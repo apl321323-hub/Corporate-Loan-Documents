@@ -118,6 +118,17 @@
   .data-table td.label.indent { padding-left: 24px; font-weight: 400; color: #64748b; }
   .data-table td.label.section { font-weight: 700; color: var(--primary); background: #eff6ff; }
   .data-table tr:hover td { background: #f0f9ff; }
+  /* BS/IS 시계열 테이블 전용 */
+  .bsis-table { table-layout: auto; white-space: nowrap; }
+  .bsis-table th, .bsis-table td { min-width: 90px; text-align: right; }
+  .bsis-table th.label, .bsis-table td.label { text-align: left; position: sticky; left: 0; background: #f8fafc; z-index: 1; min-width: 200px; }
+  .bsis-table td.label.section { background: #eff6ff; }
+  .bsis-table td.label.indent { padding-left: 24px; }
+  .bsis-table td.label.indent2 { padding-left: 40px; }
+  .bsis-table thead th { position: sticky; top: 0; background: #1e3a5f; color: #fff; z-index: 2; text-align: center; }
+  .bsis-table thead th.label { z-index: 3; background: #1e3a5f; color: #fff; text-align: left; }
+  .bsis-table td.neg { color: #dc2626; }
+  .bsis-table td.latest { background: #fffbeb; font-weight: 600; }
   .data-table td.positive { color: #16a34a; }
   .data-table td.negative { color: #dc2626; }
 
@@ -724,55 +735,77 @@
   <section class="page" id="page-bspl">
     <div class="section-header">
       <h3>재무상태표 / 손익계산서</h3>
-      <div class="date-filter">
-        <label>기간:</label>
-        <select id="bs-period" onchange="renderBSIS()">
-          <option value="12">최근 12개월</option>
-          <option value="24">최근 24개월</option>
-          <option value="all">전체</option>
-        </select>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="bsis-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">BS/IS 미업로드</span>
+        <div class="date-filter">
+          <label>기간:</label>
+          <select id="bs-period" onchange="renderBSIS()">
+            <option value="6">최근 6개월</option>
+            <option value="12" selected>최근 12개월</option>
+            <option value="24">최근 24개월</option>
+            <option value="all">전체</option>
+          </select>
+        </div>
       </div>
     </div>
 
     <div class="kpi-grid" id="bspl-kpis">
-      <div class="kpi-card"><div class="kpi-label">자산총계</div><div class="kpi-value" id="kpi-assets">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card"><div class="kpi-label">자산총계</div><div class="kpi-value" id="kpi-assets">-</div><div class="kpi-sub" id="kpi-assets-date">최근 기준월</div></div>
       <div class="kpi-card green"><div class="kpi-label">자본총계</div><div class="kpi-value" id="kpi-equity">-</div><div class="kpi-sub">최근 기준월</div></div>
       <div class="kpi-card yellow"><div class="kpi-label">부채총계</div><div class="kpi-value" id="kpi-debt">-</div><div class="kpi-sub">최근 기준월</div></div>
-      <div class="kpi-card red"><div class="kpi-label">부채비율</div><div class="kpi-value" id="kpi-debt-ratio">-</div><div class="kpi-sub">부채/자본</div></div>
+      <div class="kpi-card red"><div class="kpi-label">부채비율</div><div class="kpi-value" id="kpi-debt-ratio">-</div><div class="kpi-sub">부채/자본×100</div></div>
+      <div class="kpi-card"><div class="kpi-label">영업수익</div><div class="kpi-value" id="kpi-revenue">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
+      <div class="kpi-card green"><div class="kpi-label">당기순이익</div><div class="kpi-value" id="kpi-net-income">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
     </div>
 
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('bspl','bs')">재무상태표 (BS)</button>
-      <button class="tab-btn" onclick="switchTab('bspl','is')">손익계산서 (IS)</button>
-      <button class="tab-btn" onclick="switchTab('bspl','summary')">요약</button>
+      <button class="tab-btn active" onclick="switchBsisTab('bs')">재무상태표 (BS)</button>
+      <button class="tab-btn" onclick="switchBsisTab('is')">손익계산서 (IS)</button>
+      <button class="tab-btn" onclick="switchBsisTab('summary')">BS/PL 요약</button>
     </div>
 
+    <!-- BS 탭 -->
     <div class="tab-content active" id="tab-bspl-bs">
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div class="table-scroll" style="max-height:500px;">
-          <table class="data-table" id="bs-table">
-            <thead><tr id="bs-header"><th class="label">과목</th></tr></thead>
-            <tbody id="bs-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="background:#1e3a5f;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;">
+          ■ 재무상태표 &nbsp;<span style="font-size:11px;font-weight:400;opacity:.8;">(단위: 백만원)</span>
+        </div>
+        <div class="table-scroll" style="max-height:600px;">
+          <table class="data-table bsis-table" id="bs-table">
+            <thead><tr id="bs-header"><th class="label" style="min-width:200px;position:sticky;left:0;z-index:2;">과목</th></tr></thead>
+            <tbody id="bs-body"><tr><td class="label" colspan="99" style="text-align:center;padding:30px;color:#94a3b8;">BS/IS 파일을 업로드하세요</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
+    <!-- IS 탭 -->
     <div class="tab-content" id="tab-bspl-is">
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div class="table-scroll" style="max-height:500px;">
-          <table class="data-table" id="is-table">
-            <thead><tr id="is-header"><th class="label">과목</th></tr></thead>
-            <tbody id="is-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="background:#1e3a5f;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;">
+          ■ 손익계산서 &nbsp;<span style="font-size:11px;font-weight:400;opacity:.8;">(단위: 백만원)</span>
+        </div>
+        <div class="table-scroll" style="max-height:600px;">
+          <table class="data-table bsis-table" id="is-table">
+            <thead><tr id="is-header"><th class="label" style="min-width:200px;position:sticky;left:0;z-index:2;">과목</th></tr></thead>
+            <tbody id="is-body"><tr><td class="label" colspan="99" style="text-align:center;padding:30px;color:#94a3b8;">BS/IS 파일을 업로드하세요</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
+    <!-- 요약 탭 -->
     <div class="tab-content" id="tab-bspl-summary">
-      <div class="card">
-        <div class="card-title">주요 재무비율 추이</div>
-        <div class="chart-wrap"><canvas id="chart-bspl"></canvas></div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="background:#1e3a5f;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;">
+          ■ BS/PL 요약 &nbsp;<span style="font-size:11px;font-weight:400;opacity:.8;">(단위: 백만원, 연간 기준)</span>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table bsis-table" id="summary-table">
+            <thead><tr id="summary-header"><th class="label" style="min-width:200px;position:sticky;left:0;z-index:2;">구분</th></tr></thead>
+            <tbody id="summary-body"><tr><td class="label" colspan="99" style="text-align:center;padding:30px;color:#94a3b8;">BS/IS 파일을 업로드하세요</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -1025,7 +1058,7 @@
     </div>
 
     <!-- 섹터 3: 기업정보 -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <span style="background:#0891b2;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 3</span>
         <span style="font-size:14px;font-weight:700;color:#1e293b;">기업정보</span>
@@ -1043,6 +1076,30 @@
       </div>
       <div style="margin-top:10px;text-align:right;">
         <button class="btn-primary" onclick="uploadFile('company')" id="upload-btn-company" disabled style="padding:8px 18px;font-size:12px;background:#0891b2;">
+          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- 섹터 4: BS/IS -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="background:#059669;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 4</span>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;">재무제표 (BS/IS)</span>
+        <span style="font-size:11px;color:#64748b;">(기업여신자료 - isbs.xlsx → BS/IS 탭 자동입력)</span>
+      </div>
+      <div class="drop-zone" id="drop-zone-bsis" onclick="document.getElementById('file-input-bsis').click()" style="padding:20px;">
+        <i class="fas fa-balance-scale" style="font-size:24px;color:#059669;"></i>
+        <div class="drop-text" id="drop-text-bsis">파일을 여기에 드래그하거나 클릭하여 선택</div>
+        <div class="drop-sub">기업여신자료 - isbs.xlsx 형식 (BSPL_요약, 1. BS, 2. IS 시트)</div>
+      </div>
+      <input type="file" id="file-input-bsis" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'bsis')">
+      <div class="upload-progress" id="upload-progress-bsis" style="margin-top:10px;">
+        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-bsis">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-bsis"></div></div>
+      </div>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="btn-primary" onclick="uploadFile('bsis')" id="upload-btn-bsis" disabled style="padding:8px 18px;font-size:12px;background:#059669;">
           <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
         </button>
       </div>
@@ -1105,15 +1162,26 @@ function switchTab(group, tab) {
   if (el) el.classList.add('active');
 }
 
+// BS/IS 탭 전환 전용
+function switchBsisTab(tab) {
+  ['bs','is','summary'].forEach(t => {
+    const el = document.getElementById(`tab-bspl-${t}`);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+  document.querySelectorAll('#page-bspl .tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${tab}'`));
+  });
+}
+
 // ===== 업로드 모달 (다중 섹터) =====
-const selectedFiles = { main: null, settle: null, company: null };
+const selectedFiles = { main: null, settle: null, company: null, bsis: null };
 
 function openUpload() {
   document.getElementById('upload-modal').classList.add('open');
 }
 function closeUpload() {
   document.getElementById('upload-modal').classList.remove('open');
-  ['main','settle','company'].forEach(s => {
+  ['main','settle','company','bsis'].forEach(s => {
     selectedFiles[s] = null;
     const inp = document.getElementById(`file-input-${s}`);
     if (inp) inp.value = '';
@@ -1129,7 +1197,7 @@ function closeUpload() {
 }
 
 // 드래그 앤 드롭 초기화
-['main','settle','company'].forEach(sector => {
+['main','settle','company','bsis'].forEach(sector => {
   const dz = document.getElementById(`drop-zone-${sector}`);
   if (!dz) return;
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -1157,7 +1225,8 @@ async function uploadFile(sector) {
   const endpointMap = {
     main: '/api/upload',
     settle: '/api/upload/settlement',
-    company: '/api/upload/company_info'
+    company: '/api/upload/company_info',
+    bsis: '/api/upload/bsis'
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -1187,13 +1256,15 @@ async function uploadFile(sector) {
       await loadSettlementData();
       showToast('✅ ' + res.data.message + ` (상품 ${res.data.total_products}개)`, 'success');
     } else if (sector === 'company') {
-      // 기업정보 새로 로드 후 렌더링
       const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
       appData.company_info = ciRes.data;
       renderCompanyInfo();
       document.getElementById('data-badge').textContent = '데이터 로드됨';
       document.getElementById('data-badge').classList.remove('no-data');
       showToast('✅ ' + res.data.message + (res.data.company_name ? ` [${res.data.company_name}]` : ''), 'success');
+    } else if (sector === 'bsis') {
+      await loadBsisData();
+      showToast('✅ ' + res.data.message + ` (${(res.data.sheets||[]).join(', ')})`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -1237,6 +1308,24 @@ async function loadSettlementData() {
     }
   } catch (e) {
     console.warn('결산자료 로드 실패:', e.message);
+  }
+}
+
+async function loadBsisData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/bsis`);
+    if (res.data && (res.data.bs || res.data.is_)) {
+      appData.bsis = res.data;
+      const badge = document.getElementById('bsis-data-badge');
+      if (badge) {
+        badge.textContent = 'BS/IS 로드됨';
+        badge.style.background = '#dcfce7';
+        badge.style.color = '#16a34a';
+      }
+      renderBSIS();
+    }
+  } catch (e) {
+    console.warn('BS/IS 로드 실패:', e.message);
   }
 }
 
@@ -1619,82 +1708,141 @@ function getFilteredDates(datesObj, period) {
 }
 
 function renderBSIS() {
-  const d = appData.bs_is;
+  const d = appData.bsis;
   if (!d) return;
 
-  const period = document.getElementById('bs-period').value;
+  const period = parseInt(document.getElementById('bs-period').value) || 0;
+  const isAll = document.getElementById('bs-period').value === 'all';
 
-  // BS 테이블
-  const bsData = d.bs;
-  if (bsData && bsData.items) {
-    const filtered = getFilteredDates(bsData.dates || {}, period);
-    const header = document.getElementById('bs-header');
-    header.innerHTML = '<th class="label" style="min-width:180px;">과목</th>' +
-      filtered.map(([col, date]) => `<th>${date}</th>`).join('');
-
-    const body = document.getElementById('bs-body');
-    const labelClass = {
-      'Ⅰ. 자산총계': 'section', 'Ⅱ. 부채총계': 'section', 'Ⅲ. 자본총계': 'section',
-      '1. 현금 및 예치금': '', '2. 대출자산': '', '3. 기타자산': '',
-      '1. 차입부채': '', '2. 기타부채': ''
-    };
-    body.innerHTML = Object.entries(bsData.items).map(([label, vals]) => {
-      const cls = labelClass[label] !== undefined ? labelClass[label] :
-        (label.startsWith('  ') || label.startsWith('대출채권') || label.startsWith('대손충당금') || label.startsWith('기타') ? 'indent' : '');
-      const cells = filtered.map(([col, date]) => {
-        const v = vals[date];
-        return `<td>${v !== null && v !== undefined ? fmtK(v) : '-'}</td>`;
-      }).join('');
-      return `<tr><td class="label ${cls}">${label}</td>${cells}</tr>`;
-    }).join('');
-
-    // KPI
-    if (filtered.length > 0) {
-      const lastDate = filtered[filtered.length - 1][1];
-      const assets = bsData.items['Ⅰ. 자산총계']?.[lastDate];
-      const liab = bsData.items['Ⅱ. 부채총계']?.[lastDate];
-      const equity = bsData.items['Ⅲ. 자본총계']?.[lastDate];
-      document.getElementById('kpi-assets').textContent = assets ? fmtK(assets) : '-';
-      document.getElementById('kpi-debt').textContent = liab ? fmtK(liab) : '-';
-      document.getElementById('kpi-equity').textContent = equity ? fmtK(equity) : '-';
-      if (liab && equity && equity !== 0) {
-        document.getElementById('kpi-debt-ratio').textContent = (liab / equity * 100).toFixed(0) + '%';
-      }
-    }
+  // 공통: 기간 필터 적용 (headers 배열 슬라이스)
+  function filterHeaders(headers) {
+    if (isAll) return headers.map((h, i) => ({ h, i }));
+    const n = period || 12;
+    return headers.slice(-n).map((h, i2) => ({ h, i: headers.length - n + i2 }));
   }
 
-  // IS 테이블 - BSPL 요약에서 IS 항목 추출
-  const summary = d.summary;
-  if (summary && summary.data) {
-    const summaryDates = summary.dates || {};
-    const filtered = getFilteredDates(summaryDates, period);
-    const header = document.getElementById('is-header');
-    header.innerHTML = '<th class="label" style="min-width:180px;">과목</th>' +
-      filtered.map(([col, date]) => `<th>${date}</th>`).join('');
+  // 공통: thead 생성 (과목 고정 + 날짜 헤더)
+  function buildHeader(headerId, filteredHdrs, label = '과목') {
+    const el = document.getElementById(headerId);
+    if (!el) return;
+    const lastIdx = filteredHdrs.length - 1;
+    el.innerHTML = `<th class="label">${label}</th>` +
+      filteredHdrs.map(({h}, fi) =>
+        `<th${fi === lastIdx ? ' style="background:#0f2a45;"' : ''}>${h}</th>`
+      ).join('');
+  }
 
-    const isItems = ['영업수익', '지급이자', '중개수수료', '판관비', '대손상각비', '영업이익', '당기손익'];
-    const body = document.getElementById('is-body');
-    body.innerHTML = isItems.map(label => {
-      const colData = summary.data;
-      const cells = filtered.map(([col, date]) => {
-        let val = null;
-        // 해당 컬럼에서 행 라벨로 찾기
-        if (colData[col] && colData[col][label] !== undefined) val = colData[col][label];
-        if (val === null) {
-          // 날짜로 직접 찾기
-          Object.entries(colData).forEach(([c, rows]) => {
-            if (summaryDates[c] === date && rows[label] !== undefined) val = rows[label];
-          });
-        }
-        if (val === null || val === undefined) return '<td>-</td>';
-        // 비율인 경우
-        if (typeof val === 'number' && Math.abs(val) < 1 && val !== 0) {
-          return `<td>${(val * 100).toFixed(2)}%</td>`;
-        }
-        return `<td>${fmtK(val)}</td>`;
+  // 공통: 과목 스타일 결정
+  function getLabelClass(label, sectionList, indent1List, indent2List) {
+    if (sectionList.includes(label)) return 'section';
+    if (indent2List && indent2List.includes(label)) return 'indent2';
+    if (indent1List && indent1List.some(p => label.startsWith(p))) return 'indent';
+    if (indent1List && indent1List.includes(label)) return 'indent';
+    return '';
+  }
+
+  // ── BS ──────────────────────────────────────────────────────────────────
+  const bs = d.bs;
+  if (bs && bs.headers && bs.rows) {
+    const fh = filterHeaders(bs.headers);
+    const lastFi = fh.length - 1;
+    buildHeader('bs-header', fh, '과목');
+
+    const bsSections = ['Ⅰ. 자산총계','Ⅱ. 부채총계','Ⅲ. 자본총계'];
+    const bsIndent1 = ['1. ','2. ','3. '];
+    const bsIndent2 = ['대출채권','대손충당금','단기대여금','기업대출금','기타','차입금','사채'];
+
+    document.getElementById('bs-body').innerHTML = bs.rows.map(row => {
+      const cls = getLabelClass(row.label, bsSections, bsIndent1, bsIndent2);
+      const cells = fh.map(({i}, fi) => {
+        const v = row.values[i];
+        const fmt = (v === null || v === undefined) ? '-' : fmtK(v);
+        const neg = (typeof v === 'number' && v < 0) ? ' neg' : '';
+        const latest = fi === lastFi ? ' latest' : '';
+        return `<td class="${neg}${latest}">${fmt}</td>`;
       }).join('');
-      const isSection = ['영업수익', '영업이익', '당기손익'].includes(label);
-      return `<tr><td class="label ${isSection ? 'section' : ''}">${label}</td>${cells}</tr>`;
+      return `<tr><td class="label ${cls}">${row.label}</td>${cells}</tr>`;
+    }).join('');
+
+    // KPI - BS 최신값
+    const lastI = fh[fh.length - 1]?.i;
+    const lastDate = bs.headers[lastI] || '';
+    const findVal = (label) => bs.rows.find(r => r.label === label)?.values[lastI];
+    const assets = findVal('Ⅰ. 자산총계');
+    const liab   = findVal('Ⅱ. 부채총계');
+    const equity = findVal('Ⅲ. 자본총계');
+    document.getElementById('kpi-assets').textContent = fmtK(assets);
+    document.getElementById('kpi-assets-date').textContent = lastDate;
+    document.getElementById('kpi-debt').textContent = fmtK(liab);
+    document.getElementById('kpi-equity').textContent = fmtK(equity);
+    if (liab && equity && equity !== 0)
+      document.getElementById('kpi-debt-ratio').textContent = (liab / equity * 100).toFixed(0) + '%';
+  }
+
+  // ── IS ──────────────────────────────────────────────────────────────────
+  const is_ = d.is_;
+  if (is_ && is_.headers && is_.rows) {
+    const fh = filterHeaders(is_.headers);
+    const lastFi = fh.length - 1;
+    buildHeader('is-header', fh, '과목');
+
+    const isSections = ['Ⅰ. 영업수익','Ⅱ. 매출원가','Ⅲ. 영업비용','Ⅳ. 영업이익','Ⅴ. 법인세비용차감전순이익','Ⅵ. 당기순이익'];
+    const isIndent1 = ['1. ','2. ','3. ','4. ','5. '];
+    const isIndent2 = ['중개수수료','광고선전비','대손상각비','대출채권처분손실','인건비','기타'];
+
+    document.getElementById('is-body').innerHTML = is_.rows.map(row => {
+      const cls = getLabelClass(row.label, isSections, isIndent1, isIndent2);
+      const cells = fh.map(({i}, fi) => {
+        const v = row.values[i];
+        const fmt = (v === null || v === undefined) ? '-' : fmtK(v);
+        const neg = (typeof v === 'number' && v < 0) ? ' neg' : '';
+        const latest = fi === lastFi ? ' latest' : '';
+        return `<td class="${neg}${latest}">${fmt}</td>`;
+      }).join('');
+      return `<tr><td class="label ${cls}">${row.label}</td>${cells}</tr>`;
+    }).join('');
+
+    // KPI - IS 최신값
+    const lastI = fh[fh.length - 1]?.i;
+    const findIs = (label) => is_.rows.find(r => r.label === label)?.values[lastI];
+    document.getElementById('kpi-revenue').textContent = fmtK(findIs('Ⅰ. 영업수익'));
+    const ni = findIs('Ⅵ. 당기순이익');
+    const niEl = document.getElementById('kpi-net-income');
+    niEl.textContent = fmtK(ni);
+    niEl.style.color = (ni !== null && ni < 0) ? '#dc2626' : '';
+  }
+
+  // ── BSPL 요약 ────────────────────────────────────────────────────────────
+  const summary = d.summary;
+  if (summary && summary.headers && summary.rows) {
+    // 요약은 연간이므로 전체 표시 (기간 필터 미적용)
+    const fh = summary.headers.map((h, i) => ({ h, i }));
+    const lastFi = fh.length - 1;
+    buildHeader('summary-header', fh, '구분');
+
+    // 섹션/비율 항목 분류
+    const sumSections = ['자산총계','부채총계','자본총계','영업수익','영업이익','당기손익'];
+    const sumRatios   = ['부채비율','차입금의존도','ROA','ROE'];
+
+    document.getElementById('summary-body').innerHTML = summary.rows.map(row => {
+      const isSection = sumSections.includes(row.label);
+      const isRatio   = sumRatios.includes(row.label);
+      const cells = fh.map(({i}, fi) => {
+        const v = row.values[i];
+        let fmt = '-';
+        if (v !== null && v !== undefined) {
+          if (isRatio && typeof v === 'number') {
+            // 비율: 0~1 범위면 %로 변환, 이미 % 수치면 그대로
+            fmt = Math.abs(v) <= 1 ? (v * 100).toFixed(2) + '%' : v.toFixed(2) + '%';
+          } else {
+            fmt = fmtK(v);
+          }
+        }
+        const neg = (typeof v === 'number' && v < 0) ? ' neg' : '';
+        const latest = fi === lastFi ? ' latest' : '';
+        return `<td class="${neg}${latest}">${fmt}</td>`;
+      }).join('');
+      return `<tr><td class="label ${isSection ? 'section' : ''}">${row.label}</td>${cells}</tr>`;
     }).join('');
   }
 }
@@ -2096,6 +2244,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCompanyInfoEmpty();   // 기업정보 빈 행 초기화
   loadAllData();
   loadSettlementData();     // 결산자료 별도 로드
+  loadBsisData();           // BS/IS 별도 로드
 });
 </script>
 </body>

@@ -645,3 +645,114 @@ def parse_excel_file(file_path: str) -> Dict:
         result["borrowing"] = {"error": str(e)}
 
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BS / IS 파서
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _parse_timeseries_sheet(ws, data_row_start: int, data_row_end: int, header_row: int = 4) -> Dict:
+    """
+    시계열 시트 공통 파서
+    - A열: 과목명
+    - B열~: 날짜별 값 (header_row에 datetime)
+    반환: { "headers": ["2017.12", ...], "rows": [{"label": "Ⅰ. 자산총계", "values": [val, ...]}, ...] }
+    """
+    # 헤더 수집 (날짜 열만)
+    headers = []
+    col_indices = []
+    for cell in ws[header_row]:
+        if cell.value is not None and isinstance(cell.value, datetime):
+            headers.append(cell.value.strftime('%Y.%m'))
+            col_indices.append(cell.column)
+
+    # 데이터 행 수집
+    rows = []
+    for row_idx in range(data_row_start, data_row_end + 1):
+        label_cell = ws.cell(row=row_idx, column=1)
+        label = label_cell.value
+        if label is None:
+            continue
+        # 검증 행은 제외
+        if isinstance(label, str) and label.startswith('검증'):
+            continue
+        values = []
+        for col_idx in col_indices:
+            cell = ws.cell(row=row_idx, column=col_idx)
+            v = cell.value
+            if v is None:
+                values.append(None)
+            elif isinstance(v, bool):
+                values.append(None)
+            elif isinstance(v, (int, float)):
+                values.append(v)
+            else:
+                values.append(str(v))
+        rows.append({"label": str(label), "values": values})
+
+    return {"headers": headers, "rows": rows}
+
+
+def _parse_summary_sheet(ws) -> Dict:
+    """
+    BSPL_요약 시트 파서
+    - A열: 항목명, 3행: 연도별 헤더 (짝수 열만 실데이터)
+    반환: { "headers": ["2017.12", ...], "rows": [...] }
+    """
+    # 3행에서 연도 헤더 수집 (datetime인 셀만)
+    headers = []
+    col_indices = []
+    for cell in ws[3]:
+        if cell.value is not None and isinstance(cell.value, datetime):
+            headers.append(cell.value.strftime('%Y.%m'))
+            col_indices.append(cell.column)
+
+    # 4행부터 데이터 수집 (A열에 값 있는 행)
+    rows = []
+    for row_idx in range(4, ws.max_row + 1):
+        label_cell = ws.cell(row=row_idx, column=1)
+        label = label_cell.value
+        if label is None or str(label).strip() == '':
+            continue
+        values = []
+        for col_idx in col_indices:
+            cell = ws.cell(row=row_idx, column=col_idx)
+            v = cell.value
+            if v is None:
+                values.append(None)
+            elif isinstance(v, bool):
+                values.append(None)
+            elif isinstance(v, (int, float)):
+                values.append(v)
+            else:
+                values.append(str(v))
+        rows.append({"label": str(label), "values": values})
+
+    return {"headers": headers, "rows": rows}
+
+
+def parse_bsis(wb) -> Dict:
+    """
+    BS/IS 엑셀 파일 파싱
+    - '1. BS'   시트: 재무상태표 (행5~24)
+    - '2. IS'   시트: 손익계산서 (행5~29)
+    - 'BSPL_요약' 시트: BS/PL 요약
+    """
+    result = {}
+
+    # ── 1. BS (재무상태표) ──
+    if '1. BS' in wb.sheetnames:
+        ws = wb['1. BS']
+        result['bs'] = _parse_timeseries_sheet(ws, data_row_start=5, data_row_end=24)
+    
+    # ── 2. IS (손익계산서) ──
+    if '2. IS' in wb.sheetnames:
+        ws = wb['2. IS']
+        result['is_'] = _parse_timeseries_sheet(ws, data_row_start=5, data_row_end=29)
+
+    # ── BSPL_요약 ──
+    if 'BSPL_요약' in wb.sheetnames:
+        ws = wb['BSPL_요약']
+        result['summary'] = _parse_summary_sheet(ws)
+
+    return result

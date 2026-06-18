@@ -6,7 +6,7 @@ import tempfile
 import os
 import json
 import io
-from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info
+from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info, parse_bsis
 import openpyxl
 
 app = FastAPI(title="기업여신자료 분석 시스템")
@@ -359,6 +359,47 @@ async def update_company_info(data: dict):
         uploaded_data["company_info"] = {}
     uploaded_data["company_info"].update(data)
     return {"success": True, "message": "기업정보가 업데이트되었습니다."}
+
+
+# ─── BS/IS 엔드포인트 ────────────────────────────────────────────────────────
+
+@app.post("/api/upload/bsis")
+async def upload_bsis(file: UploadFile = File(...)):
+    """BS/IS 엑셀 파일 업로드 (재무상태표 + 손익계산서 + BSPL_요약)"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        wb = openpyxl.load_workbook(tmp_path, data_only=True)
+        data = parse_bsis(wb)
+        uploaded_data['bsis'] = data
+        os.unlink(tmp_path)
+
+        sheet_info = []
+        if 'bs' in data:
+            sheet_info.append(f"BS {len(data['bs']['headers'])}개월")
+        if 'is_' in data:
+            sheet_info.append(f"IS {len(data['is_']['headers'])}개월")
+        if 'summary' in data:
+            sheet_info.append(f"요약 {len(data['summary']['headers'])}개년")
+
+        return JSONResponse({
+            "success": True,
+            "message": f"BS/IS '{file.filename}' 업로드 완료",
+            "sheets": sheet_info
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
+
+
+@app.get("/api/data/bsis")
+async def get_bsis():
+    """BS/IS 데이터 반환"""
+    return uploaded_data.get("bsis", {})
 
 
 if __name__ == "__main__":
