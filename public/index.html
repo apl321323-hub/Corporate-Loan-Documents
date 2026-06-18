@@ -555,48 +555,10 @@
       </div>
 
       <!-- 대표이사(실경영자) 이력 (엑셀 row 16~24) -->
-      <div class="ci-table-wrap" style="margin-top:8px;">
-        <table class="ci-table">
-          <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
-          </colgroup>
-          <tbody id="ci-ceo-header-row">
-            <tr>
-              <td class="ci-label ci-label-center" id="ci-ceo-rowspan-label" rowspan="1"
-                style="line-height:1.7;">대표이사<br>(실경영자)<br><br>이&nbsp;&nbsp;력</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
-              <td class="ci-th" style="padding:7px;text-align:center;"></td>
-            </tr>
-          </tbody>
-          <tbody id="ci-ceo-body"></tbody>
-        </table>
-        <button class="ci-add-row-btn" onclick="addHistoryRow('ci-ceo')">
-          <i class="fas fa-plus"></i> 이력 행 추가
-        </button>
-      </div>
+      <div id="ci-ceo-wrap" style="margin-top:8px;"></div>
 
       <!-- 연혁 (엑셀 row 25~40) -->
-      <div class="ci-table-wrap" style="margin-top:8px;">
-        <table class="ci-table">
-          <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
-          </colgroup>
-          <tbody id="ci-hist-header-row">
-            <tr>
-              <td class="ci-label ci-label-center" id="ci-hist-rowspan-label" rowspan="1"
-                style="letter-spacing:0.2em;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
-              <td class="ci-th" style="padding:7px;text-align:center;"></td>
-            </tr>
-          </tbody>
-          <tbody id="ci-history-body"></tbody>
-        </table>
-        <button class="ci-add-row-btn" onclick="addHistoryRow('ci-hist')">
-          <i class="fas fa-plus"></i> 연혁 행 추가
-        </button>
-      </div>
+      <div id="ci-hist-wrap" style="margin-top:8px;"></div>
     </div><!-- /차주사 -->
 
     <!-- ■ 보증(법)인 (엑셀 row 42~63) -->
@@ -725,26 +687,7 @@
       </div>
 
       <!-- 보증인 연혁(경력) (row 55~63) -->
-      <div class="ci-table-wrap" style="margin-top:8px;">
-        <table class="ci-table">
-          <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
-          </colgroup>
-          <tbody id="gu-hist-header-row">
-            <tr>
-              <td class="ci-label ci-label-center" id="gu-hist-rowspan-label" rowspan="1"
-                style="line-height:1.7;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁<br><br>(경&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;력)</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
-              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
-              <td class="ci-th" style="padding:7px;text-align:center;"></td>
-            </tr>
-          </tbody>
-          <tbody id="gu-history-body"></tbody>
-        </table>
-        <button class="ci-add-row-btn" onclick="addHistoryRow('gu-hist')">
-          <i class="fas fa-plus"></i> 경력 행 추가
-        </button>
-      </div>
+      <div id="gu-hist-wrap" style="margin-top:8px;"></div>
     </div><!-- /보증(법)인 -->
 
     <!-- ■ 기타 (엑셀 row 65~68) -->
@@ -1336,49 +1279,77 @@ function fmtK(val) {
 
 // ===== 기업정보 렌더링 (엑셀 레이아웃 버전) =====
 
-// 이력 행 HTML 생성
-function historyRowHTML(prefix, idx, dateVal, contentVal) {
-  const dateStr = dateVal !== null && dateVal !== undefined ? String(dateVal) : '';
-  const contentStr = contentVal !== null && contentVal !== undefined ? String(contentVal) : '';
-  const de = dateStr.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const ce = contentStr.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return `<tr class="ci-history-row" id="${prefix}-row-${idx}">
-    <td><input class="ci-input" data-prefix="${prefix}" data-idx="${idx}" data-field="date" value="${de}" placeholder="예) 2023년, 2023.01"></td>
-    <td><input class="ci-input" data-prefix="${prefix}" data-idx="${idx}" data-field="content" value="${ce}" placeholder="내용 입력"></td>
-    <td style="text-align:center;padding:0 2px;"><button class="ci-del-btn" onclick="deleteHistoryRow('${prefix}',${idx})" title="삭제"><i class="fas fa-times"></i></button></td>
-  </tr>`;
+// 이력 테이블 설정
+const HISTORY_CONFIG = {
+  'ci-ceo':  { wrapId: 'ci-ceo-wrap',     label: '대표이사<br>(실경영자)<br><br>이&nbsp;&nbsp;력', addLabel: '이력 행 추가' },
+  'ci-hist': { wrapId: 'ci-hist-wrap',    label: '연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁',        addLabel: '연혁 행 추가' },
+  'gu-hist': { wrapId: 'gu-hist-wrap',    label: '연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁<br><br>(경&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;력)', addLabel: '경력 행 추가' },
+};
+
+// 이력 테이블 전체 렌더링 (rowspan을 단일 tbody + 첫 행에 삽입)
+function renderHistoryTable(prefix, rows) {
+  const cfg = HISTORY_CONFIG[prefix];
+  if (!cfg) return;
+  const wrap = document.getElementById(cfg.wrapId);
+  if (!wrap) return;
+
+  const n = rows.length;
+  // 데이터 행 HTML 생성
+  const dataRows = rows.map((r, i) => {
+    const de = (r.date || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    const ce = (r.content || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    const labelCell = i === 0
+      ? `<td class="ci-label ci-label-center" rowspan="${n}" style="line-height:1.6;">${cfg.label}</td>`
+      : '';
+    return `<tr>
+      ${labelCell}
+      <td style="width:160px;padding:0;"><input class="ci-input" data-prefix="${prefix}" data-idx="${i}" data-field="date" value="${de}" placeholder="예) 2023년, 2023.01"></td>
+      <td style="padding:0;"><input class="ci-input" data-prefix="${prefix}" data-idx="${i}" data-field="content" value="${ce}" placeholder="내용 입력"></td>
+      <td style="width:36px;text-align:center;padding:0;"><button class="ci-del-btn" onclick="deleteHistoryRow('${prefix}',${i})" title="삭제"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="ci-table-wrap">
+      <table class="ci-table">
+        <colgroup>
+          <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
+        </colgroup>
+        <thead>
+          <tr>
+            <td class="ci-th" style="padding:7px 10px;text-align:center;"></td>
+            <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
+            <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
+            <td class="ci-th" style="padding:7px;"></td>
+          </tr>
+        </thead>
+        <tbody>${dataRows}</tbody>
+      </table>
+    </div>
+    <button class="ci-add-row-btn" onclick="addHistoryRow('${prefix}')">
+      <i class="fas fa-plus"></i> ${cfg.addLabel}
+    </button>`;
 }
 
 let ciCeoRows = [], ciHistoryRows = [], guHistoryRows = [];
 
-// 이력 테이블 body 렌더링 (행 추가 버튼은 HTML에 이미 존재)
-function renderHistoryTable(bodyId, prefix, rows) {
-  const tbody = document.getElementById(bodyId);
-  if (!tbody) return;
-  // rowspan 라벨 업데이트 (+1 for header row)
-  const labelId = bodyId.replace('-body', '-label');
-  const labelEl = document.getElementById(labelId);
-  if (labelEl) labelEl.setAttribute('rowspan', rows.length + 1);
-  tbody.innerHTML = rows.map((r, i) => historyRowHTML(prefix, i, r.date, r.content)).join('');
-}
-
 function addHistoryRow(prefix) {
   if (prefix === 'ci-ceo') {
     ciCeoRows.push({ date: '', content: '' });
-    renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
+    renderHistoryTable('ci-ceo', ciCeoRows);
   } else if (prefix === 'ci-hist') {
     ciHistoryRows.push({ date: '', content: '' });
-    renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
+    renderHistoryTable('ci-hist', ciHistoryRows);
   } else if (prefix === 'gu-hist') {
     guHistoryRows.push({ date: '', content: '' });
-    renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
+    renderHistoryTable('gu-hist', guHistoryRows);
   }
 }
 
 function deleteHistoryRow(prefix, idx) {
-  if (prefix === 'ci-ceo') { ciCeoRows.splice(idx, 1); renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows); }
-  else if (prefix === 'ci-hist') { ciHistoryRows.splice(idx, 1); renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows); }
-  else if (prefix === 'gu-hist') { guHistoryRows.splice(idx, 1); renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows); }
+  if (prefix === 'ci-ceo') { ciCeoRows.splice(idx, 1); renderHistoryTable('ci-ceo', ciCeoRows); }
+  else if (prefix === 'ci-hist') { ciHistoryRows.splice(idx, 1); renderHistoryTable('ci-hist', ciHistoryRows); }
+  else if (prefix === 'gu-hist') { guHistoryRows.splice(idx, 1); renderHistoryTable('gu-hist', guHistoryRows); }
 }
 
 // 이력 입력 변경 반영 (input 이벤트 위임)
@@ -1482,7 +1453,7 @@ function renderCompanyInfo() {
   } else {
     ciCeoRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
   }
-  renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
+  renderHistoryTable('ci-ceo', ciCeoRows);
 
   // 연혁
   if (d.company_history) {
@@ -1490,7 +1461,7 @@ function renderCompanyInfo() {
   } else {
     ciHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
   }
-  renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
+  renderHistoryTable('ci-hist', ciHistoryRows);
 
   // 보증인 정보
   const g = d.guarantor || {};
@@ -1545,7 +1516,7 @@ function renderCompanyInfo() {
   } else {
     guHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
   }
-  renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
+  renderHistoryTable('gu-hist', guHistoryRows);
 }
 
 // 초기 빈 이력 행 렌더링 (데이터 없을 때)
@@ -1553,9 +1524,9 @@ function initCompanyInfoEmpty() {
   ciCeoRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
   ciHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
   guHistoryRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
-  renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
-  renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
-  renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
+  renderHistoryTable('ci-ceo', ciCeoRows);
+  renderHistoryTable('ci-hist', ciHistoryRows);
+  renderHistoryTable('gu-hist', guHistoryRows);
 }
 
 async function saveCompanyInfo() {
