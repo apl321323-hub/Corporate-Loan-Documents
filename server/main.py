@@ -550,7 +550,8 @@ async def get_pdf_mapping():
             return entry[0]
         return None
 
-    from pdf_mapping import PDF_BS_MAPPING, PDF_IS_MAPPING, PDF_SUMMARY_MAPPING
+    from pdf_mapping import PDF_BS_MAPPING, PDF_IS_MAPPING, PDF_SUMMARY_MAPPING, \
+                            DEFAULT_SIGN, DEFAULT_SIGN_FALLBACK
 
     bsis_data = uploaded_data.get("bsis", {})
     excel_opts = {
@@ -585,6 +586,7 @@ async def get_pdf_mapping():
                 "pdf_val":     get_pdf_val(norm_key),
                 "excel_label": excel_label,
                 "enabled":     excel_label is not None,
+                "sign":        DEFAULT_SIGN.get(norm_key, DEFAULT_SIGN_FALLBACK),
                 "_sort_idx":   idx,
             })
 
@@ -595,7 +597,7 @@ async def get_pdf_mapping():
         return rows
 
     if saved:
-        # 저장된 매핑 → raw 순서로 재정렬 + pdf_val 주입
+        # 저장된 매핑 → raw 순서로 재정렬 + pdf_val 주입 + sign 없으면 기본값 보완
         # build_rows_from_raw 와 동일한 논리: norm_key별 첫 등장 raw 인덱스 사용
         norm_order: dict = {}
         for i, raw_k in enumerate(pdf_raw.keys()):
@@ -605,6 +607,9 @@ async def get_pdf_mapping():
         for sheet_key in ["bs", "is_", "summary"]:
             for row in saved.get(sheet_key, []):
                 row["pdf_val"] = get_pdf_val(row.get("pdf_key", ""))
+                # 구버전 저장 데이터에 sign 없으면 기본값 주입
+                if "sign" not in row:
+                    row["sign"] = DEFAULT_SIGN.get(row.get("pdf_key", ""), DEFAULT_SIGN_FALLBACK)
             saved[sheet_key] = sorted(
                 saved.get(sheet_key, []),
                 key=lambda r: norm_order.get(r["pdf_key"], 99999)

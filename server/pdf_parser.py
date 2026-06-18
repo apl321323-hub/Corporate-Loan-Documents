@@ -388,14 +388,15 @@ def _parse_summary(raw: dict, bs_vals: dict, is_vals: dict) -> dict:
 def apply_user_mapping(raw: dict, user_mapping: dict) -> dict:
     """
     사용자가 UI에서 설정한 매핑을 raw 값에 적용
-    user_mapping: { "bs": [{pdf_key, excel_label, enabled}], "is_": [...], "summary": [...] }
+    user_mapping: { "bs": [{pdf_key, excel_label, enabled, sign}], "is_": [...], "summary": [...] }
+      sign: +1 = 합산(기본값), -1 = 차감
     반환: { "bs": {excel_label: val}, "is_": {...}, "summary": {...} }
     """
     result = {"bs": {}, "is_": {}, "summary": {}}
 
     for sheet_key in ["bs", "is_", "summary"]:
         rows = user_mapping.get(sheet_key, [])
-        acc = {}  # excel_label → 합산값 (여러 PDF 과목이 같은 엑셀 과목으로 매핑될 수 있음)
+        acc = {}  # excel_label → 누적값
         for row in rows:
             if not row.get("enabled", True):
                 continue
@@ -403,10 +404,13 @@ def apply_user_mapping(raw: dict, user_mapping: dict) -> dict:
             if not excel_label:
                 continue
             pdf_key = row.get("pdf_key", "")
+            sign = row.get("sign", 1)   # +1 합산, -1 차감 (기본: 합산)
             if pdf_key in raw:
-                val = raw[pdf_key][0]  # 당기값
+                val = raw[pdf_key][0]   # 당기값
                 if val is not None:
-                    acc[excel_label] = acc.get(excel_label, 0.0) + val
+                    # 차감 시: 절댓값에 -1 곱해 차감 (원장에 이미 음수인 경우도 abs 후 차감)
+                    contribution = abs(val) * sign
+                    acc[excel_label] = acc.get(excel_label, 0.0) + contribution
         result[sheet_key] = acc
 
     return result
