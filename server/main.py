@@ -550,39 +550,57 @@ async def get_pdf_mapping():
             return entry[0]
         return None
 
-    if saved:
-        # 저장된 매핑에 pdf_val 동적 주입
-        for sheet_key in ["bs", "is_", "summary"]:
-            for row in saved.get(sheet_key, []):
-                row["pdf_val"] = get_pdf_val(row.get("pdf_key", ""))
-        return JSONResponse(saved)
-
-    # 기본 매핑 설정 생성 (pdf_mapping.py 기반)
     from pdf_mapping import PDF_BS_MAPPING, PDF_IS_MAPPING, PDF_SUMMARY_MAPPING
 
     bsis_data = uploaded_data.get("bsis", {})
     excel_opts = {
-        "bs":      [r["label"] for r in bsis_data.get("bs", {}).get("rows", [])],
-        "is_":     [r["label"] for r in bsis_data.get("is_", {}).get("rows", [])],
+        "bs":      [r["label"] for r in bsis_data.get("bs",      {}).get("rows", [])],
+        "is_":     [r["label"] for r in bsis_data.get("is_",     {}).get("rows", [])],
         "summary": [r["label"] for r in bsis_data.get("summary", {}).get("rows", [])],
     }
 
-    # 각 시트별 매핑 행 목록 생성 (pdf_val 포함)
-    def build_rows(pdf_map, sheet_key):
+    # PDF raw 키 → 정규화 키 역매핑 테이블
+    # (raw 키는 "1당좌자산", "감가상각누계액37..." 처럼 접두사/중복값이 붙은 형태)
+    from pdf_parser import _normalize
+    raw_key_to_norm = {raw_k: _normalize(raw_k) for raw_k in pdf_raw.keys()}
+
+    # PDF raw 순서 기준으로 행 생성
+    # 각 mapping dict를 역참조: norm_key → excel_label
+    def build_rows_from_raw(pdf_map):
         rows = []
-        for pdf_key, excel_label in pdf_map.items():
+        seen_norm = set()   # 같은 정규화 키가 raw에 2번 나올 때 중복 방지
+        for raw_k, norm_k in raw_key_to_norm.items():
+            if norm_k in seen_norm:
+                continue
+            if norm_k not in pdf_map:
+                continue          # 해당 시트 매핑에 없는 과목 제외
+            seen_norm.add(norm_k)
+            excel_label = pdf_map[norm_k]
             rows.append({
-                "pdf_key":     pdf_key,
-                "pdf_val":     get_pdf_val(pdf_key),  # 최근 PDF 파싱 당기값
+                "pdf_key":     norm_k,           # 정규화된 키 (저장·매핑 기준)
+                "pdf_raw_key": raw_k,            # 원본 raw 키 (표시용)
+                "pdf_val":     get_pdf_val(norm_k),
                 "excel_label": excel_label,
                 "enabled":     excel_label is not None,
             })
         return rows
 
+    if saved:
+        # 저장된 매핑 → raw 순서로 재정렬 + pdf_val 주입
+        norm_order = {_normalize(raw_k): i for i, raw_k in enumerate(pdf_raw.keys())}
+        for sheet_key in ["bs", "is_", "summary"]:
+            for row in saved.get(sheet_key, []):
+                row["pdf_val"] = get_pdf_val(row.get("pdf_key", ""))
+            saved[sheet_key] = sorted(
+                saved.get(sheet_key, []),
+                key=lambda r: norm_order.get(r["pdf_key"], 99999)
+            )
+        return JSONResponse(saved)
+
     config = {
-        "bs":      build_rows(PDF_BS_MAPPING,      "bs"),
-        "is_":     build_rows(PDF_IS_MAPPING,       "is_"),
-        "summary": build_rows(PDF_SUMMARY_MAPPING,  "summary"),
+        "bs":      build_rows_from_raw(PDF_BS_MAPPING),
+        "is_":     build_rows_from_raw(PDF_IS_MAPPING),
+        "summary": build_rows_from_raw(PDF_SUMMARY_MAPPING),
         "excel_options": excel_opts,
     }
     return JSONResponse(config)
