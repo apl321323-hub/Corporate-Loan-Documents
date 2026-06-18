@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기업여신자료 분석 시스템 - ㈜에이피엘파이낸셜대부</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --primary-light: #2d5a8e;
+    --accent: #e8b84b;
+    --bg: #f0f4f8;
+    --sidebar-w: 220px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; background: var(--bg); margin: 0; }
+
+  /* Sidebar */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: var(--sidebar-w);
+    background: var(--primary);
+    color: #fff; z-index: 100;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  #sidebar .logo {
+    padding: 20px 16px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  #sidebar .logo h1 { font-size: 13px; font-weight: 700; line-height: 1.4; margin: 0; }
+  #sidebar .logo p { font-size: 10px; color: rgba(255,255,255,0.6); margin: 4px 0 0; }
+  #sidebar nav { flex: 1; padding: 10px 0; }
+  #sidebar nav a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 18px; color: rgba(255,255,255,0.75);
+    text-decoration: none; font-size: 13px;
+    transition: all 0.2s; cursor: pointer; border: none; background: none; width: 100%;
+  }
+  #sidebar nav a:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  #sidebar nav a.active { background: var(--accent); color: #1e3a5f; font-weight: 700; }
+  #sidebar nav a i { width: 18px; text-align: center; font-size: 14px; }
+  #sidebar .upload-btn {
+    margin: 10px 12px 16px;
+    background: var(--accent); color: var(--primary);
+    border: none; border-radius: 8px; padding: 11px 14px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; width: calc(100% - 24px);
+    transition: opacity 0.2s;
+  }
+  #sidebar .upload-btn:hover { opacity: 0.85; }
+
+  /* Main content */
+  #main { margin-left: var(--sidebar-w); min-height: 100vh; padding: 0; }
+  .topbar {
+    background: #fff; border-bottom: 1px solid #e2e8f0;
+    padding: 14px 28px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin: 0; }
+  .topbar .badge {
+    background: #dcfce7; color: #16a34a;
+    font-size: 11px; padding: 3px 10px; border-radius: 99px; font-weight: 600;
+  }
+  .topbar .badge.no-data { background: #fef9c3; color: #a16207; }
+
+  /* Page sections */
+  .page { display: none; padding: 24px 28px; }
+  .page.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 20px 24px; margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--primary);
+    margin: 0 0 16px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .info-item label {
+    display: block; font-size: 11px; color: #64748b;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+  }
+  .info-item input, .info-item textarea {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 8px 10px; font-size: 13px; color: #1e293b;
+    background: #f8fafc; transition: border-color 0.2s;
+  }
+  .info-item input:focus, .info-item textarea:focus {
+    outline: none; border-color: var(--primary-light); background: #fff;
+    box-shadow: 0 0 0 3px rgba(45,90,142,0.1);
+  }
+  .info-item.span2 { grid-column: span 2; }
+  .info-item.span3 { grid-column: span 3; }
+
+  /* Data table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th {
+    background: var(--primary); color: #fff;
+    padding: 8px 10px; text-align: center; font-weight: 600;
+    position: sticky; top: 0; white-space: nowrap;
+  }
+  .data-table td {
+    padding: 7px 10px; border-bottom: 1px solid #f1f5f9;
+    text-align: right; color: #374151; white-space: nowrap;
+  }
+  .data-table td.label { text-align: left; font-weight: 500; color: #1e293b; background: #f8fafc; }
+  .data-table td.label.indent { padding-left: 24px; font-weight: 400; color: #64748b; }
+  .data-table td.label.section { font-weight: 700; color: var(--primary); background: #eff6ff; }
+  .data-table tr:hover td { background: #f0f9ff; }
+  .data-table td.positive { color: #16a34a; }
+  .data-table td.negative { color: #dc2626; }
+
+  /* Table scroll wrapper */
+  .table-scroll { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+
+  /* Summary KPI cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: #fff; border-radius: 10px; padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    border-left: 4px solid var(--primary);
+  }
+  .kpi-card.green { border-color: #16a34a; }
+  .kpi-card.yellow { border-color: #d97706; }
+  .kpi-card.red { border-color: #dc2626; }
+  .kpi-card .kpi-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+  .kpi-card .kpi-value { font-size: 22px; font-weight: 800; color: #1e293b; }
+  .kpi-card .kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+  /* Upload modal */
+  #upload-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  #upload-modal.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 16px; padding: 32px 36px;
+    max-width: 520px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-box h3 { font-size: 18px; font-weight: 800; color: var(--primary); margin: 0 0 8px; }
+  .modal-box p { font-size: 13px; color: #64748b; margin: 0 0 24px; }
+  .drop-zone {
+    border: 2px dashed #cbd5e1; border-radius: 12px;
+    padding: 40px 20px; cursor: pointer; transition: all 0.2s;
+    background: #f8fafc;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: #eff6ff; }
+  .drop-zone i { font-size: 36px; color: #94a3b8; margin-bottom: 12px; display: block; }
+  .drop-zone .drop-text { font-size: 14px; color: #64748b; }
+  .drop-zone .drop-sub { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+  .upload-progress {
+    background: #f1f5f9; border-radius: 8px; padding: 16px;
+    margin-top: 16px; display: none;
+  }
+  .progress-bar-wrap { background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; margin-top: 8px; }
+  .progress-bar { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.3s; width: 0%; }
+  .btn-primary {
+    background: var(--primary); color: #fff; border: none;
+    padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-cancel {
+    background: #f1f5f9; color: #64748b; border: none;
+    padding: 10px 20px; border-radius: 8px; font-size: 13px;
+    cursor: pointer; margin-right: 10px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1e293b; color: #fff; padding: 12px 20px;
+    border-radius: 8px; font-size: 13px; z-index: 999;
+    transform: translateY(100px); transition: transform 0.3s;
+    max-width: 320px;
+  }
+  #toast.show { transform: translateY(0); }
+  #toast.success { background: #16a34a; }
+  #toast.error { background: #dc2626; }
+
+  /* Section header */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .section-header h3 { font-size: 20px; font-weight: 800; color: var(--primary); margin: 0; }
+
+  /* Date filter */
+  .date-filter {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .date-filter select, .date-filter input {
+    border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px;
+    font-size: 12px; color: #374151; background: #fff;
+  }
+  .date-filter label { font-size: 12px; color: #64748b; }
+
+  /* Chart container */
+  .chart-wrap { position: relative; height: 280px; }
+
+  /* Shareholder table */
+  .sh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sh-table th { background: #f1f5f9; padding: 8px 12px; text-align: left; font-size: 12px; color: #64748b; }
+  .sh-table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
+
+  /* Save btn */
+  .save-btn {
+    background: var(--primary); color: #fff; border: none;
+    padding: 9px 20px; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .save-btn:hover { background: var(--primary-light); }
+
+  /* Loading overlay */
+  #loading {
+    display: none; position: fixed; inset: 0;
+    background: rgba(255,255,255,0.8); z-index: 300;
+    align-items: center; justify-content: center; flex-direction: column;
+    gap: 16px;
+  }
+  #loading.show { display: flex; }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid #e2e8f0;
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tab buttons */
+  .tab-bar { display: flex; gap: 2px; margin-bottom: 18px; border-bottom: 2px solid #e2e8f0; }
+  .tab-btn {
+    padding: 8px 16px; border: none; background: none; font-size: 13px;
+    color: #64748b; cursor: pointer; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 700; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .info-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div class="logo">
+    <h1>기업여신자료<br>분석 시스템</h1>
+    <p>㈜에이피엘파이낸셜대부</p>
+  </div>
+  <nav>
+    <a onclick="showPage('page-company')" class="active" id="nav-company">
+      <i class="fas fa-building"></i> 기업정보
+    </a>
+    <a onclick="showPage('page-bspl')" id="nav-bspl">
+      <i class="fas fa-balance-scale"></i> BS / IS
+    </a>
+    <a onclick="showPage('page-cashflow')" id="nav-cashflow">
+      <i class="fas fa-water"></i> 현금흐름
+    </a>
+    <a onclick="showPage('page-asset')" id="nav-asset">
+      <i class="fas fa-shield-alt"></i> 자산건전성
+    </a>
+    <a onclick="showPage('page-business')" id="nav-business">
+      <i class="fas fa-chart-line"></i> 영업현황
+    </a>
+    <a onclick="showPage('page-loan')" id="nav-loan">
+      <i class="fas fa-hand-holding-usd"></i> 대출자산속성
+    </a>
+    <a onclick="showPage('page-borrowing')" id="nav-borrowing">
+      <i class="fas fa-credit-card"></i> 차입현황
+    </a>
+  </nav>
+  <button class="upload-btn" onclick="openUpload()">
+    <i class="fas fa-upload"></i> 엑셀 업로드
+  </button>
+</aside>
+
+<!-- Main -->
+<main id="main">
+  <div class="topbar">
+    <h2 id="page-title">기업정보</h2>
+    <div>
+      <span id="data-badge" class="badge no-data">데이터 없음 - 엑셀 업로드 필요</span>
+    </div>
+  </div>
+
+  <!-- ===== 1. 기업정보 ===== -->
+  <section class="page active" id="page-company">
+    <div class="section-header">
+      <h3>기업정보</h3>
+      <button class="save-btn" onclick="saveCompanyInfo()">
+        <i class="fas fa-save"></i> 저장
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-building"></i> 차주사 기본정보</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>차주명</label>
+          <input type="text" id="ci-name" placeholder="회사명 입력">
+        </div>
+        <div class="info-item">
+          <label>대표이사</label>
+          <input type="text" id="ci-rep" placeholder="대표이사명">
+        </div>
+        <div class="info-item">
+          <label>실경영자</label>
+          <input type="text" id="ci-actual" placeholder="실경영자명">
+        </div>
+        <div class="info-item">
+          <label>사업자번호</label>
+          <input type="text" id="ci-bizno" placeholder="000-00-00000">
+        </div>
+        <div class="info-item">
+          <label>업종</label>
+          <input type="text" id="ci-industry" placeholder="업종">
+        </div>
+        <div class="info-item">
+          <label>기업형태</label>
+          <input type="text" id="ci-type" placeholder="주식회사 등">
+        </div>
+        <div class="info-item">
+          <label>전화번호</label>
+          <input type="text" id="ci-phone" placeholder="02-0000-0000">
+        </div>
+        <div class="info-item">
+          <label>대표이사 전화번호</label>
+          <input type="text" id="ci-rep-phone" placeholder="010-0000-0000">
+        </div>
+        <div class="info-item">
+          <label>상장 여부</label>
+          <input type="text" id="ci-listed" placeholder="상장 / 비상장">
+        </div>
+        <div class="info-item">
+          <label>임직원수</label>
+          <input type="text" id="ci-employees" placeholder="명">
+        </div>
+        <div class="info-item span2">
+          <label>사업장주소</label>
+          <input type="text" id="ci-address" placeholder="주소 입력">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-users"></i> 주주현황</div>
+      <div class="table-scroll">
+        <table class="sh-table" id="shareholders-table">
+          <thead>
+            <tr>
+              <th>주주명</th>
+              <th>주식수</th>
+              <th>지분율</th>
+              <th>주식금액</th>
+              <th>이해관계</th>
+            </tr>
+          </thead>
+          <tbody id="shareholders-body">
+            <tr><td colspan="5" class="text-center text-gray-400 py-4">데이터 없음</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-user-tie"></i> 등기임원</div>
+      <div id="executives-list" class="flex flex-wrap gap-2">
+        <span class="text-gray-400 text-sm">데이터 없음</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-history"></i> 대표이사 이력</div>
+        <div class="table-scroll">
+          <table class="sh-table">
+            <thead><tr><th>일자</th><th>내용</th></tr></thead>
+            <tbody id="ceo-history-body">
+              <tr><td colspan="2" class="text-gray-400 text-center py-3">데이터 없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fas fa-scroll"></i> 연혁</div>
+        <div class="table-scroll" style="max-height:320px;overflow-y:auto;">
+          <table class="sh-table">
+            <thead><tr><th>일자</th><th>내용</th></tr></thead>
+            <tbody id="company-history-body">
+              <tr><td colspan="2" class="text-gray-400 text-center py-3">데이터 없음</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-user-shield"></i> 보증인 정보</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>보증인명</label>
+          <input type="text" id="gu-name" placeholder="보증인명">
+        </div>
+        <div class="info-item">
+          <label>관계</label>
+          <input type="text" id="gu-rep" placeholder="대표이사 등">
+        </div>
+        <div class="info-item">
+          <label>사업자번호(주민번호)</label>
+          <input type="text" id="gu-bizno" placeholder="번호 입력">
+        </div>
+        <div class="info-item">
+          <label>업종</label>
+          <input type="text" id="gu-industry" placeholder="업종">
+        </div>
+        <div class="info-item">
+          <label>전화번호</label>
+          <input type="text" id="gu-phone" placeholder="전화번호">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2. BS / IS ===== -->
+  <section class="page" id="page-bspl">
+    <div class="section-header">
+      <h3>재무상태표 / 손익계산서</h3>
+      <div class="date-filter">
+        <label>기간:</label>
+        <select id="bs-period" onchange="renderBSIS()">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="bspl-kpis">
+      <div class="kpi-card"><div class="kpi-label">자산총계</div><div class="kpi-value" id="kpi-assets">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card green"><div class="kpi-label">자본총계</div><div class="kpi-value" id="kpi-equity">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">부채총계</div><div class="kpi-value" id="kpi-debt">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card red"><div class="kpi-label">부채비율</div><div class="kpi-value" id="kpi-debt-ratio">-</div><div class="kpi-sub">부채/자본</div></div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('bspl','bs')">재무상태표 (BS)</button>
+      <button class="tab-btn" onclick="switchTab('bspl','is')">손익계산서 (IS)</button>
+      <button class="tab-btn" onclick="switchTab('bspl','summary')">요약</button>
+    </div>
+
+    <div class="tab-content active" id="tab-bspl-bs">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-scroll" style="max-height:500px;">
+          <table class="data-table" id="bs-table">
+            <thead><tr id="bs-header"><th class="label">과목</th></tr></thead>
+            <tbody id="bs-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-bspl-is">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-scroll" style="max-height:500px;">
+          <table class="data-table" id="is-table">
+            <thead><tr id="is-header"><th class="label">과목</th></tr></thead>
+            <tbody id="is-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-bspl-summary">
+      <div class="card">
+        <div class="card-title">주요 재무비율 추이</div>
+        <div class="chart-wrap"><canvas id="chart-bspl"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. 현금흐름 ===== -->
+  <section class="page" id="page-cashflow">
+    <div class="section-header">
+      <h3>현금흐름</h3>
+      <div class="date-filter">
+        <label>기간:</label>
+        <select id="cf-period" onchange="renderCashflow()">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="cf-kpis">
+      <div class="kpi-card green"><div class="kpi-label">기말현금</div><div class="kpi-value" id="kpi-cf-end">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card"><div class="kpi-label">현금유입</div><div class="kpi-value" id="kpi-cf-in">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">현금유출</div><div class="kpi-value" id="kpi-cf-out">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card"><div class="kpi-label">대출금 이자수입</div><div class="kpi-value" id="kpi-cf-interest">-</div><div class="kpi-sub">최근 기준월</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-area"></i> 현금흐름 추이</div>
+      <div class="chart-wrap"><canvas id="chart-cashflow"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-scroll" style="max-height:500px;">
+        <table class="data-table" id="cf-table">
+          <thead><tr id="cf-header"><th class="label">구분</th></tr></thead>
+          <tbody id="cf-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. 자산건전성 ===== -->
+  <section class="page" id="page-asset">
+    <div class="section-header">
+      <h3>자산건전성</h3>
+      <div class="date-filter">
+        <label>기간:</label>
+        <select id="aq-period" onchange="renderAssetQuality()">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card green"><div class="kpi-label">무연체</div><div class="kpi-value" id="kpi-aq-normal">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">연체합계</div><div class="kpi-value" id="kpi-aq-overdue">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card"><div class="kpi-label">융잔합계</div><div class="kpi-value" id="kpi-aq-total">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card red"><div class="kpi-label">연체율</div><div class="kpi-value" id="kpi-aq-ratio">-</div><div class="kpi-sub">연체/융잔</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-bar"></i> 연체 현황 추이</div>
+      <div class="chart-wrap"><canvas id="chart-asset"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-scroll" style="max-height:500px;">
+        <table class="data-table" id="aq-table">
+          <thead><tr id="aq-header"><th class="label">구분</th></tr></thead>
+          <tbody id="aq-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5. 영업현황 ===== -->
+  <section class="page" id="page-business">
+    <div class="section-header">
+      <h3>영업현황</h3>
+      <div class="date-filter">
+        <label>기간:</label>
+        <select id="bs2-period" onchange="renderBusiness()">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-chart-line"></i> 영업현황 추이</div>
+      <div class="chart-wrap"><canvas id="chart-business"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-scroll" style="max-height:500px;">
+        <table class="data-table" id="biz-table">
+          <thead><tr id="biz-header"><th class="label">구분</th></tr></thead>
+          <tbody id="biz-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 6. 대출자산속성 ===== -->
+  <section class="page" id="page-loan">
+    <div class="section-header">
+      <h3>대출자산속성</h3>
+      <div class="date-filter">
+        <label>기간:</label>
+        <select id="la-period" onchange="renderLoanAsset()">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-pie-chart"></i> 대출자산 구성</div>
+      <div class="chart-wrap"><canvas id="chart-loan"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-scroll" style="max-height:500px;">
+        <table class="data-table" id="la-table">
+          <thead><tr id="la-header"><th class="label">구분</th></tr></thead>
+          <tbody id="la-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 7. 차입현황 ===== -->
+  <section class="page" id="page-borrowing">
+    <div class="section-header">
+      <h3>차입현황</h3>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">단기차입금</div><div class="kpi-value" id="kpi-bor-short">-</div><div class="kpi-sub">최근 기준</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">장기차입금</div><div class="kpi-value" id="kpi-bor-long">-</div><div class="kpi-sub">최근 기준</div></div>
+      <div class="kpi-card red"><div class="kpi-label">사채</div><div class="kpi-value" id="kpi-bor-bond">-</div><div class="kpi-sub">최근 기준</div></div>
+      <div class="kpi-card green"><div class="kpi-label">차입금 합계</div><div class="kpi-value" id="kpi-bor-total">-</div><div class="kpi-sub">최근 기준</div></div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-scroll" style="max-height:600px;">
+        <table class="data-table" id="bor-table">
+          <thead><tr id="bor-header"></tr></thead>
+          <tbody id="bor-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Upload Modal -->
+<div id="upload-modal">
+  <div class="modal-box">
+    <h3><i class="fas fa-file-excel" style="color:#16a34a;margin-right:8px;"></i>엑셀 파일 업로드</h3>
+    <p>기업여신자료 엑셀 파일을 업로드하면<br>모든 시트 데이터가 자동으로 반영됩니다.</p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <i class="fas fa-cloud-upload-alt"></i>
+      <div class="drop-text">파일을 여기에 드래그하거나 클릭하여 선택</div>
+      <div class="drop-sub">.xlsx, .xls 파일만 지원됩니다</div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event)">
+    <div class="upload-progress" id="upload-progress">
+      <div style="font-size:13px;color:#374151;font-weight:600;" id="upload-status">업로드 중...</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    </div>
+    <div style="margin-top:20px; text-align:right;">
+      <button class="btn-cancel" onclick="closeUpload()">취소</button>
+      <button class="btn-primary" onclick="uploadFile()" id="upload-btn" disabled>
+        <i class="fas fa-upload" style="margin-right:6px;"></i>업로드
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p style="color:#64748b;font-size:14px;">데이터를 분석하고 있습니다...</p>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ===== 전역 상태 =====
+let appData = {};
+let selectedFile = null;
+let charts = {};
+const API_BASE = '';
+
+// ===== 네비게이션 =====
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+
+  const navMap = {
+    'page-company': 'nav-company', 'page-bspl': 'nav-bspl',
+    'page-cashflow': 'nav-cashflow', 'page-asset': 'nav-asset',
+    'page-business': 'nav-business', 'page-loan': 'nav-loan',
+    'page-borrowing': 'nav-borrowing'
+  };
+  const titleMap = {
+    'page-company': '기업정보', 'page-bspl': '재무상태표 / 손익계산서',
+    'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
+    'page-business': '영업현황', 'page-loan': '대출자산속성',
+    'page-borrowing': '차입현황'
+  };
+  const nav = document.getElementById(navMap[pageId]);
+  if (nav) nav.classList.add('active');
+  document.getElementById('page-title').textContent = titleMap[pageId] || '';
+}
+
+// ===== 탭 전환 =====
+function switchTab(group, tab) {
+  document.querySelectorAll(`#tab-${group}-bs, #tab-${group}-is, #tab-${group}-summary`).forEach(t => t.classList.remove('active'));
+  document.querySelectorAll(`.tab-btn`).forEach(b => {
+    if (b.getAttribute('onclick').includes(`'${group}'`) && b.getAttribute('onclick').includes(`'${tab}'`))
+      b.classList.add('active');
+    else if (b.getAttribute('onclick').includes(`'${group}'`))
+      b.classList.remove('active');
+  });
+  const el = document.getElementById(`tab-${group}-${tab}`);
+  if (el) el.classList.add('active');
+}
+
+// ===== 업로드 모달 =====
+function openUpload() {
+  document.getElementById('upload-modal').classList.add('open');
+}
+function closeUpload() {
+  document.getElementById('upload-modal').classList.remove('open');
+  selectedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('drop-zone').querySelector('.drop-text').textContent = '파일을 여기에 드래그하거나 클릭하여 선택';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('progress-bar').style.width = '0%';
+}
+
+// 드래그 앤 드롭
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) setFile(files[0]);
+});
+
+function handleFileSelect(e) { if (e.target.files[0]) setFile(e.target.files[0]); }
+
+function setFile(file) {
+  selectedFile = file;
+  dropZone.querySelector('.drop-text').textContent = `선택됨: ${file.name}`;
+  document.getElementById('upload-btn').disabled = false;
+}
+
+async function uploadFile() {
+  if (!selectedFile) return;
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('upload-status').textContent = '파일 업로드 중...';
+
+  // 프로그레스 애니메이션
+  let prog = 0;
+  const interval = setInterval(() => {
+    prog = Math.min(prog + 5, 85);
+    document.getElementById('progress-bar').style.width = prog + '%';
+  }, 150);
+
+  try {
+    showLoading();
+    const res = await axios.post(`${API_BASE}/api/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    clearInterval(interval);
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('upload-status').textContent = '완료!';
+
+    await loadAllData();
+    closeUpload();
+    showToast('✅ ' + res.data.message, 'success');
+  } catch (e) {
+    clearInterval(interval);
+    document.getElementById('progress-bar').style.width = '0%';
+    document.getElementById('upload-status').textContent = '오류 발생';
+    document.getElementById('upload-btn').disabled = false;
+    showToast('❌ 업로드 실패: ' + (e.response?.data?.detail || e.message), 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ===== 데이터 로드 =====
+async function loadAllData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data`);
+    appData = res.data;
+    if (Object.keys(appData).length > 0) {
+      document.getElementById('data-badge').textContent = '데이터 로드됨';
+      document.getElementById('data-badge').classList.remove('no-data');
+      renderAll();
+    }
+  } catch (e) {
+    console.warn('데이터 로드 실패 (서버 미연결):', e.message);
+  }
+}
+
+function renderAll() {
+  renderCompanyInfo();
+  renderBSIS();
+  renderCashflow();
+  renderAssetQuality();
+  renderBusiness();
+  renderLoanAsset();
+  renderBorrowing();
+}
+
+// ===== 숫자 포맷 =====
+function fmtNum(val, unit = '백만') {
+  if (val === null || val === undefined || val === '') return '-';
+  const n = typeof val === 'number' ? val : parseFloat(val);
+  if (isNaN(n)) return val;
+  if (unit === '백만') {
+    const m = n / 1000000;
+    if (Math.abs(m) >= 1000) return (m / 1000).toFixed(1) + '조';
+    if (Math.abs(m) >= 1) return m.toFixed(0) + '백만';
+    return n.toLocaleString();
+  }
+  if (unit === '%') return (n * 100).toFixed(2) + '%';
+  return n.toLocaleString();
+}
+
+function fmtK(val) {
+  if (!val && val !== 0) return '-';
+  const n = typeof val === 'number' ? val : parseFloat(val);
+  if (isNaN(n)) return String(val);
+  const m = n / 100000000; // 억
+  if (Math.abs(m) >= 1000) return (m / 1000).toFixed(1) + '조';
+  if (Math.abs(m) >= 1) return m.toFixed(0) + '억';
+  const k = n / 1000000;
+  if (Math.abs(k) >= 1) return k.toFixed(0) + '백만';
+  return n.toLocaleString();
+}
+
+// ===== 기업정보 렌더링 =====
+function renderCompanyInfo() {
+  const d = appData.company_info;
+  if (!d) return;
+  const c = d.company || {};
+  const fields = {
+    'ci-name': c.name, 'ci-rep': c.representative, 'ci-actual': c.actual_manager,
+    'ci-bizno': c.business_number, 'ci-industry': c.industry, 'ci-type': c.company_type,
+    'ci-phone': c.phone, 'ci-rep-phone': c.rep_phone, 'ci-listed': c.listed,
+    'ci-employees': c.employees, 'ci-address': c.address
+  };
+  Object.entries(fields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && val) el.value = val;
+  });
+
+  // 주주현황
+  const tbody = document.getElementById('shareholders-body');
+  if (d.shareholders && d.shareholders.length > 0) {
+    tbody.innerHTML = d.shareholders.map(s => `
+      <tr>
+        <td>${s.name || '-'}</td>
+        <td style="text-align:right">${s.shares ? Number(s.shares).toLocaleString() : '-'}</td>
+        <td style="text-align:right">${s.ratio !== undefined ? (Number(s.ratio) * 100).toFixed(1) + '%' : '-'}</td>
+        <td style="text-align:right">${s.amount ? fmtK(s.amount) : '-'}</td>
+        <td>${s.relation || '-'}</td>
+      </tr>`).join('');
+  }
+
+  // 등기임원
+  if (d.executives && d.executives.length > 0) {
+    document.getElementById('executives-list').innerHTML = d.executives
+      .map(e => `<span style="background:#eff6ff;color:#1e3a5f;padding:5px 12px;border-radius:99px;font-size:13px;font-weight:600;">${e}</span>`)
+      .join('');
+  }
+
+  // 대표이사 이력
+  if (d.ceo_history && d.ceo_history.length > 0) {
+    document.getElementById('ceo-history-body').innerHTML = d.ceo_history
+      .map(h => `<tr><td style="color:#64748b;font-size:12px;white-space:nowrap;">${h.date}</td><td>${h.content}</td></tr>`).join('');
+  }
+
+  // 연혁
+  if (d.company_history && d.company_history.length > 0) {
+    document.getElementById('company-history-body').innerHTML = d.company_history
+      .map(h => `<tr><td style="color:#64748b;font-size:12px;white-space:nowrap;">${h.date}</td><td>${h.content}</td></tr>`).join('');
+  }
+
+  // 보증인
+  const g = d.guarantor || {};
+  const gfields = { 'gu-name': g.name, 'gu-rep': g.representative, 'gu-bizno': g.business_number, 'gu-industry': g.industry, 'gu-phone': g.phone };
+  Object.entries(gfields).forEach(([id, val]) => {
+    const el = document.getElementById(id); if (el && val) el.value = val;
+  });
+}
+
+async function saveCompanyInfo() {
+  const data = {
+    company: {
+      name: document.getElementById('ci-name').value,
+      representative: document.getElementById('ci-rep').value,
+      actual_manager: document.getElementById('ci-actual').value,
+      business_number: document.getElementById('ci-bizno').value,
+      industry: document.getElementById('ci-industry').value,
+      company_type: document.getElementById('ci-type').value,
+      phone: document.getElementById('ci-phone').value,
+      rep_phone: document.getElementById('ci-rep-phone').value,
+      listed: document.getElementById('ci-listed').value,
+      employees: document.getElementById('ci-employees').value,
+      address: document.getElementById('ci-address').value
+    }
+  };
+  try {
+    await axios.post(`${API_BASE}/api/data/company_info`, data);
+    if (!appData.company_info) appData.company_info = {};
+    Object.assign(appData.company_info, data);
+    showToast('✅ 기업정보가 저장되었습니다.', 'success');
+  } catch {
+    showToast('💾 로컬에 저장되었습니다.', 'success');
+  }
+}
+
+// ===== BS/IS 렌더링 =====
+function getFilteredDates(datesObj, period) {
+  const sorted = Object.entries(datesObj)
+    .sort((a, b) => a[1].localeCompare(b[1]));
+  if (period === 'all') return sorted;
+  const n = parseInt(period);
+  return sorted.slice(-n);
+}
+
+function renderBSIS() {
+  const d = appData.bs_is;
+  if (!d) return;
+
+  const period = document.getElementById('bs-period').value;
+
+  // BS 테이블
+  const bsData = d.bs;
+  if (bsData && bsData.items) {
+    const filtered = getFilteredDates(bsData.dates || {}, period);
+    const header = document.getElementById('bs-header');
+    header.innerHTML = '<th class="label" style="min-width:180px;">과목</th>' +
+      filtered.map(([col, date]) => `<th>${date}</th>`).join('');
+
+    const body = document.getElementById('bs-body');
+    const labelClass = {
+      'Ⅰ. 자산총계': 'section', 'Ⅱ. 부채총계': 'section', 'Ⅲ. 자본총계': 'section',
+      '1. 현금 및 예치금': '', '2. 대출자산': '', '3. 기타자산': '',
+      '1. 차입부채': '', '2. 기타부채': ''
+    };
+    body.innerHTML = Object.entries(bsData.items).map(([label, vals]) => {
+      const cls = labelClass[label] !== undefined ? labelClass[label] :
+        (label.startsWith('  ') || label.startsWith('대출채권') || label.startsWith('대손충당금') || label.startsWith('기타') ? 'indent' : '');
+      const cells = filtered.map(([col, date]) => {
+        const v = vals[date];
+        return `<td>${v !== null && v !== undefined ? fmtK(v) : '-'}</td>`;
+      }).join('');
+      return `<tr><td class="label ${cls}">${label}</td>${cells}</tr>`;
+    }).join('');
+
+    // KPI
+    if (filtered.length > 0) {
+      const lastDate = filtered[filtered.length - 1][1];
+      const assets = bsData.items['Ⅰ. 자산총계']?.[lastDate];
+      const liab = bsData.items['Ⅱ. 부채총계']?.[lastDate];
+      const equity = bsData.items['Ⅲ. 자본총계']?.[lastDate];
+      document.getElementById('kpi-assets').textContent = assets ? fmtK(assets) : '-';
+      document.getElementById('kpi-debt').textContent = liab ? fmtK(liab) : '-';
+      document.getElementById('kpi-equity').textContent = equity ? fmtK(equity) : '-';
+      if (liab && equity && equity !== 0) {
+        document.getElementById('kpi-debt-ratio').textContent = (liab / equity * 100).toFixed(0) + '%';
+      }
+    }
+  }
+
+  // IS 테이블 - BSPL 요약에서 IS 항목 추출
+  const summary = d.summary;
+  if (summary && summary.data) {
+    const summaryDates = summary.dates || {};
+    const filtered = getFilteredDates(summaryDates, period);
+    const header = document.getElementById('is-header');
+    header.innerHTML = '<th class="label" style="min-width:180px;">과목</th>' +
+      filtered.map(([col, date]) => `<th>${date}</th>`).join('');
+
+    const isItems = ['영업수익', '지급이자', '중개수수료', '판관비', '대손상각비', '영업이익', '당기손익'];
+    const body = document.getElementById('is-body');
+    body.innerHTML = isItems.map(label => {
+      const colData = summary.data;
+      const cells = filtered.map(([col, date]) => {
+        let val = null;
+        // 해당 컬럼에서 행 라벨로 찾기
+        if (colData[col] && colData[col][label] !== undefined) val = colData[col][label];
+        if (val === null) {
+          // 날짜로 직접 찾기
+          Object.entries(colData).forEach(([c, rows]) => {
+            if (summaryDates[c] === date && rows[label] !== undefined) val = rows[label];
+          });
+        }
+        if (val === null || val === undefined) return '<td>-</td>';
+        // 비율인 경우
+        if (typeof val === 'number' && Math.abs(val) < 1 && val !== 0) {
+          return `<td>${(val * 100).toFixed(2)}%</td>`;
+        }
+        return `<td>${fmtK(val)}</td>`;
+      }).join('');
+      const isSection = ['영업수익', '영업이익', '당기손익'].includes(label);
+      return `<tr><td class="label ${isSection ? 'section' : ''}">${label}</td>${cells}</tr>`;
+    }).join('');
+  }
+}
+
+// ===== 현금흐름 렌더링 =====
+function renderCashflow() {
+  const d = appData.cashflow;
+  if (!d) return;
+
+  const period = document.getElementById('cf-period').value;
+  const filtered = getFilteredDates(d.dates || {}, period);
+
+  const header = document.getElementById('cf-header');
+  header.innerHTML = '<th class="label" style="min-width:200px;">구분</th>' +
+    filtered.map(([, date]) => `<th>${date}</th>`).join('');
+
+  const sectionItems = ['Ⅰ. 기초현금', 'Ⅱ. 현금유입', 'Ⅲ. 현금유출', 'Ⅳ. 기말현금'];
+  const body = document.getElementById('cf-body');
+  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
+    const isSection = sectionItems.includes(label);
+    const cells = filtered.map(([, date]) => {
+      const v = vals[date];
+      return `<td>${v !== null && v !== undefined ? fmtK(v) : '-'}</td>`;
+    }).join('');
+    return `<tr><td class="label ${isSection ? 'section' : ''}">${label}</td>${cells}</tr>`;
+  }).join('');
+
+  // KPI
+  if (filtered.length > 0) {
+    const lastDate = filtered[filtered.length - 1][1];
+    document.getElementById('kpi-cf-end').textContent = fmtK(d.items['Ⅳ. 기말현금']?.[lastDate]);
+    document.getElementById('kpi-cf-in').textContent = fmtK(d.items['Ⅱ. 현금유입']?.[lastDate]);
+    document.getElementById('kpi-cf-out').textContent = fmtK(d.items['Ⅲ. 현금유출']?.[lastDate]);
+    document.getElementById('kpi-cf-interest').textContent = fmtK(d.items['대출금 이자수입']?.[lastDate]);
+  }
+
+  // 차트
+  drawLineChart('chart-cashflow', filtered.map(([, d]) => d),
+    [
+      { label: '현금유입', data: filtered.map(([, date]) => (d.items['Ⅱ. 현금유입']?.[date] || 0) / 1e8), color: '#3b82f6' },
+      { label: '현금유출', data: filtered.map(([, date]) => (d.items['Ⅲ. 현금유출']?.[date] || 0) / 1e8), color: '#ef4444' },
+      { label: '기말현금', data: filtered.map(([, date]) => (d.items['Ⅳ. 기말현금']?.[date] || 0) / 1e8), color: '#10b981' },
+    ], '억원');
+}
+
+// ===== 자산건전성 렌더링 =====
+function renderAssetQuality() {
+  const d = appData.asset_quality;
+  if (!d) return;
+
+  const period = document.getElementById('aq-period').value;
+  const filtered = getFilteredDates(d.dates || {}, period);
+
+  const header = document.getElementById('aq-header');
+  header.innerHTML = '<th class="label" style="min-width:160px;">구분</th>' +
+    filtered.map(([, date]) => `<th>${date}</th>`).join('');
+
+  const body = document.getElementById('aq-body');
+  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
+    const isSection = ['연체합계', '융잔합계'].includes(label);
+    const cells = filtered.map(([, date]) => {
+      const v = vals[date];
+      return `<td>${v !== null && v !== undefined ? fmtK(v) : '-'}</td>`;
+    }).join('');
+    return `<tr><td class="label ${isSection ? 'section' : ''}">${label}</td>${cells}</tr>`;
+  }).join('');
+
+  // KPI
+  if (filtered.length > 0) {
+    const lastDate = filtered[filtered.length - 1][1];
+    const total = d.items['융잔합계']?.[lastDate];
+    const overdue = d.items['연체합계']?.[lastDate];
+    const normal = d.items['무연체']?.[lastDate];
+    document.getElementById('kpi-aq-normal').textContent = fmtK(normal);
+    document.getElementById('kpi-aq-overdue').textContent = fmtK(overdue);
+    document.getElementById('kpi-aq-total').textContent = fmtK(total);
+    if (total && overdue) {
+      document.getElementById('kpi-aq-ratio').textContent = (overdue / total * 100).toFixed(2) + '%';
+    }
+  }
+
+  // 차트 - 연체율 추이
+  const totalArr = filtered.map(([, date]) => d.items['융잔합계']?.[date] || 0);
+  const overdueArr = filtered.map(([, date]) => d.items['연체합계']?.[date] || 0);
+  const ratioArr = totalArr.map((t, i) => t > 0 ? +(overdueArr[i] / t * 100).toFixed(2) : 0);
+
+  drawLineChart('chart-asset', filtered.map(([, d]) => d),
+    [
+      { label: '연체율(%)', data: ratioArr, color: '#ef4444' },
+    ], '%');
+}
+
+// ===== 영업현황 렌더링 =====
+function renderBusiness() {
+  const d = appData.business_status;
+  if (!d) return;
+
+  const period = document.getElementById('bs2-period').value;
+  const filtered = getFilteredDates(d.dates || {}, period);
+
+  const header = document.getElementById('biz-header');
+  header.innerHTML = '<th class="label" style="min-width:200px;">구분</th>' +
+    filtered.map(([, date]) => `<th>${date}</th>`).join('');
+
+  const body = document.getElementById('biz-body');
+  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
+    const cells = filtered.map(([, date]) => {
+      const v = vals[date];
+      if (v === null || v === undefined) return '<td>-</td>';
+      if (typeof v === 'number' && Math.abs(v) < 1 && v !== 0)
+        return `<td>${(v * 100).toFixed(2)}%</td>`;
+      return `<td>${fmtK(v)}</td>`;
+    }).join('');
+    return `<tr><td class="label">${label}</td>${cells}</tr>`;
+  }).join('');
+
+  // 차트
+  const firstItems = Object.keys(d.items || {}).slice(0, 3);
+  drawLineChart('chart-business', filtered.map(([, d]) => d),
+    firstItems.map((item, i) => ({
+      label: item,
+      data: filtered.map(([, date]) => {
+        const v = d.items[item]?.[date];
+        if (v === null || v === undefined) return 0;
+        if (typeof v === 'number' && Math.abs(v) < 1 && v !== 0) return +(v * 100).toFixed(2);
+        return +(v / 1e8).toFixed(2);
+      }),
+      color: ['#3b82f6', '#10b981', '#f59e0b'][i]
+    })), '');
+}
+
+// ===== 대출자산속성 렌더링 =====
+function renderLoanAsset() {
+  const d = appData.loan_asset;
+  if (!d) return;
+
+  const period = document.getElementById('la-period').value;
+  const filtered = getFilteredDates(d.dates || {}, period);
+
+  const header = document.getElementById('la-header');
+  header.innerHTML = '<th class="label" style="min-width:200px;">구분</th>' +
+    filtered.map(([, date]) => `<th>${date}</th>`).join('');
+
+  const body = document.getElementById('la-body');
+  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
+    const cells = filtered.map(([, date]) => {
+      const v = vals[date];
+      if (v === null || v === undefined) return '<td>-</td>';
+      if (typeof v === 'number' && Math.abs(v) < 1 && v !== 0)
+        return `<td>${(v * 100).toFixed(2)}%</td>`;
+      return `<td>${fmtK(v)}</td>`;
+    }).join('');
+    return `<tr><td class="label">${label}</td>${cells}</tr>`;
+  }).join('');
+
+  // 차트 - 파이 차트
+  const lastDate = filtered.length > 0 ? filtered[filtered.length - 1][1] : null;
+  if (lastDate) {
+    const items = Object.entries(d.items || {}).slice(0, 8);
+    const vals = items.map(([, v]) => {
+      const n = v[lastDate];
+      return (n && typeof n === 'number') ? Math.abs(n) / 1e8 : 0;
+    }).filter((v, i) => v > 0);
+    const labels = items.filter((_, i) => {
+      const n = items[i][1][lastDate];
+      return n && typeof n === 'number' && Math.abs(n) > 0;
+    }).map(([l]) => l);
+
+    if (charts['chart-loan']) charts['chart-loan'].destroy();
+    const ctx = document.getElementById('chart-loan');
+    if (ctx && labels.length > 0) {
+      charts['chart-loan'] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: vals, backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+      });
+    }
+  }
+}
+
+// ===== 차입현황 렌더링 =====
+function renderBorrowing() {
+  const d = appData.borrowing;
+  if (!d || !d.raw) return;
+
+  const rows = d.raw;
+  if (rows.length === 0) return;
+
+  // 헤더 (첫 번째 유효 행)
+  const headerRow = rows[0];
+  const header = document.getElementById('bor-header');
+  header.innerHTML = headerRow.map((v, i) => `<th class="${i === 0 ? 'label' : ''}" style="min-width:100px;">${v || ''}</th>`).join('');
+
+  const tbody = document.getElementById('bor-body');
+  tbody.innerHTML = rows.slice(1).map(row => {
+    return '<tr>' + row.map((v, i) => {
+      if (v === null || v === undefined) return '<td>-</td>';
+      if (i === 0) return `<td class="label">${v}</td>`;
+      if (typeof v === 'number') return `<td>${fmtK(v)}</td>`;
+      return `<td>${v}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  // BSPL 요약에서 차입금 KPI
+  const bsData = appData.bs_is?.bs?.items;
+  if (bsData) {
+    const dates = appData.bs_is?.bs?.dates || {};
+    const sortedDates = Object.values(dates).sort();
+    const lastDate = sortedDates[sortedDates.length - 1];
+    document.getElementById('kpi-bor-short').textContent = fmtK(bsData['단기차입금']?.[lastDate]);
+    document.getElementById('kpi-bor-long').textContent = fmtK(bsData['장기차입금']?.[lastDate]);
+    document.getElementById('kpi-bor-bond').textContent = fmtK(bsData['사채']?.[lastDate]);
+    const short = bsData['단기차입금']?.[lastDate] || 0;
+    const long = bsData['장기차입금']?.[lastDate] || 0;
+    const bond = bsData['사채']?.[lastDate] || 0;
+    document.getElementById('kpi-bor-total').textContent = fmtK(short + long + bond);
+  }
+}
+
+// ===== 차트 유틸 =====
+function drawLineChart(canvasId, labels, datasets, yLabel) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  charts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: datasets.map(ds => ({
+        label: ds.label,
+        data: ds.data,
+        borderColor: ds.color,
+        backgroundColor: ds.color + '22',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 2,
+        borderWidth: 2
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        x: { ticks: { maxRotation: 45, font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { font: { size: 10 }, callback: v => v.toLocaleString() + (yLabel ? yLabel : '') }, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+}
+
+// ===== 토스트 =====
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ===== 로딩 =====
+function showLoading() { document.getElementById('loading').classList.add('show'); }
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+// ===== 초기화 =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadAllData();
+});
+</script>
+</body>
+</html>
