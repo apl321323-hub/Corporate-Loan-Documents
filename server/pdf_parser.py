@@ -173,6 +173,26 @@ def _parse_bs(raw: dict) -> dict:
             if cur_val is not None:
                 add(excel_label, cur_val)
 
+    # 유형자산 순장부가 = 취득가 - 감가상각누계액 → 3. 기타자산에 합산
+    # PDF 구조: 비품(취득가) / 감가상각누계액XX (누계) / 시설장치(취득가) / 감가상각누계액XX (누계)
+    tangible_net = 0.0
+    for k, v in raw.items():
+        # "비품", "시설장치" → 취득가
+        if k in ("비품", "시설장치"):
+            if v[0] is not None:
+                tangible_net += v[0]
+        # "감가상각누계액..." → 누계액 차감
+        elif k.startswith("감가상각누계액"):
+            if v[0] is not None:
+                tangible_net -= v[0]
+    if tangible_net != 0:
+        add("3. 기타자산", tangible_net)
+
+    # 무형자산 순장부가 = 소프트웨어 + 개발비 → 3. 기타자산에 합산
+    for k in ("소프트웨어", "개발비"):
+        if k in raw and raw[k][0] is not None:
+            add("3. 기타자산", raw[k][0])
+
     # 대손충당금: 엑셀 원본이 양수 표기 기준이므로 절댓값으로 저장
     if "대손충당금" in result:
         result["대손충당금"] = abs(result["대손충당금"])
