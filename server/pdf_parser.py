@@ -173,11 +173,9 @@ def _parse_bs(raw: dict) -> dict:
             if cur_val is not None:
                 add(excel_label, cur_val)
 
-    # 대손충당금은 음수로 저장 (엑셀도 음수 표기)
+    # 대손충당금: 엑셀 원본이 양수 표기 기준이므로 절댓값으로 저장
     if "대손충당금" in result:
-        v = result["대손충당금"]
-        if v > 0:
-            result["대손충당금"] = -v
+        result["대손충당금"] = abs(result["대손충당금"])
 
     return result
 
@@ -291,9 +289,8 @@ def _parse_summary(raw: dict, bs_vals: dict, is_vals: dict) -> dict:
         nk = _normalize(pdf_key)
         if nk in raw and raw[nk][0] is not None:
             v = raw[nk][0]
-            if sum_label == "대손충당금" and v > 0:
-                v = -v
-            result[sum_label] = v
+            # 대손충당금: 엑셀 원본이 양수 기준이므로 절댓값으로 저장
+            result[sum_label] = abs(v) if sum_label == "대손충당금" else v
 
     # 7) 유형자산: (항목번호, 소계) 구조 → prev_v가 실제 소계
     유형_key = _normalize("유형자산")
