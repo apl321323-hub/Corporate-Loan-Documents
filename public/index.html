@@ -382,6 +382,35 @@
     text-align: center;
     vertical-align: middle;
   }
+  /* 사이드바 구분선 */
+  .nav-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 8px 14px; }
+  #sidebar nav a.nav-upload { color: var(--accent); font-weight: 600; }
+  #sidebar nav a.nav-upload:hover { background: rgba(255,235,59,0.1); }
+  #sidebar nav a.nav-upload.active { background: var(--accent); color: #1e3a5f; }
+  /* 업로드 페이지 그리드 */
+  .upload-page-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .upload-sector-card {
+    background: #fff; border-radius: 12px; padding: 20px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .upload-sector-header { display: flex; align-items: flex-start; gap: 12px; }
+  .sector-badge { color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; margin-top: 2px; }
+  .upload-sector-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+  .upload-sector-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .upload-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; margin-left: auto; margin-top: 4px; flex-shrink: 0; }
+  .upload-status-dot.done { background: #16a34a; }
+  .drop-zone { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 18px 16px; text-align: center; cursor: pointer; transition: all 0.2s; color: #94a3b8; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background: #f0f9ff; color: var(--primary); }
+  .drop-zone i { font-size: 22px; margin-bottom: 6px; display: block; }
+  .drop-text { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+  .drop-sub { font-size: 10px; color: #94a3b8; }
+  .upload-progress { display: none; }
+  .upload-status-text { font-size: 12px; color: #374151; font-weight: 600; margin-bottom: 4px; }
+  .upload-action-row { text-align: right; }
+  .btn-upload { color: #fff; border: none; border-radius: 7px; padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer; opacity: 0.95; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-upload:hover { opacity: 1; }
+  .btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -414,10 +443,11 @@
     <a onclick="showPage('page-borrowing')" id="nav-borrowing">
       <i class="fas fa-credit-card"></i> 차입현황
     </a>
+    <div class="nav-divider"></div>
+    <a onclick="showPage('page-upload')" id="nav-upload" class="nav-upload">
+      <i class="fas fa-file-upload"></i> 엑셀 업로드
+    </a>
   </nav>
-  <button class="upload-btn" onclick="openUpload()">
-    <i class="fas fa-upload"></i> 엑셀 업로드
-  </button>
 </aside>
 
 <!-- Main -->
@@ -1003,116 +1033,127 @@
   </section>
 </main>
 
-<!-- Upload Modal (다중 섹터) -->
-<div id="upload-modal">
-  <div class="modal-box" style="max-width:680px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <h3 style="margin:0;"><i class="fas fa-file-excel" style="color:#16a34a;margin-right:8px;"></i>자료 업로드</h3>
-      <button onclick="closeUpload()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;">✕</button>
-    </div>
-    <p style="margin:0 0 20px;color:#64748b;font-size:13px;">업로드할 자료 유형을 선택하여 파일을 올려주세요.</p>
+<!-- Upload Modal (다중 섹터) - 제거됨, page-upload 페이지로 대체 -->
+
+<!-- ===== 업로드 페이지 ===== -->
+<section class="page" id="page-upload">
+  <div class="section-header">
+    <h3><i class="fas fa-file-excel" style="color:#16a34a;margin-right:8px;"></i>엑셀 업로드</h3>
+    <span style="font-size:12px;color:#64748b;">업로드할 자료를 선택하여 파일을 올려주세요.</span>
+  </div>
+
+  <div class="upload-page-grid">
 
     <!-- 섹터 1: 기업여신자료 -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="background:#1e3a5f;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 1</span>
-        <span style="font-size:14px;font-weight:700;color:#1e293b;">기업여신자료</span>
-        <span style="font-size:11px;color:#64748b;">(재무제표, 현금흐름, 영업현황, 차입현황 등)</span>
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#1e3a5f;">섹터 1</span>
+        <div>
+          <div class="upload-sector-title">기업여신자료</div>
+          <div class="upload-sector-desc">재무제표, 현금흐름, 영업현황, 차입현황 등</div>
+        </div>
+        <span class="upload-status-dot" id="dot-main"></span>
       </div>
-      <div class="drop-zone" id="drop-zone-main" onclick="document.getElementById('file-input-main').click()" style="padding:20px;">
-        <i class="fas fa-cloud-upload-alt" style="font-size:24px;"></i>
-        <div class="drop-text" id="drop-text-main">파일을 여기에 드래그하거나 클릭하여 선택</div>
-        <div class="drop-sub">.xlsx, .xls 파일 지원</div>
+      <div class="drop-zone" id="drop-zone-main" onclick="document.getElementById('file-input-main').click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <div class="drop-text" id="drop-text-main">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">.xlsx, .xls 지원</div>
       </div>
       <input type="file" id="file-input-main" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'main')">
-      <div class="upload-progress" id="upload-progress-main" style="margin-top:10px;">
-        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-main">업로드 중...</div>
+      <div class="upload-progress" id="upload-progress-main">
+        <div class="upload-status-text" id="upload-status-main">업로드 중...</div>
         <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-main"></div></div>
       </div>
-      <div style="margin-top:10px;text-align:right;">
-        <button class="btn-primary" onclick="uploadFile('main')" id="upload-btn-main" disabled style="padding:8px 18px;font-size:12px;">
-          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('main')" id="upload-btn-main" disabled style="background:#1e3a5f;">
+          <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
     </div>
 
     <!-- 섹터 2: 결산자료 -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 2</span>
-        <span style="font-size:14px;font-weight:700;color:#1e293b;">결산자료</span>
-        <span style="font-size:11px;color:#64748b;">(개인별 대출 결산 데이터 → 자산건전성 분석)</span>
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#7c3aed;">섹터 2</span>
+        <div>
+          <div class="upload-sector-title">결산자료</div>
+          <div class="upload-sector-desc">개인별 대출 결산 데이터 → 자산건전성 분석</div>
+        </div>
+        <span class="upload-status-dot" id="dot-settle"></span>
       </div>
-      <div class="drop-zone" id="drop-zone-settle" onclick="document.getElementById('file-input-settle').click()" style="padding:20px;">
-        <i class="fas fa-table" style="font-size:24px;"></i>
-        <div class="drop-text" id="drop-text-settle">파일을 여기에 드래그하거나 클릭하여 선택</div>
-        <div class="drop-sub">결산자료_YYYYMMDD.xlsx 형식 | H=현재상품, J=연체일수, L=잔액</div>
+      <div class="drop-zone" id="drop-zone-settle" onclick="document.getElementById('file-input-settle').click()">
+        <i class="fas fa-table"></i>
+        <div class="drop-text" id="drop-text-settle">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">결산자료_YYYYMMDD.xlsx | H=현재상품, J=연체일수, L=잔액</div>
       </div>
       <input type="file" id="file-input-settle" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'settle')">
-      <div class="upload-progress" id="upload-progress-settle" style="margin-top:10px;">
-        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-settle">업로드 중...</div>
+      <div class="upload-progress" id="upload-progress-settle">
+        <div class="upload-status-text" id="upload-status-settle">업로드 중...</div>
         <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-settle"></div></div>
       </div>
-      <div style="margin-top:10px;text-align:right;">
-        <button class="btn-primary" onclick="uploadFile('settle')" id="upload-btn-settle" disabled style="padding:8px 18px;font-size:12px;background:#7c3aed;">
-          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('settle')" id="upload-btn-settle" disabled style="background:#7c3aed;">
+          <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
     </div>
 
     <!-- 섹터 3: 기업정보 -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="background:#0891b2;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 3</span>
-        <span style="font-size:14px;font-weight:700;color:#1e293b;">기업정보</span>
-        <span style="font-size:11px;color:#64748b;">(기업여신자료_기업현황.xlsx → 기업정보 탭 자동입력)</span>
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#0891b2;">섹터 3</span>
+        <div>
+          <div class="upload-sector-title">기업정보</div>
+          <div class="upload-sector-desc">기업여신자료_기업현황.xlsx → 기업정보 탭 자동입력</div>
+        </div>
+        <span class="upload-status-dot" id="dot-company"></span>
       </div>
-      <div class="drop-zone" id="drop-zone-company" onclick="document.getElementById('file-input-company').click()" style="padding:20px;">
-        <i class="fas fa-building" style="font-size:24px;"></i>
-        <div class="drop-text" id="drop-text-company">파일을 여기에 드래그하거나 클릭하여 선택</div>
+      <div class="drop-zone" id="drop-zone-company" onclick="document.getElementById('file-input-company').click()">
+        <i class="fas fa-building"></i>
+        <div class="drop-text" id="drop-text-company">클릭하거나 파일을 드래그하여 선택</div>
         <div class="drop-sub">기업여신자료_기업현황.xlsx 형식</div>
       </div>
       <input type="file" id="file-input-company" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'company')">
-      <div class="upload-progress" id="upload-progress-company" style="margin-top:10px;">
-        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-company">업로드 중...</div>
+      <div class="upload-progress" id="upload-progress-company">
+        <div class="upload-status-text" id="upload-status-company">업로드 중...</div>
         <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-company"></div></div>
       </div>
-      <div style="margin-top:10px;text-align:right;">
-        <button class="btn-primary" onclick="uploadFile('company')" id="upload-btn-company" disabled style="padding:8px 18px;font-size:12px;background:#0891b2;">
-          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('company')" id="upload-btn-company" disabled style="background:#0891b2;">
+          <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
     </div>
 
     <!-- 섹터 4: BS/IS -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="background:#059669;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 4</span>
-        <span style="font-size:14px;font-weight:700;color:#1e293b;">재무제표 (BS/IS)</span>
-        <span style="font-size:11px;color:#64748b;">(기업여신자료 - isbs.xlsx → BS/IS 탭 자동입력)</span>
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#059669;">섹터 4</span>
+        <div>
+          <div class="upload-sector-title">재무제표 (BS/IS)</div>
+          <div class="upload-sector-desc">기업여신자료 - isbs.xlsx → BS/IS 탭 자동입력</div>
+        </div>
+        <span class="upload-status-dot" id="dot-bsis"></span>
       </div>
-      <div class="drop-zone" id="drop-zone-bsis" onclick="document.getElementById('file-input-bsis').click()" style="padding:20px;">
-        <i class="fas fa-balance-scale" style="font-size:24px;color:#059669;"></i>
-        <div class="drop-text" id="drop-text-bsis">파일을 여기에 드래그하거나 클릭하여 선택</div>
-        <div class="drop-sub">기업여신자료 - isbs.xlsx 형식 (BSPL_요약, 1. BS, 2. IS 시트)</div>
+      <div class="drop-zone" id="drop-zone-bsis" onclick="document.getElementById('file-input-bsis').click()">
+        <i class="fas fa-balance-scale" style="color:#059669;"></i>
+        <div class="drop-text" id="drop-text-bsis">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">기업여신자료 - isbs.xlsx (BSPL_요약, 1. BS, 2. IS 시트)</div>
       </div>
       <input type="file" id="file-input-bsis" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'bsis')">
-      <div class="upload-progress" id="upload-progress-bsis" style="margin-top:10px;">
-        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-bsis">업로드 중...</div>
+      <div class="upload-progress" id="upload-progress-bsis">
+        <div class="upload-status-text" id="upload-status-bsis">업로드 중...</div>
         <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-bsis"></div></div>
       </div>
-      <div style="margin-top:10px;text-align:right;">
-        <button class="btn-primary" onclick="uploadFile('bsis')" id="upload-btn-bsis" disabled style="padding:8px 18px;font-size:12px;background:#059669;">
-          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('bsis')" id="upload-btn-bsis" disabled style="background:#059669;">
+          <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
     </div>
 
-    <div style="margin-top:16px;text-align:right;">
-      <button class="btn-cancel" onclick="closeUpload()">닫기</button>
-    </div>
   </div>
-</div>
+</section>
 
 <!-- Loading -->
 <div id="loading">
@@ -1139,13 +1180,13 @@ function showPage(pageId) {
     'page-company': 'nav-company', 'page-bspl': 'nav-bspl',
     'page-cashflow': 'nav-cashflow', 'page-asset': 'nav-asset',
     'page-business': 'nav-business', 'page-loan': 'nav-loan',
-    'page-borrowing': 'nav-borrowing'
+    'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload'
   };
   const titleMap = {
     'page-company': '기업정보', 'page-bspl': '재무상태표 / 손익계산서',
     'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
     'page-business': '영업현황', 'page-loan': '대출자산속성',
-    'page-borrowing': '차입현황'
+    'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드'
   };
   const nav = document.getElementById(navMap[pageId]);
   if (nav) nav.classList.add('active');
@@ -1176,28 +1217,11 @@ function switchBsisTab(tab) {
   });
 }
 
-// ===== 업로드 모달 (다중 섹터) =====
-const selectedFiles = { main: null, settle: null, company: null, bsis: null };
+// ===== 업로드 (다중 섹터) =====
+function openUpload() { showPage('page-upload'); }
+function closeUpload() { showPage('page-company'); }
 
-function openUpload() {
-  document.getElementById('upload-modal').classList.add('open');
-}
-function closeUpload() {
-  document.getElementById('upload-modal').classList.remove('open');
-  ['main','settle','company','bsis'].forEach(s => {
-    selectedFiles[s] = null;
-    const inp = document.getElementById(`file-input-${s}`);
-    if (inp) inp.value = '';
-    const dt = document.getElementById(`drop-text-${s}`);
-    if (dt) dt.textContent = '파일을 여기에 드래그하거나 클릭하여 선택';
-    const prog = document.getElementById(`upload-progress-${s}`);
-    if (prog) prog.style.display = 'none';
-    const btn = document.getElementById(`upload-btn-${s}`);
-    if (btn) btn.disabled = true;
-    const bar = document.getElementById(`progress-bar-${s}`);
-    if (bar) bar.style.width = '0%';
-  });
-}
+const selectedFiles = { main: null, settle: null, company: null, bsis: null };
 
 // 드래그 앤 드롭 초기화
 ['main','settle','company','bsis'].forEach(sector => {
@@ -1254,6 +1278,8 @@ async function uploadFile(sector) {
     clearInterval(interval);
     document.getElementById(`progress-bar-${sector}`).style.width = '100%';
     document.getElementById(`upload-status-${sector}`).textContent = '완료!';
+    const dot = document.getElementById(`dot-${sector}`);
+    if (dot) dot.classList.add('done');
 
     if (sector === 'settle') {
       await loadSettlementData();
