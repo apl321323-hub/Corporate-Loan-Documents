@@ -122,12 +122,20 @@
   .bsis-table { table-layout: auto; white-space: nowrap; }
   .bsis-table th, .bsis-table td { min-width: 90px; text-align: right; }
   .bsis-table th.label, .bsis-table td.label { text-align: left; position: sticky; left: 0; background: #f8fafc; z-index: 1; min-width: 200px; }
-  .bsis-table td.label.section { background: #eff6ff; }
-  .bsis-table td.label.indent { padding-left: 24px; }
-  .bsis-table td.label.indent2 { padding-left: 40px; }
+  .bsis-table td.label.section { background: #eff6ff; font-weight: 700; color: var(--primary); }
+  .bsis-table td.label.indent { padding-left: 28px; font-weight: 400; color: #475569; font-size: 13px; }
+  .bsis-table td.label.indent2 { padding-left: 44px; font-weight: 400; color: #64748b; font-size: 12px; }
+  .bsis-table td.label.ratio { font-style: italic; color: #7c3aed; font-weight: 600; }
   .bsis-table thead th { position: sticky; top: 0; background: #1e3a5f; color: #fff; z-index: 2; text-align: center; }
   .bsis-table thead th.label { z-index: 3; background: #1e3a5f; color: #fff; text-align: left; }
   .bsis-table td.neg { color: #dc2626; }
+  /* summary 테이블 행 스타일 */
+  .bsis-table tr.row-section td { background: #eff6ff; }
+  .bsis-table tr.row-section td.label { background: #eff6ff; }
+  .bsis-table tr.row-indent td { background: #fff; }
+  .bsis-table tr.row-indent:hover td { background: #f8fafc; }
+  .bsis-table tr.row-ratio td { background: #f5f3ff; border-top: 1px solid #e2e8f0; }
+  .bsis-table tr.row-ratio td.label { background: #f5f3ff; }
   .bsis-table td.latest { background: #fffbeb; font-weight: 600; }
   .data-table td.positive { color: #16a34a; }
   .data-table td.negative { color: #dc2626; }
@@ -1845,19 +1853,33 @@ function renderBSIS() {
     const lastFi = fh.length - 1;
     buildHeader('summary-header', fh, '구분');
 
-    // 섹션/비율 항목 분류
+    // 섹션(대분류) / 소분류(indent) / 비율 항목 분류
     const sumSections = ['자산총계','부채총계','자본총계','영업수익','영업이익','당기손익'];
     const sumRatios   = ['부채비율','차입금의존도','ROA','ROE'];
 
+    // 대분류 아래 들여쓰기할 소분류 목록 (대분류 기준으로 그룹화)
+    const indentUnder = {
+      '자산총계': ['미수수익','미수금','선급금','가지급금','선급비용','선납세금','유형자산','무형자산','기타비유동자산','기타자산','현금및현금성자산','대출채권','대손충당금','대출평잔'],
+      '부채총계': ['미지급금','예수금','가수금','미지급세금','미지급비용','당기법인세부채','선수금','기타부채','단기차입금','장기차입금','사채'],
+      '자본총계': ['자본금','자본잉여금','이익잉여금'],
+      '영업수익': ['지급이자','중개수수료','판관비','대손상각비'],
+      '영업이익': [],
+      '당기손익': ['영업활동 현금흐름','투자활동 현금흐름','재무활동 현금흐름'],
+    };
+    // 라벨 → indent 여부 빠른 조회용 Set
+    const indentSet = new Set(Object.values(indentUnder).flat());
+    // 비율 그룹 앞에 구분선용 Set
+    const ratioSet = new Set(sumRatios);
+
     document.getElementById('summary-body').innerHTML = summary.rows.map(row => {
       const isSection = sumSections.includes(row.label);
-      const isRatio   = sumRatios.includes(row.label);
+      const isIndent  = !isSection && indentSet.has(row.label);
+      const isRatio   = ratioSet.has(row.label);
       const cells = fh.map(({i}, fi) => {
         const v = row.values[i];
         let fmt = '-';
         if (v !== null && v !== undefined) {
           if (isRatio && typeof v === 'number') {
-            // 비율: 0~1 범위면 %로 변환, 이미 % 수치면 그대로
             fmt = Math.abs(v) <= 1 ? (v * 100).toFixed(2) + '%' : v.toFixed(2) + '%';
           } else {
             fmt = fmtK(v);
@@ -1867,7 +1889,8 @@ function renderBSIS() {
         const latest = fi === lastFi ? ' latest' : '';
         return `<td class="${neg}${latest}">${fmt}</td>`;
       }).join('');
-      return `<tr><td class="label ${isSection ? 'section' : ''}">${row.label}</td>${cells}</tr>`;
+      const labelClass = isSection ? 'section' : isIndent ? 'indent' : isRatio ? 'ratio' : '';
+      return `<tr class="${isIndent ? 'row-indent' : isSection ? 'row-section' : isRatio ? 'row-ratio' : ''}"><td class="label ${labelClass}">${row.label}</td>${cells}</tr>`;
     }).join('');
   }
 }
