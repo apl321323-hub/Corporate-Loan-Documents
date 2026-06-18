@@ -1279,14 +1279,21 @@
 
     <!-- 매핑 테이블 컨테이너 -->
     <div id="mapping-table-wrap" style="overflow-x:auto;max-height:600px;overflow-y:auto;">
-      <table class="data-table" id="mapping-table" style="min-width:700px;">
+      <table class="data-table" id="mapping-table" style="min-width:820px;table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:44px;">
+          <col style="width:200px;">
+          <col style="width:160px;">
+          <col style="min-width:220px;">
+          <col style="width:80px;">
+        </colgroup>
         <thead>
           <tr>
-            <th style="width:36px;text-align:center;">적용</th>
-            <th style="min-width:200px;">PDF 과목명 <small style="font-weight:400;color:#94a3b8;">(정규화된 키)</small></th>
-            <th style="min-width:80px;text-align:right;">당기값 (원)</th>
-            <th style="min-width:240px;">→ 엑셀 과목 매핑</th>
-            <th style="min-width:80px;text-align:center;">처리방식</th>
+            <th style="text-align:center;">적용</th>
+            <th>PDF 과목명 <small style="font-weight:400;color:#94a3b8;">(정규화된 키)</small></th>
+            <th style="text-align:right;">당기값 (원)</th>
+            <th>→ 엑셀 과목 매핑</th>
+            <th style="text-align:center;">처리방식</th>
           </tr>
         </thead>
         <tbody id="mapping-tbody">
@@ -1611,8 +1618,8 @@ function renderMappingTable(sheet) {
     else if (hasMapping)   trClass = 'mapped';
 
     const fmtVal = pdf_val != null
-      ? Number(pdf_val).toLocaleString() + ' 원'
-      : '-';
+      ? Number(pdf_val).toLocaleString('ko-KR')
+      : '—';
 
     // 엑셀 과목 드롭다운
     const optionsHtml = `<option value="">-- 무시 --</option>` +
@@ -1630,8 +1637,8 @@ function renderMappingTable(sheet) {
           ${isEnabled ? 'checked' : ''}
           onchange="toggleMappingRow('${sheet}', ${idx}, this.checked)">
       </td>
-      <td style="font-family:monospace;font-size:11px;">${pdf_key}</td>
-      <td style="text-align:right;color:#475569;">${fmtVal}</td>
+      <td style="font-family:monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${pdf_key}">${pdf_key}</td>
+      <td style="text-align:right;font-family:monospace;font-size:12px;font-weight:600;color:${pdf_val != null ? '#1e3a5f' : '#cbd5e1'};white-space:nowrap;">${fmtVal}</td>
       <td>
         <select class="map-select"
           onchange="updateMappingLabel('${sheet}', ${idx}, this.value)"
