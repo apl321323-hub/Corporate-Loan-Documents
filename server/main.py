@@ -7,6 +7,7 @@ import os
 import json
 import io
 from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info, parse_bsis
+from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
 app = FastAPI(title="기업여신자료 분석 시스템")
@@ -400,6 +401,80 @@ async def upload_bsis(file: UploadFile = File(...)):
 async def get_bsis():
     """BS/IS 데이터 반환"""
     return uploaded_data.get("bsis", {})
+
+
+@app.post("/api/upload/pdf-fs")
+async def upload_pdf_fs(
+    file: UploadFile = File(...),
+    period: str = "2026.05"
+):
+    """
+    재무제표 PDF 업로드 → BS/IS/Summary 특정 기간 컬럼 업데이트
+    period: "YYYY.MM" 형식 (예: "2026.05")
+    """
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능합니다.")
+
+    bsis_data = uploaded_data.get("bsis", {})
+    if not bsis_data:
+        raise HTTPException(status_code=400, detail="먼저 BS/IS 엑셀 파일(섹터 4)을 업로드하세요.")
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        # PDF 파싱
+        parsed = parse_pdf_fs(tmp_path)
+        os.unlink(tmp_path)
+
+        # 기간이 bsis headers에 없으면 추가
+        added_period = False
+        for sheet_key in ["bs", "is_", "summary"]:
+            sheet = bsis_data.get(sheet_key, {})
+            headers = sheet.get("headers", [])
+            if period not in headers:
+                # 기간을 정렬 삽입 (YYYY.MM 기준)
+                headers.append(period)
+                headers.sort()
+                sheet["headers"] = headers
+                # 모든 row의 values에 None 추가 (삽입 위치에)
+                insert_idx = headers.index(period)
+                for row in sheet.get("rows", []):
+                    row["values"].insert(insert_idx, None)
+                added_period = True
+
+        # PDF 값으로 bsis 업데이트
+        updated_bsis, sheets_updated = apply_pdf_to_bsis(bsis_data, parsed, period)
+        uploaded_data['bsis'] = updated_bsis
+
+        return JSONResponse({
+            "success": True,
+            "message": f"재무제표 '{file.filename}' → {period} 업데이트 완료",
+            "period": period,
+            "period_added": added_period,
+            "sheets_updated": sheets_updated,
+            "parsed_counts": {
+                "bs": len(parsed["bs"]),
+                "is_": len(parsed["is_"]),
+                "summary": len(parsed["summary"]),
+            }
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/api/bsis/periods")
+async def get_bsis_periods():
+    """BS/IS 데이터의 사용 가능한 기간 목록 반환"""
+    bsis_data = uploaded_data.get("bsis", {})
+    periods = {}
+    for sheet_key in ["bs", "is_", "summary"]:
+        sheet = bsis_data.get(sheet_key, {})
+        periods[sheet_key] = sheet.get("headers", [])
+    return JSONResponse(periods)
 
 
 if __name__ == "__main__":

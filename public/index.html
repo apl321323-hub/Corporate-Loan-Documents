@@ -419,6 +419,17 @@
   .btn-upload { color: #fff; border: none; border-radius: 7px; padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer; opacity: 0.95; transition: opacity 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-upload:hover { opacity: 1; }
   .btn-upload:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* PDF 업로드 섹터5 전용 */
+  .upload-sector-card--pdf { border: 1.5px solid #fecaca; background: #fff8f8; }
+  .pdf-upload-body { display: flex; gap: 16px; align-items: flex-start; }
+  .pdf-period-panel { flex: 0 0 220px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .pdf-period-label { font-size: 12px; font-weight: 700; color: #374151; }
+  .pdf-period-row { display: flex; align-items: center; gap: 4px; }
+  .pdf-period-select { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 14px; font-weight: 700; color: #1e293b; background: #f8fafc; cursor: pointer; }
+  .pdf-period-dot { font-size: 16px; font-weight: 700; color: #94a3b8; }
+  .pdf-period-hint { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+  .pdf-period-status { font-size: 11px; padding: 6px 10px; border-radius: 6px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .pdf-dropzone-wrap { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 </style>
 </head>
 <body>
@@ -1156,6 +1167,67 @@
       </div>
     </div>
 
+    <!-- 섹터 5: 재무제표 PDF (월별 업데이트) -->
+    <div class="upload-sector-card upload-sector-card--pdf" style="grid-column: 1 / -1;">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#dc2626;">섹터 5</span>
+        <div>
+          <div class="upload-sector-title">재무제표 PDF <span style="font-size:11px;color:#64748b;font-weight:400;">(월별 업데이트)</span></div>
+          <div class="upload-sector-desc">재무상태표·손익계산서 PDF → BS/IS/요약 탭의 특정 월 컬럼에 자동 입력</div>
+        </div>
+        <span class="upload-status-dot" id="dot-pdf-fs"></span>
+      </div>
+
+      <!-- 년월 선택 + 드롭존 가로 배치 -->
+      <div class="pdf-upload-body">
+        <!-- 년월 선택 패널 -->
+        <div class="pdf-period-panel">
+          <div class="pdf-period-label"><i class="fas fa-calendar-alt"></i> 업데이트 기준 년월</div>
+          <div class="pdf-period-row">
+            <select id="pdf-year" class="pdf-period-select">
+              <!-- JS로 채움 -->
+            </select>
+            <span class="pdf-period-dot">.</span>
+            <select id="pdf-month" class="pdf-period-select">
+              <option value="01">01월</option><option value="02">02월</option>
+              <option value="03">03월</option><option value="04">04월</option>
+              <option value="05" selected>05월</option><option value="06">06월</option>
+              <option value="07">07월</option><option value="08">08월</option>
+              <option value="09">09월</option><option value="10">10월</option>
+              <option value="11">11월</option><option value="12">12월</option>
+            </select>
+          </div>
+          <div class="pdf-period-hint">
+            <i class="fas fa-info-circle"></i>
+            재무제표의 기준 월을 선택하세요<br>
+            <small>예: 2026년 05월 31일 현재 → 2026.05</small>
+          </div>
+          <div id="pdf-period-status" class="pdf-period-status" style="display:none;"></div>
+        </div>
+
+        <!-- 드롭존 -->
+        <div class="pdf-dropzone-wrap">
+          <div class="drop-zone" id="drop-zone-pdf-fs" onclick="document.getElementById('file-input-pdf-fs').click()">
+            <i class="fas fa-file-pdf" style="color:#dc2626;font-size:28px;"></i>
+            <div class="drop-text" id="drop-text-pdf-fs">재무제표 PDF 파일 선택</div>
+            <div class="drop-sub">재무상태표 + 손익계산서 포함 PDF<br>예: 2605재무제표_에이피엘.pdf</div>
+          </div>
+          <input type="file" id="file-input-pdf-fs" accept=".pdf" style="display:none" onchange="handleFileSelect(event,'pdf-fs')">
+          <div class="upload-progress" id="upload-progress-pdf-fs">
+            <div class="upload-status-text" id="upload-status-pdf-fs">업로드 중...</div>
+            <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-pdf-fs"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="upload-action-row">
+        <div id="pdf-fs-result" style="font-size:12px;color:#059669;display:none;"></div>
+        <button class="btn-upload" onclick="uploadPdfFs()" id="upload-btn-pdf-fs" disabled style="background:#dc2626;">
+          <i class="fas fa-file-upload"></i> PDF 업로드 &amp; 적용
+        </button>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -1227,10 +1299,10 @@ function switchBsisTab(tab) {
 function openUpload() { showPage('page-upload'); }
 function closeUpload() { showPage('page-company'); }
 
-const selectedFiles = { main: null, settle: null, company: null, bsis: null };
+const selectedFiles = { main: null, settle: null, company: null, bsis: null, 'pdf-fs': null };
 
 // 드래그 앤 드롭 초기화
-['main','settle','company','bsis'].forEach(sector => {
+['main','settle','company','bsis','pdf-fs'].forEach(sector => {
   const dz = document.getElementById(`drop-zone-${sector}`);
   if (!dz) return;
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -1240,6 +1312,20 @@ const selectedFiles = { main: null, settle: null, company: null, bsis: null };
     if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0], sector);
   });
 });
+
+// 년도 select 초기화 (현재 연도 기준 ±3년)
+(function initPdfYearSelect() {
+  const sel = document.getElementById('pdf-year');
+  if (!sel) return;
+  const curYear = new Date().getFullYear();
+  for (let y = curYear - 3; y <= curYear + 1; y++) {
+    const opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = y + '년';
+    if (y === curYear) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
 
 function handleFileSelect(e, sector) {
   if (e.target.files[0]) setFile(e.target.files[0], sector);
@@ -1310,6 +1396,75 @@ async function uploadFile(sector) {
     document.getElementById(`upload-status-${sector}`).textContent = '오류 발생';
     document.getElementById(`upload-btn-${sector}`).disabled = false;
     showToast('❌ 업로드 실패: ' + (e.response?.data?.detail || e.message), 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ===== PDF 재무제표 업로드 =====
+async function uploadPdfFs() {
+  const file = selectedFiles['pdf-fs'];
+  if (!file) { showToast('❌ PDF 파일을 먼저 선택하세요.', 'error'); return; }
+
+  const year  = document.getElementById('pdf-year').value;
+  const month = document.getElementById('pdf-month').value;
+  const period = `${year}.${month}`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('period', period);
+
+  document.getElementById('upload-progress-pdf-fs').style.display = 'block';
+  document.getElementById('upload-btn-pdf-fs').disabled = true;
+  document.getElementById('upload-status-pdf-fs').textContent = `${period} 데이터 처리 중...`;
+
+  let prog = 0;
+  const interval = setInterval(() => {
+    prog = Math.min(prog + 3, 85);
+    document.getElementById('progress-bar-pdf-fs').style.width = prog + '%';
+  }, 200);
+
+  try {
+    showLoading();
+    const res = await axios.post(
+      `${API_BASE}/api/upload/pdf-fs?period=${encodeURIComponent(period)}`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 }
+    );
+    clearInterval(interval);
+    document.getElementById('progress-bar-pdf-fs').style.width = '100%';
+    document.getElementById('upload-status-pdf-fs').textContent = '완료!';
+
+    const dot = document.getElementById('dot-pdf-fs');
+    if (dot) dot.classList.add('done');
+
+    // 결과 표시
+    const resultEl = document.getElementById('pdf-fs-result');
+    const cnt = res.data.parsed_counts || {};
+    resultEl.innerHTML = `
+      <i class="fas fa-check-circle" style="color:#059669;"></i>
+      <strong>${period}</strong> 업데이트 완료
+      | BS ${cnt.bs||0}항목 · IS ${cnt.is_||0}항목 · 요약 ${cnt.summary||0}항목
+      ${res.data.period_added ? '<span style="color:#dc2626;font-weight:700;"> ★ 신규 기간 추가됨</span>' : ''}
+    `;
+    resultEl.style.display = 'block';
+
+    // BS/IS 데이터 새로고침
+    await loadBsisData();
+
+    // period 상태 업데이트
+    const statusEl = document.getElementById('pdf-period-status');
+    statusEl.textContent = `✅ ${period} BS/IS 탭 반영 완료`;
+    statusEl.style.display = 'block';
+
+    showToast(`✅ 재무제표 ${period} 업데이트 완료 (${(res.data.sheets_updated||[]).join(', ')})`, 'success');
+  } catch (e) {
+    clearInterval(interval);
+    document.getElementById('progress-bar-pdf-fs').style.width = '0%';
+    document.getElementById('upload-status-pdf-fs').textContent = '오류 발생';
+    document.getElementById('upload-btn-pdf-fs').disabled = false;
+    const detail = e.response?.data?.detail || e.message;
+    showToast('❌ PDF 업로드 실패: ' + detail, 'error');
   } finally {
     hideLoading();
   }
