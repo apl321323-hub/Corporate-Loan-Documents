@@ -137,17 +137,19 @@
 
   /* Summary KPI cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi-grid.kpi-6col { grid-template-columns: repeat(6, 1fr); }
   .kpi-card {
-    background: #fff; border-radius: 10px; padding: 16px 18px;
+    background: #fff; border-radius: 10px; padding: 10px 14px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
     border-left: 4px solid var(--primary);
   }
   .kpi-card.green { border-color: #16a34a; }
   .kpi-card.yellow { border-color: #d97706; }
   .kpi-card.red { border-color: #dc2626; }
-  .kpi-card .kpi-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
-  .kpi-card .kpi-value { font-size: 22px; font-weight: 800; color: #1e293b; }
-  .kpi-card .kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+  .kpi-card .kpi-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 3px; }
+  .kpi-card .kpi-value { font-size: 18px; font-weight: 800; color: #1e293b; }
+  .kpi-card .kpi-value .kpi-unit { font-size: 11px; font-weight: 500; color: #94a3b8; margin-left: 2px; }
+  .kpi-card .kpi-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; }
 
   /* Upload modal */
   #upload-modal {
@@ -264,6 +266,7 @@
   /* Responsive */
   @media (max-width: 900px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-grid.kpi-6col { grid-template-columns: repeat(3, 1fr); }
     .info-grid { grid-template-columns: repeat(2, 1fr); }
   }
 
@@ -749,13 +752,13 @@
       </div>
     </div>
 
-    <div class="kpi-grid" id="bspl-kpis">
-      <div class="kpi-card"><div class="kpi-label">자산총계</div><div class="kpi-value" id="kpi-assets">-</div><div class="kpi-sub" id="kpi-assets-date">최근 기준월</div></div>
-      <div class="kpi-card green"><div class="kpi-label">자본총계</div><div class="kpi-value" id="kpi-equity">-</div><div class="kpi-sub">최근 기준월</div></div>
-      <div class="kpi-card yellow"><div class="kpi-label">부채총계</div><div class="kpi-value" id="kpi-debt">-</div><div class="kpi-sub">최근 기준월</div></div>
+    <div class="kpi-grid kpi-6col" id="bspl-kpis">
+      <div class="kpi-card"><div class="kpi-label">자산총계 <span style="color:#94a3b8;font-weight:400;">(백만원)</span></div><div class="kpi-value" id="kpi-assets">-</div><div class="kpi-sub" id="kpi-assets-date">최근 기준월</div></div>
+      <div class="kpi-card green"><div class="kpi-label">자본총계 <span style="color:#94a3b8;font-weight:400;">(백만원)</span></div><div class="kpi-value" id="kpi-equity">-</div><div class="kpi-sub">최근 기준월</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">부채총계 <span style="color:#94a3b8;font-weight:400;">(백만원)</span></div><div class="kpi-value" id="kpi-debt">-</div><div class="kpi-sub">최근 기준월</div></div>
       <div class="kpi-card red"><div class="kpi-label">부채비율</div><div class="kpi-value" id="kpi-debt-ratio">-</div><div class="kpi-sub">부채/자본×100</div></div>
-      <div class="kpi-card"><div class="kpi-label">영업수익</div><div class="kpi-value" id="kpi-revenue">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
-      <div class="kpi-card green"><div class="kpi-label">당기순이익</div><div class="kpi-value" id="kpi-net-income">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
+      <div class="kpi-card"><div class="kpi-label">영업수익 <span style="color:#94a3b8;font-weight:400;">(백만원)</span></div><div class="kpi-value" id="kpi-revenue">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
+      <div class="kpi-card green"><div class="kpi-label">당기순이익 <span style="color:#94a3b8;font-weight:400;">(백만원)</span></div><div class="kpi-value" id="kpi-net-income">-</div><div class="kpi-sub">최근 기준월(누계)</div></div>
     </div>
 
     <div class="tab-bar">
@@ -1354,16 +1357,14 @@ function fmtNum(val, unit = '백만') {
   return n.toLocaleString();
 }
 
+// 테이블 셀용: 백만원 단위로 표시 (단위 텍스트 없이 숫자만)
 function fmtK(val) {
-  if (!val && val !== 0) return '-';
+  if (val === null || val === undefined || val === '') return '-';
   const n = typeof val === 'number' ? val : parseFloat(val);
   if (isNaN(n)) return String(val);
-  const m = n / 100000000; // 억
-  if (Math.abs(m) >= 1000) return (m / 1000).toFixed(1) + '조';
-  if (Math.abs(m) >= 1) return m.toFixed(0) + '억';
-  const k = n / 1000000;
-  if (Math.abs(k) >= 1) return k.toFixed(0) + '백만';
-  return n.toLocaleString();
+  // 원 단위 → 백만원으로 변환 후 콤마 포맷
+  const m = Math.round(n / 1000000);
+  return m.toLocaleString();
 }
 
 // ===== 기업정보 렌더링 (엑셀 레이아웃 버전) =====
