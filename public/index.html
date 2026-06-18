@@ -395,6 +395,9 @@
   #sidebar nav a.nav-upload { color: var(--accent); font-weight: 600; }
   #sidebar nav a.nav-upload:hover { background: rgba(255,235,59,0.1); }
   #sidebar nav a.nav-upload.active { background: var(--accent); color: #1e3a5f; }
+  #sidebar nav a.nav-mapping { color: #93c5fd; font-weight: 600; }
+  #sidebar nav a.nav-mapping:hover { background: rgba(147,197,253,0.1); }
+  #sidebar nav a.nav-mapping.active { background: #93c5fd; color: #1e3a5f; }
   /* 업로드 페이지 그리드 */
   .upload-page-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
   .upload-sector-card {
@@ -430,6 +433,20 @@
   .pdf-period-hint { font-size: 11px; color: #94a3b8; line-height: 1.5; }
   .pdf-period-status { font-size: 11px; padding: 6px 10px; border-radius: 6px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
   .pdf-dropzone-wrap { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  /* 매핑 설정 테이블 */
+  #mapping-table td, #mapping-table th { padding: 7px 10px; font-size: 12px; }
+  #mapping-table tr.mapped td { background: #dbeafe; }
+  #mapping-table tr.mapped-multi td { background: #fef9c3; }
+  #mapping-table tr.unmapped td { background: #f8fafc; color: #94a3b8; }
+  #mapping-table tr.disabled td { background: #fee2e2; opacity: 0.7; }
+  #mapping-table tr:hover td { filter: brightness(0.97); }
+  .map-select { width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 4px 6px; font-size: 12px; background: #fff; }
+  .map-select:focus { outline: none; border-color: #3b82f6; }
+  .map-check { width: 16px; height: 16px; cursor: pointer; }
+  .map-badge { font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
+  .map-badge.sum  { background: #fde68a; color: #92400e; }
+  .map-badge.one  { background: #bfdbfe; color: #1e40af; }
+  .map-badge.none { background: #e2e8f0; color: #64748b; }
 </style>
 </head>
 <body>
@@ -465,6 +482,9 @@
     <div class="nav-divider"></div>
     <a onclick="showPage('page-upload')" id="nav-upload" class="nav-upload">
       <i class="fas fa-file-upload"></i> 엑셀 업로드
+    </a>
+    <a onclick="showPage('page-mapping')" id="nav-mapping" class="nav-mapping">
+      <i class="fas fa-sliders-h"></i> PDF 매핑 설정
     </a>
   </nav>
 </aside>
@@ -1231,6 +1251,70 @@
   </div>
 </section>
 
+<!-- ===== PDF 매핑 설정 페이지 ===== -->
+<section class="page" id="page-mapping">
+  <div class="section-header" style="margin-bottom:16px;">
+    <h3><i class="fas fa-sliders-h" style="color:#3b82f6;margin-right:8px;"></i>PDF 매핑 설정</h3>
+    <span style="font-size:12px;color:#64748b;">재무제표 PDF 과목을 엑셀 BS/IS/요약 과목에 연결합니다. 설정 저장 후 PDF 업로드 시 자동 적용됩니다.</span>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tab-bar" style="margin-bottom:0;">
+    <button class="tab-btn active" id="tab-map-bs-btn"   onclick="switchMappingTab('bs')">재무상태표 (BS)</button>
+    <button class="tab-btn"        id="tab-map-is-btn"   onclick="switchMappingTab('is_')">손익계산서 (IS)</button>
+    <button class="tab-btn"        id="tab-map-sum-btn"  onclick="switchMappingTab('summary')">BS/PL 요약</button>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:0 0 16px;">
+    <!-- 상단 액션 바 -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+      <span id="mapping-status-text" style="font-size:12px;color:#64748b;flex:1;">로딩 중...</span>
+      <button onclick="resetMappingToDefault()" style="font-size:12px;padding:5px 12px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;color:#64748b;">
+        <i class="fas fa-undo"></i> 기본값 복원
+      </button>
+      <button onclick="saveMappingConfig()" style="font-size:12px;padding:5px 16px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-weight:700;">
+        <i class="fas fa-save"></i> 매핑 설정 저장
+      </button>
+    </div>
+
+    <!-- 매핑 테이블 컨테이너 -->
+    <div id="mapping-table-wrap" style="overflow-x:auto;max-height:600px;overflow-y:auto;">
+      <table class="data-table" id="mapping-table" style="min-width:700px;">
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center;">적용</th>
+            <th style="min-width:200px;">PDF 과목명 <small style="font-weight:400;color:#94a3b8;">(정규화된 키)</small></th>
+            <th style="min-width:80px;text-align:right;">당기값 (원)</th>
+            <th style="min-width:240px;">→ 엑셀 과목 매핑</th>
+            <th style="min-width:80px;text-align:center;">처리방식</th>
+          </tr>
+        </thead>
+        <tbody id="mapping-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:30px;color:#94a3b8;">
+            먼저 BS/IS 엑셀(섹터4)을 업로드하세요
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 매핑 범례 -->
+  <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;">
+    <div style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:#dbeafe;display:inline-block;border:1px solid #93c5fd;"></span> 매핑됨
+    </div>
+    <div style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:#fef9c3;display:inline-block;border:1px solid #fde047;"></span> 합산 (여러 항목→동일 과목)
+    </div>
+    <div style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:#f8fafc;display:inline-block;border:1px solid #e2e8f0;"></span> 무시 (매핑 없음)
+    </div>
+    <div style="font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:#fee2e2;display:inline-block;border:1px solid #fca5a5;"></span> 비활성화
+    </div>
+  </div>
+</section>
+
 </main>
 
 <!-- Loading -->
@@ -1258,17 +1342,22 @@ function showPage(pageId) {
     'page-company': 'nav-company', 'page-bspl': 'nav-bspl',
     'page-cashflow': 'nav-cashflow', 'page-asset': 'nav-asset',
     'page-business': 'nav-business', 'page-loan': 'nav-loan',
-    'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload'
+    'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload', 'page-mapping': 'nav-mapping'
   };
   const titleMap = {
     'page-company': '기업정보', 'page-bspl': '재무상태표 / 손익계산서',
     'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
     'page-business': '영업현황', 'page-loan': '대출자산속성',
-    'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드'
+    'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드', 'page-mapping': 'PDF 매핑 설정'
   };
   const nav = document.getElementById(navMap[pageId]);
   if (nav) nav.classList.add('active');
   document.getElementById('page-title').textContent = titleMap[pageId] || '';
+
+  // 매핑 설정 페이지 진입 시 자동 로드
+  if (pageId === 'page-mapping') {
+    loadMappingConfig();
+  }
 }
 
 // ===== 탭 전환 =====
@@ -1469,6 +1558,146 @@ async function uploadPdfFs() {
     hideLoading();
   }
 }
+
+// ===== PDF 매핑 설정 =====
+let mappingConfig = null;       // 전체 매핑 설정 { bs:[], is_:[], summary:[] }
+let excelOptions  = {};         // { bs:[], is_:[], summary:[] }
+let currentMappingSheet = 'bs'; // 현재 활성 탭
+
+async function loadMappingConfig() {
+  try {
+    const [mapRes, optRes] = await Promise.all([
+      axios.get(`${API_BASE}/api/pdf-mapping`),
+      axios.get(`${API_BASE}/api/pdf-mapping/excel-options`)
+    ]);
+    mappingConfig = mapRes.data;
+    excelOptions  = optRes.data;
+    renderMappingTable(currentMappingSheet);
+  } catch(e) {
+    document.getElementById('mapping-status-text').textContent = '❌ 매핑 설정 로드 실패: ' + e.message;
+  }
+}
+
+function switchMappingTab(sheet) {
+  currentMappingSheet = sheet;
+  ['bs','is_','summary'].forEach(s => {
+    const btn = document.getElementById(`tab-map-${s === 'is_' ? 'is' : s}-btn`);
+    if (btn) btn.classList.toggle('active', s === sheet);
+  });
+  renderMappingTable(sheet);
+}
+
+function renderMappingTable(sheet) {
+  if (!mappingConfig) { loadMappingConfig(); return; }
+  const rows = mappingConfig[sheet] || [];
+  const opts = excelOptions[sheet] || [];
+
+  // 같은 excel_label이 몇 개인지 카운트 (합산 감지)
+  const labelCount = {};
+  rows.forEach(r => {
+    if (r.excel_label) labelCount[r.excel_label] = (labelCount[r.excel_label]||0)+1;
+  });
+
+  const tbody = document.getElementById('mapping-tbody');
+  tbody.innerHTML = rows.map((row, idx) => {
+    const { pdf_key, pdf_val, excel_label, enabled } = row;
+    const isEnabled  = enabled !== false;
+    const hasMapping = !!excel_label;
+    const isMulti    = hasMapping && labelCount[excel_label] > 1;
+
+    let trClass = 'unmapped';
+    if (!isEnabled)        trClass = 'disabled';
+    else if (isMulti)      trClass = 'mapped-multi';
+    else if (hasMapping)   trClass = 'mapped';
+
+    const fmtVal = pdf_val != null
+      ? Number(pdf_val).toLocaleString() + ' 원'
+      : '-';
+
+    // 엑셀 과목 드롭다운
+    const optionsHtml = `<option value="">-- 무시 --</option>` +
+      opts.map(o => `<option value="${o}" ${excel_label === o ? 'selected' : ''}>${o}</option>`).join('');
+
+    let badgeHtml = '';
+    if (!isEnabled)      badgeHtml = `<span class="map-badge none">비활성</span>`;
+    else if (isMulti)    badgeHtml = `<span class="map-badge sum">합산</span>`;
+    else if (hasMapping) badgeHtml = `<span class="map-badge one">1:1</span>`;
+    else                 badgeHtml = `<span class="map-badge none">무시</span>`;
+
+    return `<tr class="${trClass}" data-idx="${idx}">
+      <td style="text-align:center;">
+        <input type="checkbox" class="map-check"
+          ${isEnabled ? 'checked' : ''}
+          onchange="toggleMappingRow('${sheet}', ${idx}, this.checked)">
+      </td>
+      <td style="font-family:monospace;font-size:11px;">${pdf_key}</td>
+      <td style="text-align:right;color:#475569;">${fmtVal}</td>
+      <td>
+        <select class="map-select"
+          onchange="updateMappingLabel('${sheet}', ${idx}, this.value)"
+          ${!isEnabled ? 'disabled' : ''}>
+          ${optionsHtml}
+        </select>
+      </td>
+      <td style="text-align:center;">${badgeHtml}</td>
+    </tr>`;
+  }).join('');
+
+  const mappedCnt  = rows.filter(r => r.enabled !== false && r.excel_label).length;
+  const totalCnt   = rows.length;
+  document.getElementById('mapping-status-text').textContent =
+    `${sheet === 'bs' ? '재무상태표' : sheet === 'is_' ? '손익계산서' : '요약'} — 총 ${totalCnt}개 PDF 과목 중 ${mappedCnt}개 매핑됨`;
+}
+
+function toggleMappingRow(sheet, idx, enabled) {
+  if (!mappingConfig) return;
+  mappingConfig[sheet][idx].enabled = enabled;
+  renderMappingTable(sheet);
+}
+
+function updateMappingLabel(sheet, idx, newLabel) {
+  if (!mappingConfig) return;
+  mappingConfig[sheet][idx].excel_label = newLabel || null;
+  mappingConfig[sheet][idx].enabled = !!newLabel;
+  // 체크박스도 동기화
+  const row = document.querySelector(`#mapping-tbody tr[data-idx="${idx}"]`);
+  if (row) {
+    const cb = row.querySelector('.map-check');
+    if (cb) cb.checked = !!newLabel;
+  }
+  renderMappingTable(sheet);
+}
+
+async function saveMappingConfig() {
+  if (!mappingConfig) return;
+  try {
+    const res = await axios.post(`${API_BASE}/api/pdf-mapping`, mappingConfig);
+    showToast('✅ ' + res.data.message, 'success');
+    document.getElementById('mapping-status-text').textContent += ' · 저장됨 ✅';
+  } catch(e) {
+    showToast('❌ 저장 실패: ' + (e.response?.data?.detail || e.message), 'error');
+  }
+}
+
+async function resetMappingToDefault() {
+  if (!confirm('매핑 설정을 기본값으로 초기화하시겠습니까?')) return;
+  try {
+    // 서버에서 저장된 매핑 삭제 (빈 객체 POST로 초기화 유도)
+    await axios.post(`${API_BASE}/api/pdf-mapping`, { _reset: true });
+    mappingConfig = null;
+    await loadMappingConfig();
+    showToast('✅ 기본값으로 초기화되었습니다.', 'success');
+  } catch(e) {
+    showToast('❌ 초기화 실패: ' + e.message, 'error');
+  }
+}
+
+// page-mapping 진입 시 자동 로드
+const _origShowPage = showPage;
+// showPage는 이미 정의돼 있으므로 page-mapping 진입 시 loadMappingConfig 호출을 훅
+document.addEventListener('DOMContentLoaded', () => {
+  // page-mapping 초기 렌더
+});
 
 // ===== 데이터 로드 =====
 async function loadAllData() {

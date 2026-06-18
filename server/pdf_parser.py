@@ -363,28 +363,68 @@ def _parse_summary(raw: dict, bs_vals: dict, is_vals: dict) -> dict:
 # ──────────────────────────────────────────────
 # 공개 인터페이스
 # ──────────────────────────────────────────────
-def parse_pdf_fs(pdf_path: str) -> dict:
+def apply_user_mapping(raw: dict, user_mapping: dict) -> dict:
+    """
+    사용자가 UI에서 설정한 매핑을 raw 값에 적용
+    user_mapping: { "bs": [{pdf_key, excel_label, enabled}], "is_": [...], "summary": [...] }
+    반환: { "bs": {excel_label: val}, "is_": {...}, "summary": {...} }
+    """
+    result = {"bs": {}, "is_": {}, "summary": {}}
+
+    for sheet_key in ["bs", "is_", "summary"]:
+        rows = user_mapping.get(sheet_key, [])
+        acc = {}  # excel_label → 합산값 (여러 PDF 과목이 같은 엑셀 과목으로 매핑될 수 있음)
+        for row in rows:
+            if not row.get("enabled", True):
+                continue
+            excel_label = row.get("excel_label")
+            if not excel_label:
+                continue
+            pdf_key = row.get("pdf_key", "")
+            if pdf_key in raw:
+                val = raw[pdf_key][0]  # 당기값
+                if val is not None:
+                    acc[excel_label] = acc.get(excel_label, 0.0) + val
+        result[sheet_key] = acc
+
+    return result
+
+
+def parse_pdf_fs(pdf_path: str, user_mapping: dict = None) -> dict:
     """
     재무제표 PDF 파싱 → BS/IS/Summary 값 딕셔너리 반환
-    
+
+    Args:
+        pdf_path:     PDF 파일 경로
+        user_mapping: UI에서 저장한 매핑 설정 (없으면 기본 매핑 사용)
+
     Returns:
         {
           "bs":      { excel_label: float_value, ... },
           "is_":     { excel_label: float_value, ... },
           "summary": { excel_label: float_value, ... },
-          "raw":     { norm_label: (cur, prev), ... }  # 디버깅용
+          "raw":     { norm_label: [cur, prev], ... }
         }
     """
     raw = _extract_raw_values(pdf_path)
-    bs_vals  = _parse_bs(raw)
-    is_vals  = _parse_is(raw)
-    sum_vals = _parse_summary(raw, bs_vals, is_vals)
+
+    if user_mapping:
+        # 사용자 정의 매핑 사용
+        mapped = apply_user_mapping(raw, user_mapping)
+        bs_vals  = mapped["bs"]
+        is_vals  = mapped["is_"]
+        sum_vals = mapped["summary"]
+    else:
+        # 기본 코드 매핑 사용
+        bs_vals  = _parse_bs(raw)
+        is_vals  = _parse_is(raw)
+        sum_vals = _parse_summary(raw, bs_vals, is_vals)
 
     return {
         "bs":      bs_vals,
         "is_":     is_vals,
         "summary": sum_vals,
-        "raw":     {k: list(v) for k, v in raw.items()},  # JSON 직렬화 가능하게
+        "raw":     {k: list(v) for k, v in raw.items()},
     }
 
 

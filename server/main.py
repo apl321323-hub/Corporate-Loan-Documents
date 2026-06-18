@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -10,7 +10,44 @@ from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
-app = FastAPI(title="기업여신자료 분석 시스템")
+from contextlib import asynccontextmanager
+
+# ── 최근 업로드 PDF 경로 (raw값 복원용) ───────────────────────────
+_UPLOADED_FILES_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploaded_files")
+
+def _find_latest_pdf() -> str | None:
+    """uploaded_files 디렉토리에서 가장 최근 PDF 반환"""
+    d = os.path.abspath(_UPLOADED_FILES_DIR)
+    if not os.path.exists(d):
+        return None
+    pdfs = sorted(
+        [os.path.join(d, f) for f in os.listdir(d) if f.lower().endswith(".pdf")],
+        key=os.path.getmtime, reverse=True
+    )
+    return pdfs[0] if pdfs else None
+
+@asynccontextmanager
+async def lifespan(app_):
+    """서버 시작 시 최근 PDF → pdf_raw 복원"""
+    _data_dir = os.path.join(os.path.dirname(__file__), "data")
+    _raw_path = os.path.join(_data_dir, "pdf_raw.json")
+    # 이미 저장된 pdf_raw가 없으면 최신 PDF 파싱
+    if not os.path.exists(_raw_path):
+        pdf_path = _find_latest_pdf()
+        if pdf_path:
+            try:
+                from pdf_parser import parse_pdf_fs
+                parsed = parse_pdf_fs(pdf_path)
+                raw = parsed.get("raw", {})
+                os.makedirs(_data_dir, exist_ok=True)
+                with open(_raw_path, "w", encoding="utf-8") as f:
+                    json.dump(raw, f, ensure_ascii=False)
+                print(f"[startup] pdf_raw 복원 완료: {len(raw)}개 항목")
+            except Exception as ex:
+                print(f"[startup] pdf_raw 복원 실패: {ex}")
+    yield
+
+app = FastAPI(title="기업여신자료 분석 시스템", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +91,21 @@ class PersistentStore:
 
     def __contains__(self, key):
         return os.path.exists(_data_path(key))
+
+    def __delitem__(self, key):
+        path = _data_path(key)
+        if os.path.exists(path):
+            os.remove(path)
+
+    def pop(self, key, *args):
+        """저장 파일 삭제 후 반환 (dict.pop 호환)"""
+        if key in self:
+            val = self.get(key)
+            del self[key]
+            return val
+        if args:
+            return args[0]   # default 반환
+        raise KeyError(key)
 
     def update(self, d: dict):
         for k, v in d.items():
@@ -425,9 +477,14 @@ async def upload_pdf_fs(
             tmp.write(content)
             tmp_path = tmp.name
 
-        # PDF 파싱
-        parsed = parse_pdf_fs(tmp_path)
+        # PDF 파싱 (저장된 사용자 매핑 우선 적용)
+        user_mapping = uploaded_data.get("pdf_mapping", None)
+        parsed = parse_pdf_fs(tmp_path, user_mapping=user_mapping)
         os.unlink(tmp_path)
+
+        # raw 값 저장 (매핑 설정 UI의 '당기값' 표시용)
+        if "raw" in parsed:
+            uploaded_data["pdf_raw"] = parsed["raw"]
 
         # 기간이 bsis headers에 없으면 추가
         added_period = False
@@ -475,6 +532,92 @@ async def get_bsis_periods():
         sheet = bsis_data.get(sheet_key, {})
         periods[sheet_key] = sheet.get("headers", [])
     return JSONResponse(periods)
+
+
+@app.get("/api/pdf-mapping")
+async def get_pdf_mapping():
+    """
+    PDF 과목 → 엑셀 과목 매핑 설정 반환
+    저장된 설정이 없으면 pdf_mapping.py 기본값으로 초기화
+    """
+    saved = uploaded_data.get("pdf_mapping", None)
+    pdf_raw = uploaded_data.get("pdf_raw", {})
+
+    # raw 값에서 당기값(cur) 추출 헬퍼
+    def get_pdf_val(pdf_key):
+        entry = pdf_raw.get(pdf_key)
+        if entry and isinstance(entry, list) and len(entry) > 0 and entry[0] is not None:
+            return entry[0]
+        return None
+
+    if saved:
+        # 저장된 매핑에 pdf_val 동적 주입
+        for sheet_key in ["bs", "is_", "summary"]:
+            for row in saved.get(sheet_key, []):
+                row["pdf_val"] = get_pdf_val(row.get("pdf_key", ""))
+        return JSONResponse(saved)
+
+    # 기본 매핑 설정 생성 (pdf_mapping.py 기반)
+    from pdf_mapping import PDF_BS_MAPPING, PDF_IS_MAPPING, PDF_SUMMARY_MAPPING
+
+    bsis_data = uploaded_data.get("bsis", {})
+    excel_opts = {
+        "bs":      [r["label"] for r in bsis_data.get("bs", {}).get("rows", [])],
+        "is_":     [r["label"] for r in bsis_data.get("is_", {}).get("rows", [])],
+        "summary": [r["label"] for r in bsis_data.get("summary", {}).get("rows", [])],
+    }
+
+    # 각 시트별 매핑 행 목록 생성 (pdf_val 포함)
+    def build_rows(pdf_map, sheet_key):
+        rows = []
+        for pdf_key, excel_label in pdf_map.items():
+            rows.append({
+                "pdf_key":     pdf_key,
+                "pdf_val":     get_pdf_val(pdf_key),  # 최근 PDF 파싱 당기값
+                "excel_label": excel_label,
+                "enabled":     excel_label is not None,
+            })
+        return rows
+
+    config = {
+        "bs":      build_rows(PDF_BS_MAPPING,      "bs"),
+        "is_":     build_rows(PDF_IS_MAPPING,       "is_"),
+        "summary": build_rows(PDF_SUMMARY_MAPPING,  "summary"),
+        "excel_options": excel_opts,
+    }
+    return JSONResponse(config)
+
+
+@app.post("/api/pdf-mapping")
+async def save_pdf_mapping(request: Request):
+    """
+    PDF 매핑 설정 저장
+    Body: { bs: [{pdf_key, excel_label, enabled}], is_: [...], summary: [...] }
+    { _reset: true } 전달 시 저장된 설정 삭제 → 기본값으로 복원
+    """
+    body = await request.json()
+
+    # _reset: true 처리 — 저장된 매핑 삭제 (기본값으로 복원)
+    if body.get("_reset"):
+        if "pdf_mapping" in uploaded_data:
+            del uploaded_data["pdf_mapping"]
+        return JSONResponse({"success": True, "message": "매핑 설정이 기본값으로 복원되었습니다."})
+
+    body.pop("excel_options", None)
+    body.pop("_reset", None)
+    uploaded_data["pdf_mapping"] = body
+    return JSONResponse({"success": True, "message": "매핑 설정이 저장되었습니다."})
+
+
+@app.get("/api/pdf-mapping/excel-options")
+async def get_excel_options():
+    """엑셀 BS/IS/Summary 과목 목록 반환 (매핑 드롭다운용)"""
+    bsis_data = uploaded_data.get("bsis", {})
+    return JSONResponse({
+        "bs":      [r["label"] for r in bsis_data.get("bs",      {}).get("rows", [])],
+        "is_":     [r["label"] for r in bsis_data.get("is_",     {}).get("rows", [])],
+        "summary": [r["label"] for r in bsis_data.get("summary", {}).get("rows", [])],
+    })
 
 
 if __name__ == "__main__":
