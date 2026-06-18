@@ -559,35 +559,49 @@ async def get_pdf_mapping():
         "summary": [r["label"] for r in bsis_data.get("summary", {}).get("rows", [])],
     }
 
-    # PDF raw 키 → 정규화 키 역매핑 테이블
-    # (raw 키는 "1당좌자산", "감가상각누계액37..." 처럼 접두사/중복값이 붙은 형태)
     from pdf_parser import _normalize
-    raw_key_to_norm = {raw_k: _normalize(raw_k) for raw_k in pdf_raw.keys()}
 
-    # PDF raw 순서 기준으로 행 생성
-    # 각 mapping dict를 역참조: norm_key → excel_label
+    # ── pdf_map 키 기준 역방향 탐색으로 행 생성 ──────────────────────
+    # 문제: raw 키 중 "대손충당금2,308,865,085..." 같은 가비지 키는
+    #       _normalize 후에도 매핑 딕셔너리의 "대손충당금"과 불일치 →
+    #       raw 순서 기반 탐색에서 해당 과목이 누락됨
+    # 해결: pdf_map의 각 norm_key에 대해 raw 전체를 스캔하여
+    #       _normalize(raw_k) == norm_key 인 첫 번째 raw 인덱스를 위치로 사용
     def build_rows_from_raw(pdf_map):
+        raw_keys = list(pdf_raw.keys())
+
+        # norm_key → 해당 norm_key와 매칭되는 가장 이른 raw 인덱스
+        norm_to_first_raw_idx: dict = {}
+        for i, raw_k in enumerate(raw_keys):
+            nk = _normalize(raw_k)
+            if nk not in norm_to_first_raw_idx:
+                norm_to_first_raw_idx[nk] = i
+
         rows = []
-        seen_norm = set()   # 같은 정규화 키가 raw에 2번 나올 때 중복 방지
-        for raw_k, norm_k in raw_key_to_norm.items():
-            if norm_k in seen_norm:
-                continue
-            if norm_k not in pdf_map:
-                continue          # 해당 시트 매핑에 없는 과목 제외
-            seen_norm.add(norm_k)
-            excel_label = pdf_map[norm_k]
+        for norm_key, excel_label in pdf_map.items():
+            idx = norm_to_first_raw_idx.get(norm_key, 99999)
             rows.append({
-                "pdf_key":     norm_k,           # 정규화된 키 (저장·매핑 기준)
-                "pdf_raw_key": raw_k,            # 원본 raw 키 (표시용)
-                "pdf_val":     get_pdf_val(norm_k),
+                "pdf_key":     norm_key,
+                "pdf_val":     get_pdf_val(norm_key),
                 "excel_label": excel_label,
                 "enabled":     excel_label is not None,
+                "_sort_idx":   idx,
             })
+
+        # raw 파싱 순서대로 정렬 후 _sort_idx 제거
+        rows.sort(key=lambda r: r["_sort_idx"])
+        for r in rows:
+            r.pop("_sort_idx")
         return rows
 
     if saved:
         # 저장된 매핑 → raw 순서로 재정렬 + pdf_val 주입
-        norm_order = {_normalize(raw_k): i for i, raw_k in enumerate(pdf_raw.keys())}
+        # build_rows_from_raw 와 동일한 논리: norm_key별 첫 등장 raw 인덱스 사용
+        norm_order: dict = {}
+        for i, raw_k in enumerate(pdf_raw.keys()):
+            nk = _normalize(raw_k)
+            if nk not in norm_order:
+                norm_order[nk] = i
         for sheet_key in ["bs", "is_", "summary"]:
             for row in saved.get(sheet_key, []):
                 row["pdf_val"] = get_pdf_val(row.get("pdf_key", ""))
