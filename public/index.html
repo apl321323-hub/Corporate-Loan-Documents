@@ -1302,6 +1302,9 @@
       <button onclick="resetMappingToDefault()" style="font-size:12px;padding:5px 12px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;color:#64748b;">
         <i class="fas fa-undo"></i> 기본값 복원
       </button>
+      <button onclick="applyMappingToBsis()" id="btn-apply-mapping" style="font-size:12px;padding:5px 14px;border:1px solid #2563eb;border-radius:6px;background:#eff6ff;color:#2563eb;cursor:pointer;font-weight:600;">
+        <i class="fas fa-sync-alt"></i> BS/IS에 지금 반영
+      </button>
       <button onclick="saveMappingConfig()" style="font-size:12px;padding:5px 16px;border:none;border-radius:6px;background:#1e3a5f;color:#fff;cursor:pointer;font-weight:700;">
         <i class="fas fa-save"></i> 매핑 설정 저장
       </button>
@@ -1811,6 +1814,39 @@ async function saveMappingConfig() {
     document.getElementById('mapping-status-text').textContent += ' · 저장됨 ✅';
   } catch(e) {
     showToast('❌ 저장 실패: ' + (e.response?.data?.detail || e.message), 'error');
+  }
+}
+
+async function applyMappingToBsis() {
+  const btn = document.getElementById('btn-apply-mapping');
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 반영 중...';
+  try {
+    // 먼저 현재 매핑 저장
+    const payload = { bs: [], is_: [], summary: [] };
+    for (const sh of ['bs','is_','summary']) {
+      payload[sh] = mpRowsToLegacy(sh);
+    }
+    await axios.post(`${API_BASE}/api/pdf-mapping`, payload);
+
+    // 저장된 raw + 매핑으로 bsis 재반영
+    const res = await axios.post(`${API_BASE}/api/pdf-mapping/apply`, {});
+    const d = res.data;
+    showToast(
+      `✅ BS/IS 반영 완료 (${d.period}) — ` +
+      d.sheets_updated.join(', '),
+      'success'
+    );
+
+    // bsis 데이터 재로드 → 화면 갱신
+    await loadAllData();
+  } catch(e) {
+    const detail = e.response?.data?.detail || e.message;
+    showToast('❌ 반영 실패: ' + detail, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
   }
 }
 

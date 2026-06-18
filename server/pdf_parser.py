@@ -494,6 +494,10 @@ def apply_pdf_to_bsis(bsis_data: dict, parsed: dict, period: str) -> dict:
                 # values 리스트 길이 보장
                 while len(row["values"]) <= col_idx:
                     row["values"].append(None)
+                # bsis row에는 항상 양수로 저장
+                # (sign=-1 차감 항목도 원장 표시값은 양수여야 함)
+                if val is not None:
+                    val = abs(val)
                 row["values"][col_idx] = val
                 updated += 1
 

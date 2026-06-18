@@ -657,6 +657,62 @@ async def get_excel_options():
     })
 
 
+@app.post("/api/pdf-mapping/apply")
+async def apply_pdf_mapping(request: Request):
+    """
+    저장된 pdf_raw + pdf_mapping으로 bsis를 재반영 (PDF 재업로드 없이 즉시 적용)
+    Body: { "period": "2026.05" }  — 생략 시 _pdf_updated에 기록된 최근 기간 사용
+    """
+    body = await request.json()
+    period = body.get("period", None)
+
+    # 1. 저장된 raw 확인
+    pdf_raw = uploaded_data.get("pdf_raw", {})
+    if not pdf_raw:
+        raise HTTPException(status_code=400, detail="저장된 PDF raw 데이터가 없습니다. PDF를 먼저 업로드하세요.")
+
+    # 2. 매핑 확인
+    user_mapping = uploaded_data.get("pdf_mapping", None)
+    if not user_mapping:
+        raise HTTPException(status_code=400, detail="저장된 매핑 설정이 없습니다.")
+
+    # 3. bsis 확인
+    bsis_data = uploaded_data.get("bsis", {})
+    if not bsis_data:
+        raise HTTPException(status_code=400, detail="BS/IS 엑셀 파일을 먼저 업로드하세요.")
+
+    # 4. period 자동 결정 (지정 안 하면 _pdf_updated에서 가장 최근 기간)
+    if not period:
+        pdf_updated = bsis_data.get("_pdf_updated", {})
+        periods = sorted([p for p, v in pdf_updated.items() if v], reverse=True)
+        if periods:
+            period = periods[0]
+        else:
+            # bsis headers에서 가장 최근 period 사용
+            headers = bsis_data.get("bs", {}).get("headers", [])
+            period = headers[-1] if headers else None
+
+    if not period:
+        raise HTTPException(status_code=400, detail="적용할 기간을 지정하세요 (예: {\"period\": \"2026.05\"})")
+
+    # raw는 { norm_key: [cur, prev] } 형태 — apply_user_mapping과 동일 형태
+    from pdf_parser import apply_user_mapping, apply_pdf_to_bsis
+    mapped = apply_user_mapping(pdf_raw, user_mapping)
+    updated_bsis, sheets_updated = apply_pdf_to_bsis(bsis_data, mapped, period)
+    uploaded_data["bsis"] = updated_bsis
+
+    return JSONResponse({
+        "success": True,
+        "period": period,
+        "sheets_updated": sheets_updated,
+        "applied_counts": {
+            "bs":      len(mapped["bs"]),
+            "is_":     len(mapped["is_"]),
+            "summary": len(mapped["summary"]),
+        },
+    })
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=3000)
