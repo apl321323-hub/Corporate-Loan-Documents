@@ -18,105 +18,175 @@ def safe_value(val):
 
 
 def parse_company_info(ws) -> Dict:
-    """기업정보 시트 파싱"""
+    """기업정보 시트 파싱 - 엑셀 레이아웃과 동일하게"""
     data = {
         "company": {},
         "shareholders": [],
         "executives": [],
         "ceo_history": [],
         "company_history": [],
-        "guarantor": {}
+        "guarantor": {},
+        "guarantor_shareholders": [],
+        "guarantor_executives": [],
+        "guarantor_history": [],
+        "business_direction": "",
+        "affiliates": ""
     }
 
-    rows = []
+    # 전체 셀을 좌표 기준으로 읽기
+    cells = {}
     for row in ws.iter_rows():
-        row_data = {cell.coordinate: safe_value(cell.value) for cell in row if cell.value is not None}
-        rows.append(row_data)
+        for cell in row:
+            try:
+                if cell.value is not None:
+                    cells[cell.coordinate] = cell.value
+            except AttributeError:
+                continue
 
-    # 기업 기본정보
+    def g(coord):
+        return cells.get(coord, "")
+
+    def sv(v):
+        return safe_value(v) if v is not None else ""
+
+    # ■ 차주사 기본정보 (row 4~7)
     data["company"] = {
-        "name": "",
-        "representative": "",
-        "actual_manager": "",
-        "business_number": "",
-        "industry": "",
-        "company_type": "",
-        "phone": "",
-        "rep_phone": "",
-        "listed": "",
-        "employees": "",
-        "address": ""
+        "name":            str(g("B4") or ""),
+        "representative":  str(g("D4") or ""),
+        "actual_manager":  str(g("F4") or ""),
+        "business_number": str(g("B5") or ""),
+        "industry":        str(g("D5") or ""),
+        "company_type":    str(g("F5") or ""),
+        "phone":           str(g("B6") or ""),
+        "rep_phone":       str(g("D6") or ""),
+        "listed":          str(g("F6") or ""),
+        "employees":       str(g("B7") or ""),
+        "address":         str(g("D7") or ""),
     }
 
-    for row in ws.iter_rows(min_row=4, max_row=7):
-        cells = {cell.column_letter: safe_value(cell.value) for cell in row if cell.value is not None}
-        row_num = row[0].row
-        if row_num == 4:
-            data["company"]["name"] = cells.get("B", "")
-            data["company"]["representative"] = cells.get("D", "")
-            data["company"]["actual_manager"] = cells.get("F", "") if "F" in cells else cells.get("E", "")
-        elif row_num == 5:
-            data["company"]["business_number"] = cells.get("B", "")
-            data["company"]["industry"] = cells.get("D", "")
-            data["company"]["company_type"] = cells.get("F", "")
-        elif row_num == 6:
-            data["company"]["phone"] = cells.get("B", "")
-            data["company"]["rep_phone"] = cells.get("D", "")
-            data["company"]["listed"] = cells.get("F", "")
-        elif row_num == 7:
-            data["company"]["employees"] = cells.get("B", "")
-            data["company"]["address"] = cells.get("D", "")
-
-    # 주주현황 (8~14행)
+    # 주주현황 (row 9~14, A8:A14 병합)
     shareholders = []
-    for row in ws.iter_rows(min_row=9, max_row=14):
-        cells = {cell.column_letter: safe_value(cell.value) for cell in row if cell.value is not None}
-        if cells.get("B"):
+    for row_num in range(9, 15):
+        name = g(f"B{row_num}")
+        shares = g(f"C{row_num}")
+        ratio = g(f"D{row_num}")
+        amount = g(f"E{row_num}")
+        relation = g(f"F{row_num}")
+        if name:
             shareholders.append({
-                "name": cells.get("B", ""),
-                "shares": cells.get("C", ""),
-                "ratio": cells.get("D", ""),
-                "amount": cells.get("E", ""),
-                "relation": cells.get("F", "")
+                "name": str(name),
+                "shares": sv(shares),
+                "ratio": sv(ratio),
+                "amount": sv(amount),
+                "relation": str(relation or "")
             })
     data["shareholders"] = shareholders
 
-    # 등기임원
-    for row in ws.iter_rows(min_row=15, max_row=15):
-        for cell in row:
-            if cell.column_letter != "A" and cell.value:
-                data["executives"].append(str(cell.value))
+    # 등기임원 (row 15)
+    executives = []
+    for col in ["B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]:
+        v = g(f"{col}15")
+        if v:
+            executives.append(str(v))
+    data["executives"] = executives
 
-    # 대표이사 이력 (16~24행)
-    for row in ws.iter_rows(min_row=17, max_row=24):
-        cells = {cell.column_letter: safe_value(cell.value) for cell in row if cell.value is not None}
-        if cells.get("B") or cells.get("C"):
-            data["ceo_history"].append({
-                "date": str(cells.get("B", "")),
-                "content": str(cells.get("C", ""))
+    # 대표이사(실경영자) 이력 (row 17~24, A16:A24 병합)
+    ceo_history = []
+    for row_num in range(17, 25):
+        date_val = g(f"B{row_num}")
+        content = g(f"C{row_num}")
+        if date_val or content:
+            # float인 경우 연도.월 형태로 변환 (예: 2004.02)
+            if isinstance(date_val, float):
+                year = int(date_val)
+                month = round((date_val - year) * 100)
+                date_str = f"{year}.{month:02d}" if month > 0 else str(year)
+            else:
+                date_str = str(safe_value(date_val) or "")
+            ceo_history.append({
+                "date": date_str,
+                "content": str(content or "")
             })
+    data["ceo_history"] = ceo_history
 
-    # 연혁 (25~40행)
-    for row in ws.iter_rows(min_row=26, max_row=40):
-        cells = {cell.column_letter: safe_value(cell.value) for cell in row if cell.value is not None}
-        if cells.get("B") or cells.get("C"):
-            data["company_history"].append({
-                "date": str(cells.get("B", "")),
-                "content": str(cells.get("C", ""))
+    # 연혁 (row 26~40, A25:A40 병합)
+    company_history = []
+    for row_num in range(26, 41):
+        date_val = g(f"B{row_num}")
+        content = g(f"C{row_num}")
+        if date_val or content:
+            company_history.append({
+                "date": str(safe_value(date_val) or ""),
+                "content": str(content or "")
             })
+    data["company_history"] = company_history
 
-    # 보증인 정보
-    for row in ws.iter_rows(min_row=43, max_row=46):
-        cells = {cell.column_letter: safe_value(cell.value) for cell in row if cell.value is not None}
-        row_num = row[0].row
-        if row_num == 43:
-            data["guarantor"]["name"] = cells.get("B", "")
-            data["guarantor"]["representative"] = cells.get("C", "")
-        elif row_num == 44:
-            data["guarantor"]["business_number"] = cells.get("B", "")
-            data["guarantor"]["industry"] = cells.get("D", "")
-        elif row_num == 45:
-            data["guarantor"]["phone"] = cells.get("B", "")
+    # ■ 보증(법)인 기본정보 (row 43~46)
+    # A43=보증(법)인명 라벨, B43=이름값, C43=관계(대표이사) 라벨+값, E43=실경영자 라벨
+    # A44=사업자번호 라벨, B44=값, C44=업종 라벨, D44=값, E44=기업형태 라벨
+    # A45=전화번호 라벨, B45=값, C45=대표이사전화번호 라벨, E45=상장 라벨
+    # A46=임직원수 라벨, C46=사업장주소 라벨
+    data["guarantor"] = {
+        "name":            str(g("B43") or ""),
+        "representative":  str(g("C43") or ""),   # 관계 (대표이사 등)
+        "actual_manager":  str(g("F43") or ""),   # 실경영자 값 (F43)
+        "business_number": str(g("B44") or ""),
+        "industry":        str(g("D44") or ""),
+        "company_type":    str(g("F44") or ""),
+        "phone":           str(g("B45") or ""),
+        "rep_phone":       str(g("D45") or ""),
+        "listed":          str(g("F45") or ""),
+        "employees":       str(g("B46") or ""),
+        "address":         str(g("D46") or ""),
+    }
+
+    # 보증인 주주현황 (row 48~53, A47:A53 병합)
+    gu_shareholders = []
+    for row_num in range(48, 54):
+        name = g(f"B{row_num}")
+        shares = g(f"C{row_num}")
+        ratio = g(f"D{row_num}")
+        amount = g(f"E{row_num}")
+        relation = g(f"F{row_num}")
+        if name:
+            gu_shareholders.append({
+                "name": str(name),
+                "shares": sv(shares),
+                "ratio": sv(ratio),
+                "amount": sv(amount),
+                "relation": str(relation or "")
+            })
+    data["guarantor_shareholders"] = gu_shareholders
+
+    # 보증인 등기임원 (row 54)
+    gu_executives = []
+    for col in ["B", "C", "D", "E", "F", "G", "H", "I", "J", "K"]:
+        v = g(f"{col}54")
+        if v:
+            gu_executives.append(str(v))
+    data["guarantor_executives"] = gu_executives
+
+    # 보증인 연혁(경력) (row 56~63, A55:A63 병합)
+    gu_history = []
+    for row_num in range(56, 64):
+        date_val = g(f"B{row_num}")
+        content = g(f"C{row_num}")
+        if date_val or content:
+            if isinstance(date_val, float):
+                year = int(date_val)
+                month = round((date_val - year) * 100)
+                date_str = f"{year}.{month:02d}" if month > 0 else str(year)
+            else:
+                date_str = str(safe_value(date_val) or "")
+            gu_history.append({
+                "date": date_str,
+                "content": str(content or "")
+            })
+    data["guarantor_history"] = gu_history
+
+    # ■ 기타 (row 66~68)
+    data["business_direction"] = str(g("B67") or "")
+    data["affiliates"] = str(g("B68") or "")
 
     return data
 

@@ -255,6 +255,114 @@
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .info-grid { grid-template-columns: repeat(2, 1fr); }
   }
+
+  /* ===== 기업정보 테이블 스타일 ===== */
+  .ci-section-wrap {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .ci-section-title {
+    font-size: 15px; font-weight: 800; color: #1e3a5f;
+    padding: 0 0 12px; border-bottom: 2px solid #e8b84b;
+    margin-bottom: 14px;
+  }
+  .ci-sub-title {
+    font-size: 12px; font-weight: 700; color: #64748b;
+    padding: 10px 0 6px; letter-spacing: 0.03em;
+  }
+  .ci-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #c8d0db;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .ci-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 12.5px; min-width: 560px;
+  }
+  .ci-table td, .ci-table th {
+    border: 1px solid #c8d0db;
+    padding: 0;
+    vertical-align: middle;
+  }
+  .ci-label {
+    background: #eef2f8;
+    color: #1e3a5f;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 10px;
+    white-space: nowrap;
+    text-align: left;
+    min-width: 80px;
+  }
+  .ci-th {
+    background: #2c4a72;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 10px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .ci-input {
+    width: 100%;
+    border: none;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    color: #1e293b;
+    background: transparent;
+    outline: none;
+    box-sizing: border-box;
+    transition: background 0.15s;
+    font-family: inherit;
+    min-height: 32px;
+  }
+  .ci-input:focus {
+    background: #eff6ff;
+    outline: none;
+  }
+  .ci-input::placeholder { color: #b0bbc8; }
+  textarea.ci-input {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.65;
+    border-bottom: none;
+  }
+  /* 이력 행 */
+  .ci-history-row td { border: 1px solid #c8d0db; }
+  /* 행 추가 버튼 */
+  .ci-add-row-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; background: #f8fafc;
+    border: 1px dashed #94a3b8; border-radius: 6px;
+    font-size: 11px; color: #64748b; cursor: pointer;
+    margin: 4px 0 10px; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .ci-add-row-btn:hover { background: #e0e7ff; border-color: #6366f1; color: #4338ca; }
+  /* 등기임원 태그 */
+  .exec-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #eff6ff; color: #1e3a5f;
+    padding: 4px 10px; border-radius: 99px;
+    font-size: 12px; font-weight: 600;
+    border: 1px solid #bfdbfe;
+  }
+  .exec-tag button {
+    background: none; border: none; color: #94a3b8;
+    cursor: pointer; font-size: 12px; padding: 0; line-height: 1;
+  }
+  .exec-tag button:hover { color: #dc2626; }
+  /* 삭제 버튼 */
+  .ci-del-btn {
+    background: none; border: none; color: #cbd5e1;
+    cursor: pointer; font-size: 12px; padding: 4px 6px;
+    transition: color 0.15s;
+  }
+  .ci-del-btn:hover { color: #dc2626; }
 </style>
 </head>
 <body>
@@ -305,139 +413,365 @@
   <!-- ===== 1. 기업정보 ===== -->
   <section class="page active" id="page-company">
     <div class="section-header">
-      <h3>기업정보</h3>
-      <button class="save-btn" onclick="saveCompanyInfo()">
-        <i class="fas fa-save"></i> 저장
-      </button>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><i class="fas fa-building"></i> 차주사 기본정보</div>
-      <div class="info-grid">
-        <div class="info-item">
-          <label>차주명</label>
-          <input type="text" id="ci-name" placeholder="회사명 입력">
-        </div>
-        <div class="info-item">
-          <label>대표이사</label>
-          <input type="text" id="ci-rep" placeholder="대표이사명">
-        </div>
-        <div class="info-item">
-          <label>실경영자</label>
-          <input type="text" id="ci-actual" placeholder="실경영자명">
-        </div>
-        <div class="info-item">
-          <label>사업자번호</label>
-          <input type="text" id="ci-bizno" placeholder="000-00-00000">
-        </div>
-        <div class="info-item">
-          <label>업종</label>
-          <input type="text" id="ci-industry" placeholder="업종">
-        </div>
-        <div class="info-item">
-          <label>기업형태</label>
-          <input type="text" id="ci-type" placeholder="주식회사 등">
-        </div>
-        <div class="info-item">
-          <label>전화번호</label>
-          <input type="text" id="ci-phone" placeholder="02-0000-0000">
-        </div>
-        <div class="info-item">
-          <label>대표이사 전화번호</label>
-          <input type="text" id="ci-rep-phone" placeholder="010-0000-0000">
-        </div>
-        <div class="info-item">
-          <label>상장 여부</label>
-          <input type="text" id="ci-listed" placeholder="상장 / 비상장">
-        </div>
-        <div class="info-item">
-          <label>임직원수</label>
-          <input type="text" id="ci-employees" placeholder="명">
-        </div>
-        <div class="info-item span2">
-          <label>사업장주소</label>
-          <input type="text" id="ci-address" placeholder="주소 입력">
-        </div>
+      <h3>1. 기업정보</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="save-btn" onclick="saveCompanyInfo()" style="background:#16a34a;">
+          <i class="fas fa-save"></i> 저장
+        </button>
+        <button class="save-btn" onclick="exportCompanyInfo()" style="background:#1e3a5f;">
+          <i class="fas fa-file-excel"></i> 엑셀 다운로드
+        </button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-users"></i> 주주현황</div>
-      <div class="table-scroll">
-        <table class="sh-table" id="shareholders-table">
-          <thead>
+    <!-- ■ 차주사 섹션 -->
+    <div class="ci-section-wrap">
+      <div class="ci-section-title">■ 차주사</div>
+
+      <!-- 기본정보 (Row 4~7) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:220px">
+            <col style="width:130px"><col style="width:200px">
+            <col style="width:100px"><col>
+          </colgroup>
+          <tbody>
             <tr>
-              <th>주주명</th>
-              <th>주식수</th>
-              <th>지분율</th>
-              <th>주식금액</th>
-              <th>이해관계</th>
+              <td class="ci-label">차주명</td>
+              <td><input class="ci-input" id="ci-name" placeholder="회사명 입력"></td>
+              <td class="ci-label">대표이사</td>
+              <td><input class="ci-input" id="ci-rep" placeholder="대표이사명"></td>
+              <td class="ci-label">실경영자</td>
+              <td><input class="ci-input" id="ci-actual" placeholder="실경영자명"></td>
             </tr>
-          </thead>
-          <tbody id="shareholders-body">
-            <tr><td colspan="5" class="text-center text-gray-400 py-4">데이터 없음</td></tr>
+            <tr>
+              <td class="ci-label">사업자번호</td>
+              <td><input class="ci-input" id="ci-bizno" placeholder="000-00-00000"></td>
+              <td class="ci-label">업종</td>
+              <td><input class="ci-input" id="ci-industry" placeholder="업종"></td>
+              <td class="ci-label">기업형태</td>
+              <td><input class="ci-input" id="ci-type" placeholder="주식회사 등"></td>
+            </tr>
+            <tr>
+              <td class="ci-label">전화번호</td>
+              <td><input class="ci-input" id="ci-phone" placeholder="02-0000-0000"></td>
+              <td class="ci-label">대표이사<br>전화번호</td>
+              <td><input class="ci-input" id="ci-rep-phone" placeholder="010-0000-0000"></td>
+              <td class="ci-label">상장</td>
+              <td><input class="ci-input" id="ci-listed" placeholder="상장 / 비상장"></td>
+            </tr>
+            <tr>
+              <td class="ci-label">임직원수</td>
+              <td><input class="ci-input" id="ci-employees" placeholder="명"></td>
+              <td class="ci-label">사업장주소</td>
+              <td colspan="3"><input class="ci-input" id="ci-address" placeholder="주소 입력"></td>
+            </tr>
           </tbody>
         </table>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-user-tie"></i> 등기임원</div>
-      <div id="executives-list" class="flex flex-wrap gap-2">
-        <span class="text-gray-400 text-sm">데이터 없음</span>
+      <!-- 주주현황 (Row 8~14) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px">
+            <col><col style="width:130px"><col style="width:90px"><col style="width:160px"><col style="width:110px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" rowspan="7" style="text-align:center;vertical-align:middle;font-size:13px;">주주현황</td>
+              <td class="ci-th">주주명</td>
+              <td class="ci-th">주식수</td>
+              <td class="ci-th">지분율</td>
+              <td class="ci-th">주식금액</td>
+              <td class="ci-th">이해관계</td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="0" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="0" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="0" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="0" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="0" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="1" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="1" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="1" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="1" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="1" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="2" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="2" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="2" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="2" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="2" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="3" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="3" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="3" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="3" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="3" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="4" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="4" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="4" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="4" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="4" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-sh="5" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-sh="5" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="5" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="5" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="5" data-field="relation" placeholder="관계"></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-      <div class="card">
-        <div class="card-title"><i class="fas fa-history"></i> 대표이사 이력</div>
-        <div class="table-scroll">
-          <table class="sh-table">
-            <thead><tr><th>일자</th><th>내용</th></tr></thead>
-            <tbody id="ceo-history-body">
-              <tr><td colspan="2" class="text-gray-400 text-center py-3">데이터 없음</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- 등기임원 (Row 15) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup><col style="width:110px"><col></colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" style="vertical-align:middle;">등기임원</td>
+              <td style="padding:8px 10px;">
+                <div id="ci-executives-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px;"></div>
+                <input class="ci-input" id="ci-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;max-width:220px;" onkeydown="addExecutive(event,'ci')">
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="card">
-        <div class="card-title"><i class="fas fa-scroll"></i> 연혁</div>
-        <div class="table-scroll" style="max-height:320px;overflow-y:auto;">
-          <table class="sh-table">
-            <thead><tr><th>일자</th><th>내용</th></tr></thead>
-            <tbody id="company-history-body">
-              <tr><td colspan="2" class="text-gray-400 text-center py-3">데이터 없음</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-user-shield"></i> 보증인 정보</div>
-      <div class="info-grid">
-        <div class="info-item">
-          <label>보증인명</label>
-          <input type="text" id="gu-name" placeholder="보증인명">
-        </div>
-        <div class="info-item">
-          <label>관계</label>
-          <input type="text" id="gu-rep" placeholder="대표이사 등">
-        </div>
-        <div class="info-item">
-          <label>사업자번호(주민번호)</label>
-          <input type="text" id="gu-bizno" placeholder="번호 입력">
-        </div>
-        <div class="info-item">
-          <label>업종</label>
-          <input type="text" id="gu-industry" placeholder="업종">
-        </div>
-        <div class="info-item">
-          <label>전화번호</label>
-          <input type="text" id="gu-phone" placeholder="전화번호">
-        </div>
+      <!-- 대표이사(실경영자) 이력 (Row 16~24) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table" id="ci-ceo-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" id="ci-ceo-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:1.7;">대표이사<br>(실경영자)<br><br>이&nbsp;&nbsp;력</td>
+              <td class="ci-th">일자(년/월)</td>
+              <td class="ci-th">내용</td>
+              <td class="ci-th" style="width:32px;"></td>
+            </tr>
+          </tbody>
+          <tbody id="ci-ceo-body">
+            <!-- JS로 채움 -->
+          </tbody>
+        </table>
       </div>
-    </div>
+      <button class="ci-add-row-btn" id="ci-ceo-add-btn" onclick="addHistoryRow('ci-ceo')">
+        <i class="fas fa-plus"></i> 이력 행 추가
+      </button>
+
+      <!-- 연혁 (Row 25~40) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
+        <table class="ci-table" id="ci-hist-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" id="ci-hist-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:2;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁</td>
+              <td class="ci-th">일자(년/월)</td>
+              <td class="ci-th">내용</td>
+              <td class="ci-th" style="width:32px;"></td>
+            </tr>
+          </tbody>
+          <tbody id="ci-history-body">
+            <!-- JS로 채움 -->
+          </tbody>
+        </table>
+      </div>
+      <button class="ci-add-row-btn" id="ci-hist-add-btn" onclick="addHistoryRow('ci-hist')">
+        <i class="fas fa-plus"></i> 연혁 행 추가
+      </button>
+    </div><!-- /차주사 -->
+
+    <!-- ■ 보증(법)인 섹션 -->
+    <div class="ci-section-wrap" style="margin-top:24px;">
+      <div class="ci-section-title">■ 보증(법)인</div>
+
+      <!-- 보증인 기본정보 (Row 43~46) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:220px">
+            <col style="width:100px"><col style="width:160px">
+            <col style="width:100px"><col>
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label">보증(법)인명</td>
+              <td><input class="ci-input" id="gu-name" placeholder="보증인명 입력"></td>
+              <td class="ci-label" style="text-align:center;">관계</td>
+              <td><input class="ci-input" id="gu-relation" placeholder="대표이사 등"></td>
+              <td class="ci-label">실경영자</td>
+              <td><input class="ci-input" id="gu-actual" placeholder="실경영자명"></td>
+            </tr>
+            <tr>
+              <td class="ci-label">사업자번호<br><small style="font-size:10px;color:#94a3b8;font-weight:400;">(주민번호)</small></td>
+              <td><input class="ci-input" id="gu-bizno" placeholder="000000-0000000"></td>
+              <td class="ci-label">업종</td>
+              <td><input class="ci-input" id="gu-industry" placeholder="업종"></td>
+              <td class="ci-label">기업형태</td>
+              <td><input class="ci-input" id="gu-type" placeholder="주식회사 등"></td>
+            </tr>
+            <tr>
+              <td class="ci-label">전화번호</td>
+              <td><input class="ci-input" id="gu-phone" placeholder="010-0000-0000"></td>
+              <td class="ci-label">대표이사<br>전화번호</td>
+              <td><input class="ci-input" id="gu-rep-phone" placeholder="010-0000-0000"></td>
+              <td class="ci-label">상장</td>
+              <td><input class="ci-input" id="gu-listed" placeholder="비상장"></td>
+            </tr>
+            <tr>
+              <td class="ci-label">임직원수</td>
+              <td><input class="ci-input" id="gu-employees" placeholder="명"></td>
+              <td class="ci-label">사업장주소</td>
+              <td colspan="3"><input class="ci-input" id="gu-address" placeholder="주소 입력"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 보증인 주주현황 (Row 47~53) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px">
+            <col><col style="width:130px"><col style="width:90px"><col style="width:160px"><col style="width:110px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" rowspan="7" style="text-align:center;vertical-align:middle;font-size:13px;">주주현황</td>
+              <td class="ci-th">주주명</td>
+              <td class="ci-th">주식수</td>
+              <td class="ci-th">지분율</td>
+              <td class="ci-th">주식금액</td>
+              <td class="ci-th">이해관계</td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="0" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="1" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="2" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="3" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="4" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="relation" placeholder="관계"></td>
+            </tr>
+            <tr>
+              <td><input class="ci-input" data-gsh="5" data-field="name" placeholder="주주명"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="shares" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="relation" placeholder="관계"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 보증인 등기임원 (Row 54) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup><col style="width:110px"><col></colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" style="vertical-align:middle;">등기임원</td>
+              <td style="padding:8px 10px;">
+                <div id="gu-executives-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px;"></div>
+                <input class="ci-input" id="gu-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;max-width:220px;" onkeydown="addExecutive(event,'gu')">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 보증인 연혁(경력) (Row 55~63) -->
+      <div class="ci-table-wrap">
+        <table class="ci-table" id="gu-hist-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
+          </colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" id="gu-hist-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:2;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁<br><br>(경&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;력)</td>
+              <td class="ci-th">일자(년/월)</td>
+              <td class="ci-th">내용</td>
+              <td class="ci-th" style="width:32px;"></td>
+            </tr>
+          </tbody>
+          <tbody id="gu-history-body">
+            <!-- JS로 채움 -->
+          </tbody>
+        </table>
+      </div>
+      <button class="ci-add-row-btn" id="gu-hist-add-btn" onclick="addHistoryRow('gu-hist')">
+        <i class="fas fa-plus"></i> 경력 행 추가
+      </button>
+    </div><!-- /보증(법)인 -->
+
+    <!-- ■ 기타 섹션 -->
+    <div class="ci-section-wrap" style="margin-top:24px;">
+      <div class="ci-section-title">■ 기타</div>
+      <div class="ci-table-wrap">
+        <table class="ci-table">
+          <colgroup><col style="width:130px"><col></colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label" style="text-align:center;vertical-align:top;padding-top:14px;line-height:1.9;">
+                차주사 영업방향<br>및<br>장&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;점
+              </td>
+              <td>
+                <textarea class="ci-input" id="ci-business-direction" rows="8"
+                  placeholder="영업방향 및 장점 입력..." style="resize:vertical;min-height:140px;"></textarea>
+              </td>
+            </tr>
+            <tr>
+              <td class="ci-label" style="text-align:center;vertical-align:middle;">관계사 및 계열사</td>
+              <td>
+                <textarea class="ci-input" id="ci-affiliates" rows="3"
+                  placeholder="관계사 및 계열사 입력..." style="resize:vertical;"></textarea>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /기타 -->
   </section>
 
   <!-- ===== 2. BS / IS ===== -->
@@ -721,7 +1055,7 @@
     </div>
 
     <!-- 섹터 2: 결산자료 -->
-    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 2</span>
         <span style="font-size:14px;font-weight:700;color:#1e293b;">결산자료</span>
@@ -739,6 +1073,30 @@
       </div>
       <div style="margin-top:10px;text-align:right;">
         <button class="btn-primary" onclick="uploadFile('settle')" id="upload-btn-settle" disabled style="padding:8px 18px;font-size:12px;background:#7c3aed;">
+          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- 섹터 3: 기업정보 -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="background:#0891b2;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 3</span>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;">기업정보</span>
+        <span style="font-size:11px;color:#64748b;">(기업여신자료_기업현황.xlsx → 기업정보 탭 자동입력)</span>
+      </div>
+      <div class="drop-zone" id="drop-zone-company" onclick="document.getElementById('file-input-company').click()" style="padding:20px;">
+        <i class="fas fa-building" style="font-size:24px;"></i>
+        <div class="drop-text" id="drop-text-company">파일을 여기에 드래그하거나 클릭하여 선택</div>
+        <div class="drop-sub">기업여신자료_기업현황.xlsx 형식</div>
+      </div>
+      <input type="file" id="file-input-company" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'company')">
+      <div class="upload-progress" id="upload-progress-company" style="margin-top:10px;">
+        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-company">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-company"></div></div>
+      </div>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="btn-primary" onclick="uploadFile('company')" id="upload-btn-company" disabled style="padding:8px 18px;font-size:12px;background:#0891b2;">
           <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
         </button>
       </div>
@@ -802,14 +1160,14 @@ function switchTab(group, tab) {
 }
 
 // ===== 업로드 모달 (다중 섹터) =====
-const selectedFiles = { main: null, settle: null };
+const selectedFiles = { main: null, settle: null, company: null };
 
 function openUpload() {
   document.getElementById('upload-modal').classList.add('open');
 }
 function closeUpload() {
   document.getElementById('upload-modal').classList.remove('open');
-  ['main','settle'].forEach(s => {
+  ['main','settle','company'].forEach(s => {
     selectedFiles[s] = null;
     const inp = document.getElementById(`file-input-${s}`);
     if (inp) inp.value = '';
@@ -825,7 +1183,7 @@ function closeUpload() {
 }
 
 // 드래그 앤 드롭 초기화
-['main','settle'].forEach(sector => {
+['main','settle','company'].forEach(sector => {
   const dz = document.getElementById(`drop-zone-${sector}`);
   if (!dz) return;
   dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
@@ -850,7 +1208,12 @@ async function uploadFile(sector) {
   const file = selectedFiles[sector];
   if (!file) return;
 
-  const endpoint = sector === 'settle' ? '/api/upload/settlement' : '/api/upload';
+  const endpointMap = {
+    main: '/api/upload',
+    settle: '/api/upload/settlement',
+    company: '/api/upload/company_info'
+  };
+  const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
   formData.append('file', file);
 
@@ -877,6 +1240,14 @@ async function uploadFile(sector) {
     if (sector === 'settle') {
       await loadSettlementData();
       showToast('✅ ' + res.data.message + ` (상품 ${res.data.total_products}개)`, 'success');
+    } else if (sector === 'company') {
+      // 기업정보 새로 로드 후 렌더링
+      const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
+      appData.company_info = ciRes.data;
+      renderCompanyInfo();
+      document.getElementById('data-badge').textContent = '데이터 로드됨';
+      document.getElementById('data-badge').classList.remove('no-data');
+      showToast('✅ ' + res.data.message + (res.data.company_name ? ` [${res.data.company_name}]` : ''), 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -960,78 +1331,296 @@ function fmtK(val) {
   return n.toLocaleString();
 }
 
-// ===== 기업정보 렌더링 =====
+// ===== 기업정보 렌더링 (엑셀 레이아웃 버전) =====
+
+// 이력 행 HTML 생성
+function historyRowHTML(prefix, idx, dateVal, contentVal) {
+  const dateStr = dateVal !== null && dateVal !== undefined ? String(dateVal) : '';
+  const contentStr = contentVal !== null && contentVal !== undefined ? String(contentVal) : '';
+  const de = dateStr.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ce = contentStr.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return `<tr class="ci-history-row" id="${prefix}-row-${idx}">
+    <td><input class="ci-input" data-prefix="${prefix}" data-idx="${idx}" data-field="date" value="${de}" placeholder="예) 2023년, 2023.01"></td>
+    <td><input class="ci-input" data-prefix="${prefix}" data-idx="${idx}" data-field="content" value="${ce}" placeholder="내용 입력"></td>
+    <td style="text-align:center;padding:0 2px;"><button class="ci-del-btn" onclick="deleteHistoryRow('${prefix}',${idx})" title="삭제"><i class="fas fa-times"></i></button></td>
+  </tr>`;
+}
+
+let ciCeoRows = [], ciHistoryRows = [], guHistoryRows = [];
+
+// 이력 테이블 body 렌더링 (행 추가 버튼은 HTML에 이미 존재)
+function renderHistoryTable(bodyId, prefix, rows) {
+  const tbody = document.getElementById(bodyId);
+  if (!tbody) return;
+  // rowspan 라벨 업데이트 (+1 for header row)
+  const labelId = bodyId.replace('-body', '-label');
+  const labelEl = document.getElementById(labelId);
+  if (labelEl) labelEl.setAttribute('rowspan', rows.length + 1);
+  tbody.innerHTML = rows.map((r, i) => historyRowHTML(prefix, i, r.date, r.content)).join('');
+}
+
+function addHistoryRow(prefix) {
+  if (prefix === 'ci-ceo') {
+    ciCeoRows.push({ date: '', content: '' });
+    renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
+  } else if (prefix === 'ci-hist') {
+    ciHistoryRows.push({ date: '', content: '' });
+    renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
+  } else if (prefix === 'gu-hist') {
+    guHistoryRows.push({ date: '', content: '' });
+    renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
+  }
+}
+
+function deleteHistoryRow(prefix, idx) {
+  if (prefix === 'ci-ceo') { ciCeoRows.splice(idx, 1); renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows); }
+  else if (prefix === 'ci-hist') { ciHistoryRows.splice(idx, 1); renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows); }
+  else if (prefix === 'gu-hist') { guHistoryRows.splice(idx, 1); renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows); }
+}
+
+// 이력 입력 변경 반영 (input 이벤트 위임)
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (!el.dataset.prefix) return;
+  const { prefix, idx, field } = el.dataset;
+  const i = parseInt(idx);
+  if (prefix === 'ci-ceo' && ciCeoRows[i]) ciCeoRows[i][field] = el.value;
+  else if (prefix === 'ci-hist' && ciHistoryRows[i]) ciHistoryRows[i][field] = el.value;
+  else if (prefix === 'gu-hist' && guHistoryRows[i]) guHistoryRows[i][field] = el.value;
+});
+
+// 등기임원 태그 관리
+let ciExecutives = [], guExecutives = [];
+
+function renderExecutives(type) {
+  const isGu = type === 'gu';
+  const list = isGu ? guExecutives : ciExecutives;
+  const wrap = document.getElementById(isGu ? 'gu-executives-wrap' : 'ci-executives-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = list.map((e, i) =>
+    `<span class="exec-tag">${e}<button onclick="removeExecutive(${i},'${type}')"><i class="fas fa-times"></i></button></span>`
+  ).join('');
+}
+
+function addExecutive(event, type) {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  const inputId = type === 'gu' ? 'gu-exec-input' : 'ci-exec-input';
+  const inp = document.getElementById(inputId);
+  const val = inp.value.trim();
+  if (!val) return;
+  if (type === 'gu') guExecutives.push(val);
+  else ciExecutives.push(val);
+  inp.value = '';
+  renderExecutives(type || 'ci');
+}
+
+function removeExecutive(idx, type) {
+  if (type === 'gu') { guExecutives.splice(idx, 1); renderExecutives('gu'); }
+  else { ciExecutives.splice(idx, 1); renderExecutives('ci'); }
+}
+
 function renderCompanyInfo() {
   const d = appData.company_info;
   if (!d) return;
   const c = d.company || {};
-  const fields = {
+
+  // 기본 정보 필드 채우기
+  const ciFields = {
     'ci-name': c.name, 'ci-rep': c.representative, 'ci-actual': c.actual_manager,
     'ci-bizno': c.business_number, 'ci-industry': c.industry, 'ci-type': c.company_type,
     'ci-phone': c.phone, 'ci-rep-phone': c.rep_phone, 'ci-listed': c.listed,
     'ci-employees': c.employees, 'ci-address': c.address
   };
-  Object.entries(fields).forEach(([id, val]) => {
+  Object.entries(ciFields).forEach(([id, val]) => {
     const el = document.getElementById(id);
-    if (el && val) el.value = val;
+    if (el && val !== null && val !== undefined) el.value = val;
   });
 
-  // 주주현황
-  const tbody = document.getElementById('shareholders-body');
+  // 주주현황 (차주사)
   if (d.shareholders && d.shareholders.length > 0) {
-    tbody.innerHTML = d.shareholders.map(s => `
-      <tr>
-        <td>${s.name || '-'}</td>
-        <td style="text-align:right">${s.shares ? Number(s.shares).toLocaleString() : '-'}</td>
-        <td style="text-align:right">${s.ratio !== undefined ? (Number(s.ratio) * 100).toFixed(1) + '%' : '-'}</td>
-        <td style="text-align:right">${s.amount ? fmtK(s.amount) : '-'}</td>
-        <td>${s.relation || '-'}</td>
-      </tr>`).join('');
+    d.shareholders.slice(0, 6).forEach((s, i) => {
+      // ratio: 엑셀에서 1 = 100% 형태로 저장된 경우 변환
+      let ratioStr = '';
+      if (s.ratio !== null && s.ratio !== undefined && s.ratio !== '') {
+        const rNum = parseFloat(s.ratio);
+        if (!isNaN(rNum)) {
+          ratioStr = rNum <= 1 ? (rNum * 100).toFixed(1) + '%' : rNum.toFixed(1) + '%';
+        } else {
+          ratioStr = String(s.ratio);
+        }
+      }
+      // 주식수, 금액은 숫자면 천단위 콤마
+      const sharesStr = s.shares != null && s.shares !== '' ? Number(s.shares).toLocaleString() : '';
+      const amountStr = s.amount != null && s.amount !== '' ? Number(s.amount).toLocaleString() : '';
+      const fields = {
+        name: s.name || '',
+        shares: sharesStr,
+        ratio: ratioStr,
+        amount: amountStr,
+        relation: s.relation || ''
+      };
+      Object.entries(fields).forEach(([field, val]) => {
+        const el = document.querySelector(`[data-sh="${i}"][data-field="${field}"]`);
+        if (el) el.value = val;
+      });
+    });
   }
 
   // 등기임원
   if (d.executives && d.executives.length > 0) {
-    document.getElementById('executives-list').innerHTML = d.executives
-      .map(e => `<span style="background:#eff6ff;color:#1e3a5f;padding:5px 12px;border-radius:99px;font-size:13px;font-weight:600;">${e}</span>`)
-      .join('');
+    ciExecutives = [...d.executives];
+    renderExecutives('ci');
   }
 
   // 대표이사 이력
-  if (d.ceo_history && d.ceo_history.length > 0) {
-    document.getElementById('ceo-history-body').innerHTML = d.ceo_history
-      .map(h => `<tr><td style="color:#64748b;font-size:12px;white-space:nowrap;">${h.date}</td><td>${h.content}</td></tr>`).join('');
+  if (d.ceo_history) {
+    ciCeoRows = d.ceo_history.map(h => ({ date: h.date || '', content: h.content || '' }));
+  } else {
+    ciCeoRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
   }
+  renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
 
   // 연혁
-  if (d.company_history && d.company_history.length > 0) {
-    document.getElementById('company-history-body').innerHTML = d.company_history
-      .map(h => `<tr><td style="color:#64748b;font-size:12px;white-space:nowrap;">${h.date}</td><td>${h.content}</td></tr>`).join('');
+  if (d.company_history) {
+    ciHistoryRows = d.company_history.map(h => ({ date: h.date || '', content: h.content || '' }));
+  } else {
+    ciHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
+  }
+  renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
+
+  // 보증인 정보
+  const g = d.guarantor || {};
+  const guFields = {
+    'gu-name': g.name, 'gu-relation': g.representative,
+    'gu-actual': g.actual_manager, 'gu-bizno': g.business_number,
+    'gu-industry': g.industry, 'gu-type': g.company_type,
+    'gu-phone': g.phone, 'gu-rep-phone': g.rep_phone,
+    'gu-listed': g.listed, 'gu-employees': g.employees, 'gu-address': g.address
+  };
+  Object.entries(guFields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined) el.value = val;
+  });
+
+  // 보증인 등기임원
+  if (d.guarantor_executives && d.guarantor_executives.length > 0) {
+    guExecutives = [...d.guarantor_executives];
+    renderExecutives('gu');
   }
 
-  // 보증인
-  const g = d.guarantor || {};
-  const gfields = { 'gu-name': g.name, 'gu-rep': g.representative, 'gu-bizno': g.business_number, 'gu-industry': g.industry, 'gu-phone': g.phone };
-  Object.entries(gfields).forEach(([id, val]) => {
-    const el = document.getElementById(id); if (el && val) el.value = val;
-  });
+  // 보증인 주주현황
+  if (d.guarantor_shareholders && d.guarantor_shareholders.length > 0) {
+    d.guarantor_shareholders.slice(0, 6).forEach((s, i) => {
+      let ratioStr = '';
+      if (s.ratio !== null && s.ratio !== undefined && s.ratio !== '') {
+        const rNum = parseFloat(s.ratio);
+        ratioStr = !isNaN(rNum) ? (rNum <= 1 ? (rNum * 100).toFixed(1) + '%' : rNum.toFixed(1) + '%') : String(s.ratio);
+      }
+      const sharesStr = s.shares != null && s.shares !== '' ? Number(s.shares).toLocaleString() : '';
+      const amountStr = s.amount != null && s.amount !== '' ? Number(s.amount).toLocaleString() : '';
+      const fields = {
+        name: s.name || '', shares: sharesStr,
+        ratio: ratioStr, amount: amountStr, relation: s.relation || ''
+      };
+      Object.entries(fields).forEach(([field, val]) => {
+        const el = document.querySelector(`[data-gsh="${i}"][data-field="${field}"]`);
+        if (el) el.value = val;
+      });
+    });
+  }
+
+  // 기타
+  const biz = document.getElementById('ci-business-direction');
+  if (biz && d.business_direction) biz.value = d.business_direction;
+  const aff = document.getElementById('ci-affiliates');
+  if (aff && d.affiliates) aff.value = d.affiliates;
+
+  // 보증인 경력 (연혁)
+  if (d.guarantor_history) {
+    guHistoryRows = d.guarantor_history.map(h => ({ date: h.date || '', content: h.content || '' }));
+  } else {
+    guHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
+  }
+  renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
+}
+
+// 초기 빈 이력 행 렌더링 (데이터 없을 때)
+function initCompanyInfoEmpty() {
+  ciCeoRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
+  ciHistoryRows = Array(8).fill(null).map(() => ({ date: '', content: '' }));
+  guHistoryRows = Array(5).fill(null).map(() => ({ date: '', content: '' }));
+  renderHistoryTable('ci-ceo-body', 'ci-ceo', ciCeoRows);
+  renderHistoryTable('ci-history-body', 'ci-hist', ciHistoryRows);
+  renderHistoryTable('gu-history-body', 'gu-hist', guHistoryRows);
 }
 
 async function saveCompanyInfo() {
+  // 주주 수집
+  const shareholders = [];
+  for (let i = 0; i < 6; i++) {
+    const name = document.querySelector(`[data-sh="${i}"][data-field="name"]`)?.value?.trim();
+    if (!name) continue;
+    shareholders.push({
+      name,
+      shares: document.querySelector(`[data-sh="${i}"][data-field="shares"]`)?.value || '',
+      ratio: document.querySelector(`[data-sh="${i}"][data-field="ratio"]`)?.value || '',
+      amount: document.querySelector(`[data-sh="${i}"][data-field="amount"]`)?.value || '',
+      relation: document.querySelector(`[data-sh="${i}"][data-field="relation"]`)?.value || ''
+    });
+  }
+  // 보증인 주주 수집
+  const guShareholders = [];
+  for (let i = 0; i < 7; i++) {
+    const name = document.querySelector(`[data-gsh="${i}"][data-field="name"]`)?.value?.trim();
+    if (!name) continue;
+    guShareholders.push({
+      name,
+      shares: document.querySelector(`[data-gsh="${i}"][data-field="shares"]`)?.value || '',
+      ratio: document.querySelector(`[data-gsh="${i}"][data-field="ratio"]`)?.value || '',
+      amount: document.querySelector(`[data-gsh="${i}"][data-field="amount"]`)?.value || '',
+      relation: document.querySelector(`[data-gsh="${i}"][data-field="relation"]`)?.value || ''
+    });
+  }
+
   const data = {
     company: {
-      name: document.getElementById('ci-name').value,
-      representative: document.getElementById('ci-rep').value,
-      actual_manager: document.getElementById('ci-actual').value,
-      business_number: document.getElementById('ci-bizno').value,
-      industry: document.getElementById('ci-industry').value,
-      company_type: document.getElementById('ci-type').value,
-      phone: document.getElementById('ci-phone').value,
-      rep_phone: document.getElementById('ci-rep-phone').value,
-      listed: document.getElementById('ci-listed').value,
-      employees: document.getElementById('ci-employees').value,
-      address: document.getElementById('ci-address').value
-    }
+      name: document.getElementById('ci-name')?.value || '',
+      representative: document.getElementById('ci-rep')?.value || '',
+      actual_manager: document.getElementById('ci-actual')?.value || '',
+      business_number: document.getElementById('ci-bizno')?.value || '',
+      industry: document.getElementById('ci-industry')?.value || '',
+      company_type: document.getElementById('ci-type')?.value || '',
+      phone: document.getElementById('ci-phone')?.value || '',
+      rep_phone: document.getElementById('ci-rep-phone')?.value || '',
+      listed: document.getElementById('ci-listed')?.value || '',
+      employees: document.getElementById('ci-employees')?.value || '',
+      address: document.getElementById('ci-address')?.value || ''
+    },
+    shareholders,
+    executives: ciExecutives,
+    ceo_history: ciCeoRows.filter(r => r.date || r.content),
+    company_history: ciHistoryRows.filter(r => r.date || r.content),
+    guarantor: {
+      name: document.getElementById('gu-name')?.value || '',
+      representative: document.getElementById('gu-relation')?.value || '',
+      business_number: document.getElementById('gu-bizno')?.value || '',
+      industry: document.getElementById('gu-industry')?.value || '',
+      phone: document.getElementById('gu-phone')?.value || '',
+      actual_manager: document.getElementById('gu-actual')?.value || '',
+      company_type: document.getElementById('gu-type')?.value || '',
+      rep_phone: document.getElementById('gu-rep-phone')?.value || '',
+      listed: document.getElementById('gu-listed')?.value || '',
+      employees: document.getElementById('gu-employees')?.value || '',
+      address: document.getElementById('gu-address')?.value || ''
+    },
+    guarantor_shareholders: guShareholders,
+    guarantor_executives: guExecutives,
+    guarantor_history: guHistoryRows.filter(r => r.date || r.content),
+    business_direction: document.getElementById('ci-business-direction')?.value || '',
+    affiliates: document.getElementById('ci-affiliates')?.value || ''
   };
+
   try {
     await axios.post(`${API_BASE}/api/data/company_info`, data);
     if (!appData.company_info) appData.company_info = {};
@@ -1040,6 +1629,10 @@ async function saveCompanyInfo() {
   } catch {
     showToast('💾 로컬에 저장되었습니다.', 'success');
   }
+}
+
+function exportCompanyInfo() {
+  showToast('ℹ️ 기업정보 엑셀 다운로드는 준비 중입니다.', '');
 }
 
 // ===== BS/IS 렌더링 =====
@@ -1526,8 +2119,9 @@ function hideLoading() { document.getElementById('loading').classList.remove('sh
 
 // ===== 초기화 =====
 document.addEventListener('DOMContentLoaded', () => {
+  initCompanyInfoEmpty();   // 기업정보 빈 행 초기화
   loadAllData();
-  loadSettlementData();  // 결산자료 별도 로드
+  loadSettlementData();     // 결산자료 별도 로드
 });
 </script>
 </body>

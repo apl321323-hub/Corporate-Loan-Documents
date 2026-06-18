@@ -6,7 +6,8 @@ import tempfile
 import os
 import json
 import io
-from excel_parser import parse_excel_file, parse_settlement_asset_quality
+from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info
+import openpyxl
 
 app = FastAPI(title="기업여신자료 분석 시스템")
 
@@ -234,7 +235,40 @@ async def export_asset_quality(view: str = "total", product: str = "", group: st
         raise HTTPException(status_code=500, detail=f"엑셀 생성 오류: {str(e)}")
 
 
+@app.post("/api/upload/company_info")
+async def upload_company_info(file: UploadFile = File(...)):
+    """기업정보 엑셀 전용 업로드"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
 
+        wb = openpyxl.load_workbook(tmp_path, data_only=True)
+        ws = None
+        for sname in wb.sheetnames:
+            if '기업정보' in sname or '기업현황' in sname:
+                ws = wb[sname]
+                break
+        if ws is None:
+            ws = wb.active
+
+        data = parse_company_info(ws)
+        uploaded_data['company_info'] = data
+        os.unlink(tmp_path)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"기업정보 '{file.filename}' 업로드 완료",
+            "company_name": data.get('company', {}).get('name', '')
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
+
+
+@app.get("/api/data/company_info")
 async def get_company_info():
     """기업정보 데이터"""
     return uploaded_data.get("company_info", {})
