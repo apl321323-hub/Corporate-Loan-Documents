@@ -19,8 +19,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 업로드된 데이터 저장소 (메모리)
-uploaded_data = {}
+# ── 파일 기반 영구 저장소 ──────────────────────────────────────────
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+def _data_path(key: str) -> str:
+    return os.path.join(DATA_DIR, f"{key}.json")
+
+def save_data(key: str, value) -> None:
+    """데이터를 JSON 파일로 저장"""
+    with open(_data_path(key), "w", encoding="utf-8") as f:
+        json.dump(value, f, ensure_ascii=False, indent=2)
+
+def load_data(key: str):
+    """JSON 파일에서 데이터 로드 (없으면 None)"""
+    path = _data_path(key)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+class PersistentStore:
+    """dict처럼 사용하되 get/update/__setitem__/__contains__ 시 파일 I/O"""
+    def get(self, key, default=None):
+        v = load_data(key)
+        return v if v is not None else default
+
+    def __setitem__(self, key, value):
+        save_data(key, value)
+
+    def __contains__(self, key):
+        return os.path.exists(_data_path(key))
+
+    def update(self, d: dict):
+        for k, v in d.items():
+            save_data(k, v)
+
+    def keys(self):
+        names = [f[:-5] for f in os.listdir(DATA_DIR) if f.endswith(".json")]
+        return names
+
+uploaded_data = PersistentStore()
 
 # 정적 파일 서빙
 static_dir = os.path.join(os.path.dirname(__file__), "..", "public")
