@@ -363,6 +363,11 @@
     transition: color 0.15s;
   }
   .ci-del-btn:hover { color: #dc2626; }
+  /* 라벨 중앙 정렬 */
+  .ci-label-center {
+    text-align: center;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -424,22 +429,22 @@
       </div>
     </div>
 
-    <!-- ■ 차주사 섹션 -->
+    <!-- ■ 차주사 -->
     <div class="ci-section-wrap">
       <div class="ci-section-title">■ 차주사</div>
 
-      <!-- 기본정보 (Row 4~7) -->
+      <!-- 기본정보 (엑셀 row 4~7) -->
       <div class="ci-table-wrap">
         <table class="ci-table">
           <colgroup>
-            <col style="width:110px"><col style="width:220px">
-            <col style="width:130px"><col style="width:200px">
-            <col style="width:100px"><col>
+            <col style="width:110px"><col style="width:200px">
+            <col style="width:120px"><col style="width:190px">
+            <col style="width:90px"><col>
           </colgroup>
           <tbody>
             <tr>
               <td class="ci-label">차주명</td>
-              <td><input class="ci-input" id="ci-name" placeholder="회사명 입력"></td>
+              <td><input class="ci-input" id="ci-name" placeholder="회사명"></td>
               <td class="ci-label">대표이사</td>
               <td><input class="ci-input" id="ci-rep" placeholder="대표이사명"></td>
               <td class="ci-label">실경영자</td>
@@ -471,154 +476,152 @@
         </table>
       </div>
 
-      <!-- 주주현황 (Row 8~14) -->
-      <div class="ci-table-wrap">
+      <!-- 주주현황 (엑셀 row 8~14) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
         <table class="ci-table">
           <colgroup>
-            <col style="width:110px">
-            <col><col style="width:130px"><col style="width:90px"><col style="width:160px"><col style="width:110px">
+            <col style="width:110px"><col><col style="width:110px">
+            <col style="width:80px"><col style="width:140px"><col style="width:100px">
           </colgroup>
           <tbody>
             <tr>
-              <td class="ci-label" rowspan="7" style="text-align:center;vertical-align:middle;font-size:13px;">주주현황</td>
-              <td class="ci-th">주주명</td>
-              <td class="ci-th">주식수</td>
-              <td class="ci-th">지분율</td>
-              <td class="ci-th">주식금액</td>
-              <td class="ci-th">이해관계</td>
+              <td class="ci-label ci-label-center" rowspan="7">주주현황</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주주명</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주식수</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">지분율</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주식금액</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">이해관계</td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="0" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="0" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="0" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="0" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="0" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="0" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="0" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="0" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="1" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="1" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="1" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="1" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="1" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="1" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="1" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="1" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="2" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="2" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="2" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="2" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="2" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="2" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="2" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="2" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="3" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="3" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="3" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="3" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="3" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="3" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="3" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="3" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="4" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="4" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="4" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="4" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="4" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="4" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="4" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="4" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-sh="5" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-sh="5" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="5" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-sh="5" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-sh="5" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-sh="5" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-sh="5" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-sh="5" data-field="relation" placeholder="관계"></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- 등기임원 (Row 15) -->
-      <div class="ci-table-wrap">
+      <!-- 등기임원 (엑셀 row 15) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
         <table class="ci-table">
           <colgroup><col style="width:110px"><col></colgroup>
           <tbody>
             <tr>
-              <td class="ci-label" style="vertical-align:middle;">등기임원</td>
+              <td class="ci-label ci-label-center">등기임원</td>
               <td style="padding:8px 10px;">
                 <div id="ci-executives-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px;"></div>
-                <input class="ci-input" id="ci-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;max-width:220px;" onkeydown="addExecutive(event,'ci')">
+                <input class="ci-input" id="ci-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;width:220px;border-bottom:1px dashed #94a3b8;" onkeydown="addExecutive(event)">
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- 대표이사(실경영자) 이력 (Row 16~24) -->
-      <div class="ci-table-wrap">
-        <table class="ci-table" id="ci-ceo-table">
-          <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
-          </colgroup>
-          <tbody>
-            <tr>
-              <td class="ci-label" id="ci-ceo-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:1.7;">대표이사<br>(실경영자)<br><br>이&nbsp;&nbsp;력</td>
-              <td class="ci-th">일자(년/월)</td>
-              <td class="ci-th">내용</td>
-              <td class="ci-th" style="width:32px;"></td>
-            </tr>
-          </tbody>
-          <tbody id="ci-ceo-body">
-            <!-- JS로 채움 -->
-          </tbody>
-        </table>
-      </div>
-      <button class="ci-add-row-btn" id="ci-ceo-add-btn" onclick="addHistoryRow('ci-ceo')">
-        <i class="fas fa-plus"></i> 이력 행 추가
-      </button>
-
-      <!-- 연혁 (Row 25~40) -->
+      <!-- 대표이사(실경영자) 이력 (엑셀 row 16~24) -->
       <div class="ci-table-wrap" style="margin-top:8px;">
-        <table class="ci-table" id="ci-hist-table">
+        <table class="ci-table">
           <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
+            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
           </colgroup>
-          <tbody>
+          <tbody id="ci-ceo-header-row">
             <tr>
-              <td class="ci-label" id="ci-hist-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:2;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁</td>
-              <td class="ci-th">일자(년/월)</td>
-              <td class="ci-th">내용</td>
-              <td class="ci-th" style="width:32px;"></td>
+              <td class="ci-label ci-label-center" id="ci-ceo-rowspan-label" rowspan="1"
+                style="line-height:1.7;">대표이사<br>(실경영자)<br><br>이&nbsp;&nbsp;력</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
+              <td class="ci-th" style="padding:7px;text-align:center;"></td>
             </tr>
           </tbody>
-          <tbody id="ci-history-body">
-            <!-- JS로 채움 -->
-          </tbody>
+          <tbody id="ci-ceo-body"></tbody>
         </table>
+        <button class="ci-add-row-btn" onclick="addHistoryRow('ci-ceo')">
+          <i class="fas fa-plus"></i> 이력 행 추가
+        </button>
       </div>
-      <button class="ci-add-row-btn" id="ci-hist-add-btn" onclick="addHistoryRow('ci-hist')">
-        <i class="fas fa-plus"></i> 연혁 행 추가
-      </button>
+
+      <!-- 연혁 (엑셀 row 25~40) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
+          </colgroup>
+          <tbody id="ci-hist-header-row">
+            <tr>
+              <td class="ci-label ci-label-center" id="ci-hist-rowspan-label" rowspan="1"
+                style="letter-spacing:0.2em;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
+              <td class="ci-th" style="padding:7px;text-align:center;"></td>
+            </tr>
+          </tbody>
+          <tbody id="ci-history-body"></tbody>
+        </table>
+        <button class="ci-add-row-btn" onclick="addHistoryRow('ci-hist')">
+          <i class="fas fa-plus"></i> 연혁 행 추가
+        </button>
+      </div>
     </div><!-- /차주사 -->
 
-    <!-- ■ 보증(법)인 섹션 -->
-    <div class="ci-section-wrap" style="margin-top:24px;">
+    <!-- ■ 보증(법)인 (엑셀 row 42~63) -->
+    <div class="ci-section-wrap" style="margin-top:16px;">
       <div class="ci-section-title">■ 보증(법)인</div>
 
-      <!-- 보증인 기본정보 (Row 43~46) -->
+      <!-- 기본정보 (row 43~46) -->
       <div class="ci-table-wrap">
         <table class="ci-table">
           <colgroup>
-            <col style="width:110px"><col style="width:220px">
-            <col style="width:100px"><col style="width:160px">
-            <col style="width:100px"><col>
+            <col style="width:110px"><col style="width:200px">
+            <col style="width:120px"><col style="width:190px">
+            <col style="width:90px"><col>
           </colgroup>
           <tbody>
             <tr>
               <td class="ci-label">보증(법)인명</td>
-              <td><input class="ci-input" id="gu-name" placeholder="보증인명 입력"></td>
-              <td class="ci-label" style="text-align:center;">관계</td>
+              <td><input class="ci-input" id="gu-name" placeholder="보증인명"></td>
+              <td class="ci-label" style="text-align:center;">관&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;계</td>
               <td><input class="ci-input" id="gu-relation" placeholder="대표이사 등"></td>
               <td class="ci-label">실경영자</td>
               <td><input class="ci-input" id="gu-actual" placeholder="실경영자명"></td>
             </tr>
             <tr>
-              <td class="ci-label">사업자번호<br><small style="font-size:10px;color:#94a3b8;font-weight:400;">(주민번호)</small></td>
+              <td class="ci-label">사업자번호<br><span style="font-size:10px;color:#94a3b8;font-weight:400;">(주민번호)</span></td>
               <td><input class="ci-input" id="gu-bizno" placeholder="000000-0000000"></td>
               <td class="ci-label">업종</td>
               <td><input class="ci-input" id="gu-industry" placeholder="업종"></td>
@@ -643,136 +646,136 @@
         </table>
       </div>
 
-      <!-- 보증인 주주현황 (Row 47~53) -->
-      <div class="ci-table-wrap">
+      <!-- 주주현황 (row 47~53) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
         <table class="ci-table">
           <colgroup>
-            <col style="width:110px">
-            <col><col style="width:130px"><col style="width:90px"><col style="width:160px"><col style="width:110px">
+            <col style="width:110px"><col><col style="width:110px">
+            <col style="width:80px"><col style="width:140px"><col style="width:100px">
           </colgroup>
           <tbody>
             <tr>
-              <td class="ci-label" rowspan="7" style="text-align:center;vertical-align:middle;font-size:13px;">주주현황</td>
-              <td class="ci-th">주주명</td>
-              <td class="ci-th">주식수</td>
-              <td class="ci-th">지분율</td>
-              <td class="ci-th">주식금액</td>
-              <td class="ci-th">이해관계</td>
+              <td class="ci-label ci-label-center" rowspan="7">주주현황</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주주명</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주식수</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">지분율</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">주식금액</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">이해관계</td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="0" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="0" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="0" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="0" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="0" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="0" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="1" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="1" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="1" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="1" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="1" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="1" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="2" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="2" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="2" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="2" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="2" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="2" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="3" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="3" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="3" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="3" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="3" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="3" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="4" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="4" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="4" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="4" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="4" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="4" data-field="relation" placeholder="관계"></td>
             </tr>
             <tr>
               <td><input class="ci-input" data-gsh="5" data-field="name" placeholder="주주명"></td>
-              <td><input class="ci-input" data-gsh="5" data-field="shares" placeholder="0" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="5" data-field="ratio" placeholder="0%" style="text-align:right;"></td>
-              <td><input class="ci-input" data-gsh="5" data-field="amount" placeholder="0" style="text-align:right;"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="shares" placeholder="0"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="ratio" placeholder="0%"></td>
+              <td><input class="ci-input" data-gsh="5" data-field="amount" placeholder="0"></td>
               <td><input class="ci-input" data-gsh="5" data-field="relation" placeholder="관계"></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- 보증인 등기임원 (Row 54) -->
+      <!-- 등기임원 (row 54) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
+        <table class="ci-table">
+          <colgroup><col style="width:110px"><col></colgroup>
+          <tbody>
+            <tr>
+              <td class="ci-label ci-label-center">등기임원</td>
+              <td style="padding:8px 10px;">
+                <div id="gu-executives-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px;"></div>
+                <input class="ci-input" id="gu-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;width:220px;border-bottom:1px dashed #94a3b8;" onkeydown="addExecutive(event,'gu')">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 보증인 연혁(경력) (row 55~63) -->
+      <div class="ci-table-wrap" style="margin-top:8px;">
+        <table class="ci-table">
+          <colgroup>
+            <col style="width:110px"><col style="width:160px"><col><col style="width:36px">
+          </colgroup>
+          <tbody id="gu-hist-header-row">
+            <tr>
+              <td class="ci-label ci-label-center" id="gu-hist-rowspan-label" rowspan="1"
+                style="line-height:1.7;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁<br><br>(경&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;력)</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">일자(년/월)</td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">내용</td>
+              <td class="ci-th" style="padding:7px;text-align:center;"></td>
+            </tr>
+          </tbody>
+          <tbody id="gu-history-body"></tbody>
+        </table>
+        <button class="ci-add-row-btn" onclick="addHistoryRow('gu-hist')">
+          <i class="fas fa-plus"></i> 경력 행 추가
+        </button>
+      </div>
+    </div><!-- /보증(법)인 -->
+
+    <!-- ■ 기타 (엑셀 row 65~68) -->
+    <div class="ci-section-wrap" style="margin-top:16px;">
+      <div class="ci-section-title">■ 기타</div>
       <div class="ci-table-wrap">
         <table class="ci-table">
           <colgroup><col style="width:110px"><col></colgroup>
           <tbody>
             <tr>
-              <td class="ci-label" style="vertical-align:middle;">등기임원</td>
-              <td style="padding:8px 10px;">
-                <div id="gu-executives-wrap" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px;"></div>
-                <input class="ci-input" id="gu-exec-input" placeholder="임원명 입력 후 Enter" style="margin-top:6px;max-width:220px;" onkeydown="addExecutive(event,'gu')">
-              </td>
+              <td class="ci-th" style="padding:7px 10px;text-align:center;">구분</td>
+              <td class="ci-th" style="padding:7px 10px;">내용</td>
             </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 보증인 연혁(경력) (Row 55~63) -->
-      <div class="ci-table-wrap">
-        <table class="ci-table" id="gu-hist-table">
-          <colgroup>
-            <col style="width:110px"><col style="width:160px"><col><col style="width:32px">
-          </colgroup>
-          <tbody>
             <tr>
-              <td class="ci-label" id="gu-hist-label" rowspan="2" style="text-align:center;vertical-align:middle;line-height:2;">연&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;혁<br><br>(경&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;력)</td>
-              <td class="ci-th">일자(년/월)</td>
-              <td class="ci-th">내용</td>
-              <td class="ci-th" style="width:32px;"></td>
-            </tr>
-          </tbody>
-          <tbody id="gu-history-body">
-            <!-- JS로 채움 -->
-          </tbody>
-        </table>
-      </div>
-      <button class="ci-add-row-btn" id="gu-hist-add-btn" onclick="addHistoryRow('gu-hist')">
-        <i class="fas fa-plus"></i> 경력 행 추가
-      </button>
-    </div><!-- /보증(법)인 -->
-
-    <!-- ■ 기타 섹션 -->
-    <div class="ci-section-wrap" style="margin-top:24px;">
-      <div class="ci-section-title">■ 기타</div>
-      <div class="ci-table-wrap">
-        <table class="ci-table">
-          <colgroup><col style="width:130px"><col></colgroup>
-          <tbody>
-            <tr>
-              <td class="ci-label" style="text-align:center;vertical-align:top;padding-top:14px;line-height:1.9;">
-                차주사 영업방향<br>및<br>장&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;점
-              </td>
-              <td>
+              <td class="ci-label ci-label-center" style="vertical-align:top;padding-top:12px;">차주사<br>영업방향<br>및<br>장&nbsp;&nbsp;&nbsp;&nbsp;점</td>
+              <td style="padding:4px;">
                 <textarea class="ci-input" id="ci-business-direction" rows="8"
-                  placeholder="영업방향 및 장점 입력..." style="resize:vertical;min-height:140px;"></textarea>
+                  placeholder="영업방향 및 장점 입력..." style="resize:vertical;min-height:140px;width:100%;"></textarea>
               </td>
             </tr>
             <tr>
-              <td class="ci-label" style="text-align:center;vertical-align:middle;">관계사 및 계열사</td>
-              <td>
-                <textarea class="ci-input" id="ci-affiliates" rows="3"
-                  placeholder="관계사 및 계열사 입력..." style="resize:vertical;"></textarea>
-              </td>
+              <td class="ci-label ci-label-center" style="vertical-align:middle;">관계사 및<br>계열사</td>
+              <td style="padding:4px;"><textarea class="ci-input" id="ci-affiliates" rows="3"
+                placeholder="관계사 및 계열사 입력..." style="resize:vertical;width:100%;"></textarea></td>
             </tr>
           </tbody>
         </table>
       </div>
     </div><!-- /기타 -->
   </section>
+
 
   <!-- ===== 2. BS / IS ===== -->
   <section class="page" id="page-bspl">
