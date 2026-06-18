@@ -385,6 +385,137 @@ def parse_borrowing(ws) -> Dict:
     return result
 
 
+def parse_settlement_asset_quality(file_path: str) -> Dict:
+    """
+    결산자료 엑셀 파싱 → 자산건전성 연체 버킷 집계
+    H열=현재상품, J열=연체일수, L열=잔액
+    반환: { total, by_product, by_group, products, groups }
+    """
+    wb = openpyxl.load_workbook(file_path, data_only=True)
+    ws = wb.active  # 결산자료_20260531
+
+    # 버킷 정의
+    BUCKETS = ['무연체', '1~10', '11~30', '31~60', '61~90', '91~120', '121~150', '151~180', '181~', '연체합계', '융잔합계']
+
+    def bucket_of(days: int) -> List[str]:
+        """연체일수 → 해당 버킷 목록"""
+        buckets = []
+        if days == 0:
+            buckets.append('무연체')
+        elif 1 <= days <= 10:
+            buckets.append('1~10')
+        elif 11 <= days <= 30:
+            buckets.append('11~30')
+        elif 31 <= days <= 60:
+            buckets.append('31~60')
+        elif 61 <= days <= 90:
+            buckets.append('61~90')
+        elif 91 <= days <= 120:
+            buckets.append('91~120')
+        elif 121 <= days <= 150:
+            buckets.append('121~150')
+        elif 151 <= days <= 180:
+            buckets.append('151~180')
+        else:  # >= 181
+            buckets.append('181~')
+        if days >= 1:
+            buckets.append('연체합계')
+        buckets.append('융잔합계')
+        return buckets
+
+    def empty_buckets() -> Dict:
+        return {b: {'count': 0, 'balance': 0.0} for b in BUCKETS}
+
+    # 상품 → 그룹 매핑 (업종 분류)
+    PRODUCT_GROUPS = {
+        '담보론': '담보',
+        '담보론(지분대출)': '담보',
+        '전월세론': '담보',
+        'N론': '신용',
+        'N론(하이브리드)': '신용',
+        'OP론': '신용',
+        '오투N론': '신용',
+        '오투론': '신용',
+        '토마토N론': '신용',
+        '기타N': '신용',
+        '토마토론': '신용',
+        '토마토토탈론': '토탈',
+        '토마토토탈론플러스': '토탈',
+        '토탈론': '토탈',
+        '스타론': '스타',
+        '스타스위치론': '스타',
+        '우량론': '우량/기타',
+        '기타': '우량/기타',
+        '플러스론': '우량/기타',
+        '프리론': '우량/기타',
+        '프리미엄론': '우량/기타',
+        '큐브론': '우량/기타',
+        '테일론': '우량/기타',
+        '레이디론': '우량/기타',
+        '다이렉트론(A)': '다이렉트',
+        '다이렉트론(W)': '다이렉트',
+        'T플러스론': '우량/기타',
+    }
+
+    total = empty_buckets()
+    by_product: Dict[str, Dict] = {}
+    by_group: Dict[str, Dict] = {}
+
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, values_only=True):
+        product = row[7]   # H열
+        overdue = row[9]   # J열
+        balance = row[11]  # L열
+
+        if product is None or balance is None:
+            continue
+
+        try:
+            bal = float(balance)
+            ov = int(overdue) if overdue is not None else 0
+        except (ValueError, TypeError):
+            continue
+
+        product = str(product).strip()
+        group = PRODUCT_GROUPS.get(product, '기타')
+
+        # 상품별 초기화
+        if product not in by_product:
+            by_product[product] = empty_buckets()
+        if group not in by_group:
+            by_group[group] = empty_buckets()
+
+        hit_buckets = bucket_of(ov)
+        for bk in hit_buckets:
+            total[bk]['count'] += 1
+            total[bk]['balance'] += bal
+            by_product[product][bk]['count'] += 1
+            by_product[product][bk]['balance'] += bal
+            by_group[group][bk]['count'] += 1
+            by_group[group][bk]['balance'] += bal
+
+    # 연체율 계산 헬퍼
+    def add_rate(d: Dict) -> Dict:
+        result = {}
+        for bk, v in d.items():
+            total_bal = d['융잔합계']['balance']
+            rate = (v['balance'] / total_bal * 100) if total_bal > 0 else 0.0
+            result[bk] = {
+                'count': v['count'],
+                'balance': round(v['balance']),
+                'rate': round(rate, 2)
+            }
+        return result
+
+    return {
+        'buckets': BUCKETS,
+        'total': add_rate(total),
+        'by_product': {p: add_rate(v) for p, v in sorted(by_product.items())},
+        'by_group': {g: add_rate(v) for g, v in sorted(by_group.items())},
+        'products': sorted(by_product.keys()),
+        'groups': sorted(by_group.keys()),
+    }
+
+
 def parse_excel_file(file_path: str) -> Dict:
     """전체 엑셀 파일 파싱"""
     wb = openpyxl.load_workbook(file_path, data_only=True)

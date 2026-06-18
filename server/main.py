@@ -1,11 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 import tempfile
 import os
 import json
-from excel_parser import parse_excel_file
+import io
+from excel_parser import parse_excel_file, parse_settlement_asset_quality
 
 app = FastAPI(title="기업여신자료 분석 시스템")
 
@@ -70,7 +71,170 @@ async def get_all_data():
     return uploaded_data
 
 
-@app.get("/api/data/company_info")
+@app.post("/api/upload/settlement")
+async def upload_settlement(file: UploadFile = File(...)):
+    """결산자료 엑셀 업로드 및 자산건전성 계산"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_settlement_asset_quality(tmp_path)
+        uploaded_data['settlement_asset_quality'] = data
+        os.unlink(tmp_path)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"결산자료 '{file.filename}' 업로드 및 분석 완료",
+            "total_products": len(data.get('products', [])),
+            "total_groups": len(data.get('groups', []))
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
+
+
+@app.get("/api/data/settlement_asset_quality")
+async def get_settlement_asset_quality():
+    """결산자료 기반 자산건전성 데이터"""
+    return uploaded_data.get("settlement_asset_quality", {})
+
+
+@app.get("/api/export/asset_quality")
+async def export_asset_quality(view: str = "total", product: str = "", group: str = ""):
+    """자산건전성 데이터를 엑셀로 다운로드"""
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+
+        data = uploaded_data.get("settlement_asset_quality", {})
+        if not data:
+            raise HTTPException(status_code=404, detail="결산자료가 업로드되지 않았습니다.")
+
+        buckets = data.get('buckets', [])
+        wb = openpyxl.Workbook()
+
+        # 스타일 정의
+        header_fill = PatternFill("solid", fgColor="1e3a5f")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        subheader_fill = PatternFill("solid", fgColor="2d5a8e")
+        subheader_font = Font(color="FFFFFF", bold=True, size=10)
+        total_fill = PatternFill("solid", fgColor="FFF3CD")
+        overdue_fill = PatternFill("solid", fgColor="FFE0E0")
+        center_align = Alignment(horizontal="center", vertical="center")
+        right_align = Alignment(horizontal="right", vertical="center")
+        border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+
+        def write_bucket_table(ws, title: str, bk_data: dict, start_row: int) -> int:
+            """버킷 테이블 작성, 다음 시작행 반환"""
+            # 타이틀
+            ws.cell(row=start_row, column=1, value=title).font = Font(bold=True, size=12, color="1e3a5f")
+            start_row += 1
+
+            # 헤더
+            headers = ['구분', '건수', '잔액(원)', '연체율(%)']
+            for ci, h in enumerate(headers, 1):
+                c = ws.cell(row=start_row, column=ci, value=h)
+                c.fill = header_fill; c.font = header_font
+                c.alignment = center_align; c.border = border
+            start_row += 1
+
+            # 데이터 행
+            for bk in buckets:
+                v = bk_data.get(bk, {'count': 0, 'balance': 0, 'rate': 0.0})
+                row_vals = [bk, v['count'], v['balance'], v['rate']]
+                for ci, val in enumerate(row_vals, 1):
+                    c = ws.cell(row=start_row, column=ci, value=val)
+                    c.border = border
+                    if bk in ('융잔합계',):
+                        c.fill = total_fill; c.font = Font(bold=True)
+                    elif bk in ('연체합계',):
+                        c.fill = overdue_fill; c.font = Font(bold=True, color="CC0000")
+                    if ci > 1:
+                        c.alignment = right_align
+                    if ci == 3 and isinstance(val, (int, float)):
+                        c.number_format = '#,##0'
+                    if ci == 4 and isinstance(val, (int, float)):
+                        c.number_format = '0.00"%"'
+                start_row += 1
+
+            return start_row + 1  # 빈 행 하나 추가
+
+        if view == "total":
+            ws = wb.active
+            ws.title = "전체"
+            ws.column_dimensions['A'].width = 15
+            ws.column_dimensions['B'].width = 10
+            ws.column_dimensions['C'].width = 20
+            ws.column_dimensions['D'].width = 12
+            write_bucket_table(ws, "■ 전체 자산건전성 현황", data['total'], 1)
+            filename = "자산건전성_전체.xlsx"
+
+        elif view == "by_group":
+            ws = wb.active
+            ws.title = "상품그룹별"
+            ws.column_dimensions['A'].width = 15
+            ws.column_dimensions['B'].width = 10
+            ws.column_dimensions['C'].width = 20
+            ws.column_dimensions['D'].width = 12
+            row = 1
+            for g, gdata in data['by_group'].items():
+                row = write_bucket_table(ws, f"■ {g}", gdata, row)
+            filename = "자산건전성_상품그룹별.xlsx"
+
+        elif view == "by_product":
+            ws = wb.active
+            ws.title = "상품별"
+            ws.column_dimensions['A'].width = 20
+            ws.column_dimensions['B'].width = 10
+            ws.column_dimensions['C'].width = 20
+            ws.column_dimensions['D'].width = 12
+            row = 1
+            target_product = product or None
+            items = data['by_product']
+            if target_product and target_product in items:
+                row = write_bucket_table(ws, f"■ {target_product}", items[target_product], row)
+            else:
+                for p, pdata in items.items():
+                    row = write_bucket_table(ws, f"■ {p}", pdata, row)
+            filename = f"자산건전성_{target_product or '상품별'}.xlsx"
+
+        else:
+            # 전체 시트 묶음
+            ws = wb.active
+            ws.title = "전체"
+            for col_width, col in zip([15, 10, 20, 12], ['A', 'B', 'C', 'D']):
+                ws.column_dimensions[col].width = col_width
+            write_bucket_table(ws, "■ 전체 자산건전성 현황", data['total'], 1)
+            filename = "자산건전성_전체.xlsx"
+
+        # 스트리밍 응답
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        from urllib.parse import quote
+        encoded_filename = quote(filename)
+
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"엑셀 생성 오류: {str(e)}")
+
+
+
 async def get_company_info():
     """기업정보 데이터"""
     return uploaded_data.get("company_info", {})

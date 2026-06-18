@@ -537,35 +537,71 @@
   <section class="page" id="page-asset">
     <div class="section-header">
       <h3>자산건전성</h3>
-      <div class="date-filter">
-        <label>기간:</label>
-        <select id="aq-period" onchange="renderAssetQuality()">
-          <option value="12">최근 12개월</option>
-          <option value="24">최근 24개월</option>
-          <option value="all">전체</option>
-        </select>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="settle-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">결산자료 미업로드</span>
+        <button onclick="exportAssetQuality()" id="btn-export-aq" style="background:#1e3a5f;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;" disabled>
+          <i class="fas fa-file-excel"></i> 엑셀 다운로드
+        </button>
       </div>
     </div>
 
+    <!-- KPI 카드 -->
     <div class="kpi-grid">
-      <div class="kpi-card green"><div class="kpi-label">무연체</div><div class="kpi-value" id="kpi-aq-normal">-</div><div class="kpi-sub">최근 기준월</div></div>
-      <div class="kpi-card yellow"><div class="kpi-label">연체합계</div><div class="kpi-value" id="kpi-aq-overdue">-</div><div class="kpi-sub">최근 기준월</div></div>
-      <div class="kpi-card"><div class="kpi-label">융잔합계</div><div class="kpi-value" id="kpi-aq-total">-</div><div class="kpi-sub">최근 기준월</div></div>
-      <div class="kpi-card red"><div class="kpi-label">연체율</div><div class="kpi-value" id="kpi-aq-ratio">-</div><div class="kpi-sub">연체/융잔</div></div>
+      <div class="kpi-card green"><div class="kpi-label">무연체</div><div class="kpi-value" id="kpi-aq-normal">-</div><div class="kpi-sub">잔액 기준</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">연체합계</div><div class="kpi-value" id="kpi-aq-overdue">-</div><div class="kpi-sub">잔액 기준</div></div>
+      <div class="kpi-card"><div class="kpi-label">융잔합계</div><div class="kpi-value" id="kpi-aq-total">-</div><div class="kpi-sub">전체 잔액</div></div>
+      <div class="kpi-card red"><div class="kpi-label">연체율</div><div class="kpi-value" id="kpi-aq-ratio">-</div><div class="kpi-sub">연체합계/융잔합계</div></div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-chart-bar"></i> 연체 현황 추이</div>
-      <div class="chart-wrap"><canvas id="chart-asset"></canvas></div>
+    <!-- 3-view 탭 -->
+    <div class="tab-bar" id="aq-tab-bar">
+      <button class="tab-btn active" onclick="switchAQTab('total')" id="aq-tab-btn-total">전체</button>
+      <button class="tab-btn" onclick="switchAQTab('group')" id="aq-tab-btn-group">상품그룹</button>
+      <button class="tab-btn" onclick="switchAQTab('product')" id="aq-tab-btn-product">각 상품</button>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-scroll" style="max-height:500px;">
-        <table class="data-table" id="aq-table">
-          <thead><tr id="aq-header"><th class="label">구분</th></tr></thead>
-          <tbody id="aq-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
-        </table>
+    <!-- 전체 탭 -->
+    <div id="aq-view-total">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-chart-bar"></i> 연체구간별 잔액 현황</div>
+        <div class="chart-wrap"><canvas id="chart-asset-total"></canvas></div>
       </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="table-scroll">
+          <table class="data-table" id="aq-table-total">
+            <thead><tr>
+              <th class="label" style="min-width:120px;">연체구간</th>
+              <th>건수</th><th>잔액(원)</th><th>비율(%)</th>
+            </tr></thead>
+            <tbody id="aq-body-total"><tr><td class="label" colspan="4">결산자료를 업로드하세요</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상품그룹 탭 -->
+    <div id="aq-view-group" style="display:none;">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-layer-group"></i> 상품그룹별 연체율 비교</div>
+        <div class="chart-wrap"><canvas id="chart-asset-group"></canvas></div>
+      </div>
+      <div id="aq-group-tables"></div>
+    </div>
+
+    <!-- 각 상품 탭 -->
+    <div id="aq-view-product" style="display:none;">
+      <div class="card" style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <label style="font-size:13px;font-weight:600;color:#374151;">상품 선택:</label>
+          <select id="aq-product-select" onchange="renderAQProduct()" style="border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:13px;min-width:200px;">
+            <option value="">전체 상품 보기</option>
+          </select>
+          <button onclick="exportAssetQuality('by_product')" style="background:#7c3aed;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
+            <i class="fas fa-file-excel"></i> 이 상품 다운로드
+          </button>
+        </div>
+      </div>
+      <div id="aq-product-tables"></div>
     </div>
   </section>
 
@@ -651,26 +687,65 @@
   </section>
 </main>
 
-<!-- Upload Modal -->
+<!-- Upload Modal (다중 섹터) -->
 <div id="upload-modal">
-  <div class="modal-box">
-    <h3><i class="fas fa-file-excel" style="color:#16a34a;margin-right:8px;"></i>엑셀 파일 업로드</h3>
-    <p>기업여신자료 엑셀 파일을 업로드하면<br>모든 시트 데이터가 자동으로 반영됩니다.</p>
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <i class="fas fa-cloud-upload-alt"></i>
-      <div class="drop-text">파일을 여기에 드래그하거나 클릭하여 선택</div>
-      <div class="drop-sub">.xlsx, .xls 파일만 지원됩니다</div>
+  <div class="modal-box" style="max-width:680px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <h3 style="margin:0;"><i class="fas fa-file-excel" style="color:#16a34a;margin-right:8px;"></i>자료 업로드</h3>
+      <button onclick="closeUpload()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;">✕</button>
     </div>
-    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event)">
-    <div class="upload-progress" id="upload-progress">
-      <div style="font-size:13px;color:#374151;font-weight:600;" id="upload-status">업로드 중...</div>
-      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <p style="margin:0 0 20px;color:#64748b;font-size:13px;">업로드할 자료 유형을 선택하여 파일을 올려주세요.</p>
+
+    <!-- 섹터 1: 기업여신자료 -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="background:#1e3a5f;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 1</span>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;">기업여신자료</span>
+        <span style="font-size:11px;color:#64748b;">(재무제표, 현금흐름, 영업현황, 차입현황 등)</span>
+      </div>
+      <div class="drop-zone" id="drop-zone-main" onclick="document.getElementById('file-input-main').click()" style="padding:20px;">
+        <i class="fas fa-cloud-upload-alt" style="font-size:24px;"></i>
+        <div class="drop-text" id="drop-text-main">파일을 여기에 드래그하거나 클릭하여 선택</div>
+        <div class="drop-sub">.xlsx, .xls 파일 지원</div>
+      </div>
+      <input type="file" id="file-input-main" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'main')">
+      <div class="upload-progress" id="upload-progress-main" style="margin-top:10px;">
+        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-main">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-main"></div></div>
+      </div>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="btn-primary" onclick="uploadFile('main')" id="upload-btn-main" disabled style="padding:8px 18px;font-size:12px;">
+          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+        </button>
+      </div>
     </div>
-    <div style="margin-top:20px; text-align:right;">
-      <button class="btn-cancel" onclick="closeUpload()">취소</button>
-      <button class="btn-primary" onclick="uploadFile()" id="upload-btn" disabled>
-        <i class="fas fa-upload" style="margin-right:6px;"></i>업로드
-      </button>
+
+    <!-- 섹터 2: 결산자료 -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;">섹터 2</span>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;">결산자료</span>
+        <span style="font-size:11px;color:#64748b;">(개인별 대출 결산 데이터 → 자산건전성 분석)</span>
+      </div>
+      <div class="drop-zone" id="drop-zone-settle" onclick="document.getElementById('file-input-settle').click()" style="padding:20px;">
+        <i class="fas fa-table" style="font-size:24px;"></i>
+        <div class="drop-text" id="drop-text-settle">파일을 여기에 드래그하거나 클릭하여 선택</div>
+        <div class="drop-sub">결산자료_YYYYMMDD.xlsx 형식 | H=현재상품, J=연체일수, L=잔액</div>
+      </div>
+      <input type="file" id="file-input-settle" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'settle')">
+      <div class="upload-progress" id="upload-progress-settle" style="margin-top:10px;">
+        <div style="font-size:12px;color:#374151;font-weight:600;" id="upload-status-settle">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-settle"></div></div>
+      </div>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="btn-primary" onclick="uploadFile('settle')" id="upload-btn-settle" disabled style="padding:8px 18px;font-size:12px;background:#7c3aed;">
+          <i class="fas fa-upload" style="margin-right:5px;"></i>업로드
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;text-align:right;">
+      <button class="btn-cancel" onclick="closeUpload()">닫기</button>
     </div>
   </div>
 </div>
@@ -687,7 +762,6 @@
 <script>
 // ===== 전역 상태 =====
 let appData = {};
-let selectedFile = null;
 let charts = {};
 const API_BASE = '';
 
@@ -727,71 +801,91 @@ function switchTab(group, tab) {
   if (el) el.classList.add('active');
 }
 
-// ===== 업로드 모달 =====
+// ===== 업로드 모달 (다중 섹터) =====
+const selectedFiles = { main: null, settle: null };
+
 function openUpload() {
   document.getElementById('upload-modal').classList.add('open');
 }
 function closeUpload() {
   document.getElementById('upload-modal').classList.remove('open');
-  selectedFile = null;
-  document.getElementById('file-input').value = '';
-  document.getElementById('drop-zone').querySelector('.drop-text').textContent = '파일을 여기에 드래그하거나 클릭하여 선택';
-  document.getElementById('upload-progress').style.display = 'none';
-  document.getElementById('upload-btn').disabled = true;
-  document.getElementById('progress-bar').style.width = '0%';
+  ['main','settle'].forEach(s => {
+    selectedFiles[s] = null;
+    const inp = document.getElementById(`file-input-${s}`);
+    if (inp) inp.value = '';
+    const dt = document.getElementById(`drop-text-${s}`);
+    if (dt) dt.textContent = '파일을 여기에 드래그하거나 클릭하여 선택';
+    const prog = document.getElementById(`upload-progress-${s}`);
+    if (prog) prog.style.display = 'none';
+    const btn = document.getElementById(`upload-btn-${s}`);
+    if (btn) btn.disabled = true;
+    const bar = document.getElementById(`progress-bar-${s}`);
+    if (bar) bar.style.width = '0%';
+  });
 }
 
-// 드래그 앤 드롭
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('dragover');
-  const files = e.dataTransfer.files;
-  if (files.length > 0) setFile(files[0]);
+// 드래그 앤 드롭 초기화
+['main','settle'].forEach(sector => {
+  const dz = document.getElementById(`drop-zone-${sector}`);
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0], sector);
+  });
 });
 
-function handleFileSelect(e) { if (e.target.files[0]) setFile(e.target.files[0]); }
-
-function setFile(file) {
-  selectedFile = file;
-  dropZone.querySelector('.drop-text').textContent = `선택됨: ${file.name}`;
-  document.getElementById('upload-btn').disabled = false;
+function handleFileSelect(e, sector) {
+  if (e.target.files[0]) setFile(e.target.files[0], sector);
 }
 
-async function uploadFile() {
-  if (!selectedFile) return;
+function setFile(file, sector) {
+  selectedFiles[sector] = file;
+  document.getElementById(`drop-text-${sector}`).textContent = `선택됨: ${file.name}`;
+  document.getElementById(`upload-btn-${sector}`).disabled = false;
+}
+
+async function uploadFile(sector) {
+  const file = selectedFiles[sector];
+  if (!file) return;
+
+  const endpoint = sector === 'settle' ? '/api/upload/settlement' : '/api/upload';
   const formData = new FormData();
-  formData.append('file', selectedFile);
+  formData.append('file', file);
 
-  document.getElementById('upload-progress').style.display = 'block';
-  document.getElementById('upload-btn').disabled = true;
-  document.getElementById('upload-status').textContent = '파일 업로드 중...';
+  document.getElementById(`upload-progress-${sector}`).style.display = 'block';
+  document.getElementById(`upload-btn-${sector}`).disabled = true;
+  document.getElementById(`upload-status-${sector}`).textContent = '파일 업로드 중...';
 
-  // 프로그레스 애니메이션
   let prog = 0;
   const interval = setInterval(() => {
-    prog = Math.min(prog + 5, 85);
-    document.getElementById('progress-bar').style.width = prog + '%';
-  }, 150);
+    prog = Math.min(prog + 4, 85);
+    document.getElementById(`progress-bar-${sector}`).style.width = prog + '%';
+  }, 200);
 
   try {
     showLoading();
-    const res = await axios.post(`${API_BASE}/api/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    const res = await axios.post(`${API_BASE}${endpoint}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000
     });
     clearInterval(interval);
-    document.getElementById('progress-bar').style.width = '100%';
-    document.getElementById('upload-status').textContent = '완료!';
+    document.getElementById(`progress-bar-${sector}`).style.width = '100%';
+    document.getElementById(`upload-status-${sector}`).textContent = '완료!';
 
-    await loadAllData();
-    closeUpload();
-    showToast('✅ ' + res.data.message, 'success');
+    if (sector === 'settle') {
+      await loadSettlementData();
+      showToast('✅ ' + res.data.message + ` (상품 ${res.data.total_products}개)`, 'success');
+    } else {
+      await loadAllData();
+      showToast('✅ ' + res.data.message, 'success');
+    }
   } catch (e) {
     clearInterval(interval);
-    document.getElementById('progress-bar').style.width = '0%';
-    document.getElementById('upload-status').textContent = '오류 발생';
-    document.getElementById('upload-btn').disabled = false;
+    document.getElementById(`progress-bar-${sector}`).style.width = '0%';
+    document.getElementById(`upload-status-${sector}`).textContent = '오류 발생';
+    document.getElementById(`upload-btn-${sector}`).disabled = false;
     showToast('❌ 업로드 실패: ' + (e.response?.data?.detail || e.message), 'error');
   } finally {
     hideLoading();
@@ -810,6 +904,22 @@ async function loadAllData() {
     }
   } catch (e) {
     console.warn('데이터 로드 실패 (서버 미연결):', e.message);
+  }
+}
+
+async function loadSettlementData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/settlement_asset_quality`);
+    if (res.data && res.data.buckets) {
+      appData.settlement_asset_quality = res.data;
+      document.getElementById('settle-data-badge').textContent = '결산자료 로드됨';
+      document.getElementById('settle-data-badge').style.background = '#dcfce7';
+      document.getElementById('settle-data-badge').style.color = '#16a34a';
+      document.getElementById('btn-export-aq').disabled = false;
+      renderAssetQuality();
+    }
+  } catch (e) {
+    console.warn('결산자료 로드 실패:', e.message);
   }
 }
 
@@ -1063,51 +1173,152 @@ function renderCashflow() {
     ], '억원');
 }
 
+// ===== 자산건전성 탭 전환 =====
+let aqCurrentTab = 'total';
+
+function switchAQTab(tab) {
+  aqCurrentTab = tab;
+  ['total','group','product'].forEach(t => {
+    document.getElementById(`aq-view-${t}`).style.display = t === tab ? '' : 'none';
+    const btn = document.getElementById(`aq-tab-btn-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  renderAssetQuality();
+}
+
 // ===== 자산건전성 렌더링 =====
+const AQ_BUCKETS = ['무연체','1~10','11~30','31~60','61~90','91~120','121~150','151~180','181~','연체합계','융잔합계'];
+
 function renderAssetQuality() {
-  const d = appData.asset_quality;
-  if (!d) return;
+  const d = appData.settlement_asset_quality;
+  if (!d || !d.buckets) return;
 
-  const period = document.getElementById('aq-period').value;
-  const filtered = getFilteredDates(d.dates || {}, period);
+  // KPI (전체 데이터 기준)
+  const total = d.total || {};
+  const totalBal = (total['융잔합계'] || {}).balance || 0;
+  const overdueBal = (total['연체합계'] || {}).balance || 0;
+  const normalBal = (total['무연체'] || {}).balance || 0;
+  document.getElementById('kpi-aq-total').textContent = fmtK(totalBal);
+  document.getElementById('kpi-aq-overdue').textContent = fmtK(overdueBal);
+  document.getElementById('kpi-aq-normal').textContent = fmtK(normalBal);
+  document.getElementById('kpi-aq-ratio').textContent =
+    totalBal > 0 ? (overdueBal / totalBal * 100).toFixed(2) + '%' : '-';
 
-  const header = document.getElementById('aq-header');
-  header.innerHTML = '<th class="label" style="min-width:160px;">구분</th>' +
-    filtered.map(([, date]) => `<th>${date}</th>`).join('');
+  if (aqCurrentTab === 'total') renderAQTotal();
+  else if (aqCurrentTab === 'group') renderAQGroup();
+  else if (aqCurrentTab === 'product') renderAQProduct();
+}
 
-  const body = document.getElementById('aq-body');
-  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
-    const isSection = ['연체합계', '융잔합계'].includes(label);
-    const cells = filtered.map(([, date]) => {
-      const v = vals[date];
-      return `<td>${v !== null && v !== undefined ? fmtK(v) : '-'}</td>`;
-    }).join('');
-    return `<tr><td class="label ${isSection ? 'section' : ''}">${label}</td>${cells}</tr>`;
+// 버킷 테이블 HTML 생성 헬퍼
+function buildBucketTableHTML(data) {
+  const rows = AQ_BUCKETS.map(bk => {
+    const v = data[bk] || {count:0, balance:0, rate:0};
+    const isTotalRow = bk === '융잔합계';
+    const isOverdueRow = bk === '연체합계';
+    const rowStyle = isTotalRow ? 'background:#FFF3CD;font-weight:700;'
+      : isOverdueRow ? 'background:#FFE0E0;font-weight:700;color:#cc0000;'
+      : bk === '무연체' ? 'background:#F0FDF4;' : '';
+    const balFmt = v.balance ? v.balance.toLocaleString() : '0';
+    const rateFmt = typeof v.rate === 'number' ? v.rate.toFixed(2) + '%' : '-';
+    return `<tr style="${rowStyle}">
+      <td class="label" style="${isTotalRow||isOverdueRow?'font-weight:700;':''};min-width:110px;">${bk}</td>
+      <td style="text-align:right;">${v.count ? v.count.toLocaleString() : '0'}</td>
+      <td style="text-align:right;">${balFmt}</td>
+      <td style="text-align:right;${isOverdueRow?'color:#cc0000;font-weight:700;':''}">${rateFmt}</td>
+    </tr>`;
   }).join('');
+  return rows;
+}
 
-  // KPI
-  if (filtered.length > 0) {
-    const lastDate = filtered[filtered.length - 1][1];
-    const total = d.items['융잔합계']?.[lastDate];
-    const overdue = d.items['연체합계']?.[lastDate];
-    const normal = d.items['무연체']?.[lastDate];
-    document.getElementById('kpi-aq-normal').textContent = fmtK(normal);
-    document.getElementById('kpi-aq-overdue').textContent = fmtK(overdue);
-    document.getElementById('kpi-aq-total').textContent = fmtK(total);
-    if (total && overdue) {
-      document.getElementById('kpi-aq-ratio').textContent = (overdue / total * 100).toFixed(2) + '%';
-    }
+function renderAQTotal() {
+  const d = appData.settlement_asset_quality;
+  const tbody = document.getElementById('aq-body-total');
+  if (!tbody) return;
+  tbody.innerHTML = buildBucketTableHTML(d.total || {});
+
+  // 차트: 연체구간별 잔액 막대
+  const displayBuckets = AQ_BUCKETS.filter(b => b !== '연체합계' && b !== '융잔합계');
+  const vals = displayBuckets.map(b => ((d.total[b] || {}).balance || 0) / 1e8);
+  drawBarChart('chart-asset-total', displayBuckets, vals, '억원');
+}
+
+function renderAQGroup() {
+  const d = appData.settlement_asset_quality;
+  const groups = d.groups || [];
+  const container = document.getElementById('aq-group-tables');
+  if (!container) return;
+
+  // 차트: 그룹별 연체율
+  const rates = groups.map(g => ((d.by_group[g] || {})['연체합계'] || {rate:0}).rate || 0);
+  drawBarChart('chart-asset-group', groups, rates, '%', '#ef4444');
+
+  // 테이블
+  container.innerHTML = groups.map(g => {
+    const gdata = d.by_group[g] || {};
+    const totalBal = (gdata['융잔합계'] || {}).balance || 0;
+    const overdueRate = ((gdata['연체합계'] || {}).rate || 0).toFixed(2);
+    return `
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">■ ${g}</span>
+        <span style="font-size:12px;color:#64748b;">융잔합계: ${fmtK(totalBal)} &nbsp;|&nbsp; 연체율: <b style="color:${parseFloat(overdueRate)>5?'#dc2626':'#16a34a'}">${overdueRate}%</b></span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th class="label" style="min-width:110px;">연체구간</th><th>건수</th><th>잔액(원)</th><th>비율(%)</th></tr></thead>
+          <tbody>${buildBucketTableHTML(gdata)}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAQProduct() {
+  const d = appData.settlement_asset_quality;
+  const products = d.products || [];
+  const select = document.getElementById('aq-product-select');
+  const container = document.getElementById('aq-product-tables');
+  if (!container) return;
+
+  // 셀렉트 박스 채우기 (최초 1회)
+  if (select && select.options.length <= 1) {
+    select.innerHTML = '<option value="">전체 상품 보기</option>' +
+      products.map(p => `<option value="${p}">${p}</option>`).join('');
   }
 
-  // 차트 - 연체율 추이
-  const totalArr = filtered.map(([, date]) => d.items['융잔합계']?.[date] || 0);
-  const overdueArr = filtered.map(([, date]) => d.items['연체합계']?.[date] || 0);
-  const ratioArr = totalArr.map((t, i) => t > 0 ? +(overdueArr[i] / t * 100).toFixed(2) : 0);
+  const selectedProduct = select ? select.value : '';
+  const targetProducts = selectedProduct ? [selectedProduct] : products;
 
-  drawLineChart('chart-asset', filtered.map(([, d]) => d),
-    [
-      { label: '연체율(%)', data: ratioArr, color: '#ef4444' },
-    ], '%');
+  container.innerHTML = targetProducts.map(p => {
+    const pdata = d.by_product[p] || {};
+    const totalBal = (pdata['융잔합계'] || {}).balance || 0;
+    const overdueRate = ((pdata['연체합계'] || {}).rate || 0).toFixed(2);
+    return `
+    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">■ ${p}</span>
+        <span style="font-size:12px;color:#64748b;">융잔합계: ${fmtK(totalBal)} &nbsp;|&nbsp; 연체율: <b style="color:${parseFloat(overdueRate)>5?'#dc2626':'#16a34a'}">${overdueRate}%</b></span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th class="label" style="min-width:110px;">연체구간</th><th>건수</th><th>잔액(원)</th><th>비율(%)</th></tr></thead>
+          <tbody>${buildBucketTableHTML(pdata)}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// 엑셀 다운로드
+async function exportAssetQuality(view, product) {
+  const d = appData.settlement_asset_quality;
+  if (!d) { showToast('❌ 결산자료를 먼저 업로드하세요.', 'error'); return; }
+  const v = view || aqCurrentTab === 'group' ? 'by_group'
+    : aqCurrentTab === 'product' ? 'by_product' : 'total';
+  const p = product || document.getElementById('aq-product-select')?.value || '';
+  let url = `${API_BASE}/api/export/asset_quality?view=${v}`;
+  if (p) url += `&product=${encodeURIComponent(p)}`;
+  window.open(url, '_blank');
 }
 
 // ===== 영업현황 렌더링 =====
@@ -1241,6 +1452,36 @@ function renderBorrowing() {
 }
 
 // ===== 차트 유틸 =====
+function drawBarChart(canvasId, labels, values, yLabel, color) {
+  if (charts[canvasId]) charts[canvasId].destroy();
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const colors = color ? values.map(() => color) :
+    ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16',
+     '#ec4899','#14b8a6','#6366f1','#a3e635'];
+  charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: yLabel || '',
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { font: { size: 10 }, callback: v => v.toLocaleString() + (yLabel||'') }, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+}
+
 function drawLineChart(canvasId, labels, datasets, yLabel) {
   if (charts[canvasId]) charts[canvasId].destroy();
   const ctx = document.getElementById(canvasId);
@@ -1286,6 +1527,7 @@ function hideLoading() { document.getElementById('loading').classList.remove('sh
 // ===== 초기화 =====
 document.addEventListener('DOMContentLoaded', () => {
   loadAllData();
+  loadSettlementData();  // 결산자료 별도 로드
 });
 </script>
 </body>
