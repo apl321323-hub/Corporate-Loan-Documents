@@ -1698,7 +1698,7 @@
         <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-writeoff"></div></div>
       </div>
       <div class="upload-action-row">
-        <button class="btn-upload" onclick="uploadFile('writeoff')" id="upload-btn-writeoff" disabled style="background:#7c3aed;">
+        <button class="btn-upload" onclick="uploadFile('writeoff')" id="upload-btn-writeoff" disabled style="background:#dc2626;">
           <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
@@ -4794,61 +4794,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadContractData();       // 계약리스트 별도 로드
   loadPaymentData();        // 입금명세 별도 로드
   loadWriteoffData();       // 대손리스트 별도 로드
-});
-
-nvasId, labels, datasets, yLabel) {
-  if (charts[canvasId]) charts[canvasId].destroy();
-  const ctx = document.getElementById(canvasId);
-  if (!ctx) return;
-  charts[canvasId] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: datasets.map(ds => ({
-        label: ds.label,
-        data: ds.data,
-        borderColor: ds.color,
-        backgroundColor: ds.color + '22',
-        fill: false,
-        tension: 0.3,
-        pointRadius: 2,
-        borderWidth: 2
-      }))
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } },
-      scales: {
-        x: { ticks: { maxRotation: 45, font: { size: 10 } }, grid: { display: false } },
-        y: { ticks: { font: { size: 10 }, callback: v => v.toLocaleString() + (yLabel ? yLabel : '') }, grid: { color: '#f1f5f9' } }
-      }
-    }
-  });
-}
-
-// ===== 토스트 =====
-function showToast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + type;
-  setTimeout(() => el.classList.remove('show'), 3500);
-}
-
-// ===== 로딩 =====
-function showLoading() { document.getElementById('loading').classList.add('show'); }
-function hideLoading() { document.getElementById('loading').classList.remove('show'); }
-
-// ===== 초기화 =====
-document.addEventListener('DOMContentLoaded', () => {
-  initCompanyInfoEmpty();   // 기업정보 빈 행 초기화
-  loadAllData();
-  loadSettlementData();     // 결산자료 별도 로드 (기존 방식)
-  loadBsisData();           // BS/IS 별도 로드
-  loadAQData();             // 자산건전성 별도 로드 (기업여신자료 형식)
-  loadSettlementAQData();   // 결산자료 기반 자산건전성 로드 (우선순위: 기업여신자료 없으면 표시)
-  loadBusinessData();       // 영업현황 별도 로드
-  loadContractData();       // 계약리스트 별도 로드
-  loadPaymentData();        // 입금명세 별도 로드
 });
 </script>
 </body>
