@@ -208,6 +208,23 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         gname = g.get('name', '')
         section3[gname] = to_series(s3_raw.get(gname, {}))
 
+    # ── 대출취급액 (section_deal) ──────────────────────────────────
+    # T열(취급액) 기준, 계약구분 매핑:
+    #   신규        = Q열 '신규'
+    #   추가재대출  = Q열 '추가대출' + '재대출'
+    #   대출취급액 합계 = 세 계약구분 전체 합
+    # 단위: 원 → 백만원 (laFmt와 동일 처리)
+    section_deal: dict = {}
+    for ym in periods:
+        d = s1_raw.get(ym, {})
+        section_deal.setdefault('신규',          {})[ym] = round(d.get('신규', 0) / 1_000_000, 1)
+        section_deal.setdefault('추가재대출',     {})[ym] = round(
+            (d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000, 1
+        )
+        section_deal.setdefault('대출취급액 합계', {})[ym] = round(
+            (d.get('신규', 0) + d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000, 1
+        )
+
     # ── 대출채권잔액 (section_balance) ────────────────────────────
     # 잔액은 원(raw) 단위로 저장 — asset_parser 엑셀 데이터와 단위 통일
     # (laFmt에서 /1_000_000 변환, 건수는 그대로)
@@ -231,6 +248,7 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         "periods":          periods,
         "section1":         section1,
         "section3":         section3,
+        "section_deal":     section_deal,
         "section_balance":  section_balance,
         "products":         sorted(products_set),
     }
@@ -265,6 +283,10 @@ if __name__ == "__main__":
         print(f"  [{gname}]")
         for label, series in gs.items():
             print(f"    {label:15s}: {series}")
+    print()
+    print("=== 대출취급액 ===")
+    for label, series in result['section_deal'].items():
+        print(f"  {label:15s}: {series}")
     print()
     print("=== 대출채권잔액 ===")
     for label, series in result['section_balance'].items():
