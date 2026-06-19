@@ -14,6 +14,7 @@ from contract_parser import parse_contract_list
 from payment_parser import parse_payment
 from writeoff_parser import parse_writeoff
 from sale_parser import parse_sale
+from asset_parser import parse_asset
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -1181,6 +1182,37 @@ async def upload_sale(file: UploadFile = File(...), period: str = ""):
 async def get_sale_data():
     """매각리스트 집계 데이터 반환 (월중매각액)"""
     d = uploaded_data.get("sale_data")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/asset")
+async def upload_asset(file: UploadFile = File(...)):
+    import tempfile, os
+    suffix = os.path.splitext(file.filename)[1] if file.filename else ".xlsx"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    try:
+        data = parse_asset(tmp_path)
+        uploaded_data['asset_data'] = data
+        return JSONResponse({
+            "status": "ok",
+            "periods": len(data["periods"]),
+            "sections": list(data["sections"].keys()),
+            "cb_products": list(data["cb_products"].keys()),
+        })
+    except Exception as e:
+        import traceback
+        return JSONResponse({"error": str(e), "detail": traceback.format_exc()}, status_code=500)
+    finally:
+        os.unlink(tmp_path)
+
+
+@app.get("/api/data/asset")
+async def get_asset_data():
+    d = uploaded_data.get("asset_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)

@@ -1362,28 +1362,154 @@
   <!-- ===== 6. 대출자산속성 ===== -->
   <section class="page" id="page-loan">
     <div class="section-header">
-      <h3>대출자산속성</h3>
-      <div class="date-filter">
-        <label>기간:</label>
-        <select id="la-period" onchange="renderLoanAsset()">
+      <h3><i class="fas fa-hand-holding-usd" style="color:#1e3a5f;margin-right:8px;"></i>대출자산속성</h3>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:12px;color:#64748b;">기간:</label>
+        <select id="la-period-sel" onchange="laRenderCurrent()" style="font-size:12px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;">
           <option value="12">최근 12개월</option>
           <option value="24">최근 24개월</option>
           <option value="all">전체</option>
         </select>
+        <button onclick="showPage('page-upload')" style="font-size:12px;padding:4px 12px;border:1px solid #1e3a5f;border-radius:5px;background:#fff;color:#1e3a5f;cursor:pointer;">
+          <i class="fas fa-file-upload"></i> 업로드
+        </button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-pie-chart"></i> 대출자산 구성</div>
-      <div class="chart-wrap"><canvas id="chart-loan"></canvas></div>
+    <!-- 업로드 유도 상태 -->
+    <div id="la-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:#94a3b8;">
+      <i class="fas fa-file-excel" style="font-size:48px;margin-bottom:16px;opacity:0.4;"></i>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">대출자산속성 데이터가 없습니다</div>
+      <div style="font-size:13px;">섹터 12: 대출자산속성.xlsx 를 업로드하세요</div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-scroll" style="max-height:500px;">
-        <table class="data-table" id="la-table">
-          <thead><tr id="la-header"><th class="label">구분</th></tr></thead>
-          <tbody id="la-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
-        </table>
+    <!-- 섹션 탭 -->
+    <div id="la-content" style="display:none;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:2px solid #e2e8f0;padding-bottom:0;">
+        <button class="tab-btn active" id="la-stab-01" onclick="laSwitchSection('01')">대출취급건수</button>
+        <button class="tab-btn" id="la-stab-02" onclick="laSwitchSection('02')">대출채권잔액</button>
+        <button class="tab-btn" id="la-stab-03" onclick="laSwitchSection('03')">대출취급액</button>
+        <button class="tab-btn" id="la-stab-04" onclick="laSwitchSection('04')">대출만기</button>
+        <button class="tab-btn" id="la-stab-05" onclick="laSwitchSection('05')">평균이자율</button>
+        <button class="tab-btn" id="la-stab-06" onclick="laSwitchSection('06')">상환방식</button>
+        <button class="tab-btn" id="la-stab-07" onclick="laSwitchSection('07')">금액별</button>
+        <button class="tab-btn" id="la-stab-08" onclick="laSwitchSection('08')">접수경로</button>
+        <button class="tab-btn" id="la-stab-09" onclick="laSwitchSection('09')">상품별</button>
+        <button class="tab-btn" id="la-stab-10" onclick="laSwitchSection('10')">상품구분</button>
+        <button class="tab-btn" id="la-stab-11" onclick="laSwitchSection('11')">성별/연령/직업</button>
+        <button class="tab-btn" id="la-stab-12" onclick="laSwitchSection('12')">지역별</button>
+        <button class="tab-btn" id="la-stab-13" onclick="laSwitchSection('13')">CB등급</button>
+        <button class="tab-btn" id="la-stab-14" onclick="laSwitchSection('14')">상품별CB등급</button>
+      </div>
+
+      <!-- 각 섹션 뷰 -->
+      <div id="la-view-01" class="la-view">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-hashtag"></i> 대출취급건수</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-01"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-02" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-database"></i> 대출채권잔액</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-02"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-03" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-coins"></i> 대출취급액</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-03"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-04" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-clock"></i> 대출만기</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-04"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-05" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-percent"></i> 평균이자율</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-05"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-06" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-exchange-alt"></i> 상환방식</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-06"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-07" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-layer-group"></i> 금액별</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-07"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-08" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-door-open"></i> 접수경로</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-08"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-09" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-box-open"></i> 상품별</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-09"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-10" class="la-view" style="display:none;">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:280px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-tags"></i> 상품구분</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-10a"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:280px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-tags"></i> 상품구분(상세)</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-10b"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:280px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-tags"></i> 상품구분(화해채권)</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-10c"><thead></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+      </div>
+      <div id="la-view-11" class="la-view" style="display:none;">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:240px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-venus-mars"></i> 성별</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-11a"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:240px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-birthday-cake"></i> 연령별</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-11b"><thead></thead><tbody></tbody></table></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;flex:1;min-width:240px;">
+            <div class="card-title" style="padding:10px 14px;"><i class="fas fa-briefcase"></i> 직업별</div>
+            <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-11c"><thead></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+      </div>
+      <div id="la-view-12" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-map-marker-alt"></i> 지역별 (단위: 백만원)</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-12"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-13" class="la-view" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star"></i> CB등급 (23.04.01부터 신용평점기준)</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-13"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div id="la-view-14" class="la-view" style="display:none;">
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+          <label style="font-size:12px;color:#64748b;font-weight:600;">상품 선택:</label>
+          <select id="la-cb-product-sel" onchange="laRenderCbProduct()" style="font-size:12px;padding:4px 10px;border:1px solid #cbd5e1;border-radius:5px;max-width:200px;"></select>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star-half-alt"></i> 상품별 CB등급 (단위: 백만원, NICE 은행CB등급기준)</div>
+          <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-14"><thead></thead><tbody></tbody></table></div>
+        </div>
       </div>
     </div>
   </section>
@@ -1775,7 +1901,34 @@
       </div>
     </div>
 
-    <!-- 섹터 6: 재무제표 PDF (월별 업데이트) -->
+    <!-- 섹터 12: 대출자산속성 -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#0f766e;">섹터 12</span>
+        <div>
+          <div class="upload-sector-title">대출자산속성</div>
+          <div class="upload-sector-desc">기업여신자료 - 대출자산속성.xlsx → 18개 섹션 + 상품별CB등급</div>
+        </div>
+        <span class="upload-status-dot" id="dot-asset"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-asset" onclick="document.getElementById('file-input-asset').click()">
+        <i class="fas fa-file-excel" style="color:#0f766e;"></i>
+        <div class="drop-text" id="drop-text-asset">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">기업여신자료 - 대출자산속성.xlsx</div>
+      </div>
+      <input type="file" id="file-input-asset" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'asset')">
+      <div class="upload-progress" id="upload-progress-asset">
+        <div class="upload-status-text" id="upload-status-asset">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-asset"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('asset')" id="upload-btn-asset" disabled style="background:#0f766e;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
+
     <div class="upload-sector-card upload-sector-card--pdf" style="grid-column: 1 / -1;">
       <div class="upload-sector-header">
         <span class="sector-badge" style="background:#dc2626;">섹터 6</span>
@@ -2150,6 +2303,7 @@ async function uploadFile(sector) {
     payment:  '/api/upload/payment',
     writeoff: '/api/upload/writeoff',
     sale:     '/api/upload/sale',
+    asset:    '/api/upload/asset',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -2224,6 +2378,9 @@ async function uploadFile(sector) {
       await loadSaleData();
       const total = res.data.total != null ? ` / 합계: ${Math.round(res.data.total).toLocaleString()}백만` : '';
       showToast(`✅ 매각리스트 업로드 완료 (${res.data.periods?.length || 0}개월${total})`, 'success');
+    } else if (sector === 'asset') {
+      await loadAssetData();
+      showToast(`✅ 대출자산속성 업로드 완료 (${res.data.periods}개월 / ${res.data.sections?.length || 0}섹션)`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -5080,6 +5237,323 @@ function showLoading() { document.getElementById('loading').classList.add('show'
 function hideLoading() { document.getElementById('loading').classList.remove('show'); }
 
 // ===== 초기화 =====
+// ═══════════════════════════════════════════════════════════════
+// ■ 대출자산속성 (page-loan) — 전체 JS
+// ═══════════════════════════════════════════════════════════════
+
+let assetData = null;  // { periods, sections, cb_products }
+let laCurSection = '01';
+
+// ── 섹션키 → 데이터키 매핑 ─────────────────────────────────────
+const LA_SEC_MAP = {
+  '01': '대출취급건수',
+  '02': '대출채권잔액',
+  '03': '대출취급액',
+  '04': '대출만기',
+  '05': ['평균이자율', '평균이자율2'],   // 두 서브섹션
+  '06': '상환방식',
+  '07': '금액별',
+  '08': '접수경로',
+  '09': '상품별',
+  '10': ['상품구분', '상품구분상세', '상품구분화해채권'],
+  '11': ['성별', '연령별', '직업별'],
+  '12': '지역별',
+  '13': 'CB등급',
+  '14': null,   // 상품별CB등급: 별도 처리
+};
+
+// ── 숫자 포맷 ──────────────────────────────────────────────────
+function laFmt(v, secKey) {
+  if (v === null || v === undefined) return '–';
+  // 이자율 섹션: % 표시
+  if (secKey === '평균이자율' || secKey === '평균이자율2') {
+    return v === 0 ? '–' : v.toFixed(2) + '%';
+  }
+  // 건수 섹션
+  if (secKey === '대출취급건수') {
+    return v === 0 ? '–' : Math.round(v).toLocaleString();
+  }
+  // 금액(원) → 백만원 단위
+  const mln = v / 1_000_000;
+  if (mln === 0) return '–';
+  return mln >= 1 ? Math.round(mln).toLocaleString() : mln.toFixed(1);
+}
+
+// ── 기간 필터링 ────────────────────────────────────────────────
+function laGetPeriods() {
+  if (!assetData) return [];
+  const sel = document.getElementById('la-period-sel')?.value || '12';
+  const all = assetData.periods.filter(p => {
+    // None/undefined 제거
+    return p && typeof p === 'string' && /^\d{4}-\d{2}$/.test(p);
+  });
+  if (sel === 'all') return all;
+  const n = parseInt(sel);
+  return all.slice(-n);
+}
+
+// ── 공통 테이블 빌더 ───────────────────────────────────────────
+function laBuildTable(tblId, secKey, rowLabels, periods) {
+  const tbl = document.getElementById(tblId);
+  if (!tbl || !assetData) return;
+  const secData = assetData.sections[secKey] || {};
+
+  // thead
+  const thead = tbl.querySelector('thead');
+  thead.innerHTML = '';
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '구분';
+  th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:160px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym.replace('-', '.').replace(/^20/, '');
+    th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  // tbody
+  const tbody = tbl.querySelector('tbody');
+  tbody.innerHTML = '';
+  rowLabels.forEach(label => {
+    const rowData = secData[label] || {};
+    const tr = document.createElement('tr');
+
+    // 합계/소계 행 스타일
+    const isTotal = label.includes('합계') || label.includes('전체') || label === '대출취급액 합계';
+    if (isTotal) tr.style.cssText = 'background:#f8fafc;font-weight:700;';
+
+    const td0 = document.createElement('td');
+    td0.textContent = label;
+    td0.className = 'bs-sub-col';
+    td0.style.cssText = 'position:sticky;left:0;z-index:2;background:' + (isTotal ? '#f1f5f9' : '#fff') + ';min-width:160px;white-space:nowrap;';
+    tr.appendChild(td0);
+
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      const v = rowData[ym] ?? null;
+      td.textContent = laFmt(v, secKey);
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (v !== null && v < 0 ? 'color:#dc2626;' : '');
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 섹션별 행 레이블 정의 ──────────────────────────────────────
+const LA_ROW_DEFS = {
+  '대출취급건수':       ['신청건수(신규대출)', '신청건수(추가재대출)', '승인건수(신규대출)', '승인건수(추가재대출)'],
+  '대출채권잔액':       ['신용채권 건수', '신용채권 잔액', '담보채권 건수', '담보채권 잔액', '보증채권 건수', '보증채권 잔액', '전체채권 건수', '전체채권 잔액'],
+  '대출취급액':         ['신규', '추가재대출', '대출취급액 합계'],
+  '대출만기':           ['12개월 미만', '12~24개월 미만', '24~36개월 미만', '36개월 이상', '전체융잔 합계'],
+  '평균이자율':         ['대출자산평균', '취급대출평균'],
+  '평균이자율2':        ['신용', '담보'],
+  '상환방식':           ['신용 _원리금균등상환', '신용 _자유상환', '신용 _전체융잔 합계', '담보 _원리금균등상환', '담보 _자유상환', '담보 _체융잔 합계', '원리금균등상환', '자유상환', '전체융잔 합계'],
+  '금액별':             ['300만원이하', '500만원이하', '700만원이하', '1000만원이하', '1000만원초과', '2000만원이하', '3000만원이하', '4000만원이하', '5000만원이하', '1억원이하', '1억원초과', '전체융잔 합계'],
+  '접수경로':           ['에이전트', '직접대출', '홈페이지', '온라인플랫폼', '기타(고객추천)', '전체융잔 합계'],
+  '상품별':             ['N론', 'V론', '담보론', '담보론(지분대출)', '레이디론', '스타론', '스타스위치론', '우량론', '큐브론', '테일론', '토탈론', '프리론', '프리미엄론', '전월세론', '플러스론', '토마토론', '토마토N론', '토마토토탈', 'T플러스론', 'OP론', '충성론', '오투론', '오투N론', '토마토토탈론플러스', '다이렉트론(A)', '다이렉트론(W)', 'N론(하이브리드)', '기타', '기타N', '전체융잔 합계'],
+  '상품구분':           ['신용', '담보', '보증', '기타', '전체융잔 합계'],
+  '상품구분상세':       ['신용', '부동산', '자동차담보', '기타담보(보증금)', '회복파', '전체융잔 합계'],
+  '상품구분화해채권':   ['일반신용', '보증인', '회파복', '부동산', '자동차담보', '보증금', '전체화해 합계'],
+  '성별':               ['남성', '여성', '전체융잔 합계'],
+  '연령별':             ['20대', '30대', '40대', '50대이상', '전체융잔 합계'],
+  '직업별':             ['직장인', '자영업', '주부', '학생', '기타', '전체융잔 합계'],
+  '지역별':             ['서울', '부산', '대구', '경기/인천', '강원', '충청/대전', '전라/광주', '경상/울산', '제주', '기타', '전체융잔 합계'],
+  'CB등급':             ['1 등급', '2 등급', '3 등급', '4 등급', '5 등급', '6 등급', '7 등급', '8 등급', '9 등급', '10 등급', '기타', '전체융잔 합계'],
+};
+
+const LA_CB_GRADES = ['1 등급(965~1000)', '2 등급(945~964)', '3 등급(930~944)', '4 등급(905~929)', '5 등급(880~904)', '6 등급(825~879)', '7 등급(785~824)', '8 등급(750~784)', '9 등급(725~749)', '10 등급(1~724)', '무등급', '융잔합계'];
+
+// ── 탭 전환 ────────────────────────────────────────────────────
+function laSwitchSection(sid) {
+  laCurSection = sid;
+  document.querySelectorAll('.la-view').forEach(v => v.style.display = 'none');
+  document.querySelectorAll('[id^="la-stab-"]').forEach(b => b.classList.remove('active'));
+  const view = document.getElementById(`la-view-${sid}`);
+  const btn  = document.getElementById(`la-stab-${sid}`);
+  if (view) view.style.display = '';
+  if (btn)  btn.classList.add('active');
+  laRenderSection(sid);
+}
+
+// ── 섹션 렌더 ─────────────────────────────────────────────────
+function laRenderSection(sid) {
+  if (!assetData) return;
+  const periods = laGetPeriods();
+
+  if (sid === '01') laBuildTable('la-tbl-01', '대출취급건수', LA_ROW_DEFS['대출취급건수'], periods);
+  else if (sid === '02') laBuildTable('la-tbl-02', '대출채권잔액', LA_ROW_DEFS['대출채권잔액'], periods);
+  else if (sid === '03') laBuildTable('la-tbl-03', '대출취급액',   LA_ROW_DEFS['대출취급액'], periods);
+  else if (sid === '04') laBuildTable('la-tbl-04', '대출만기',     LA_ROW_DEFS['대출만기'], periods);
+  else if (sid === '05') {
+    laBuildTable('la-tbl-05', '평균이자율', [...LA_ROW_DEFS['평균이자율'], ...LA_ROW_DEFS['평균이자율2'].map(l => `(담보) ${l}`)], periods);
+    // 평균이자율2 병합 렌더링
+    const tbl = document.getElementById('la-tbl-05');
+    if (tbl && assetData) {
+      const thead = tbl.querySelector('thead');
+      thead.innerHTML = '';
+      const tr0 = document.createElement('tr');
+      const th0 = document.createElement('th');
+      th0.textContent = '구분'; th0.className = 'bs-sub-col';
+      th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:160px;';
+      tr0.appendChild(th0);
+      periods.forEach(ym => {
+        const th = document.createElement('th');
+        th.textContent = ym.replace('-', '.').replace(/^20/, '');
+        th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+        tr0.appendChild(th);
+      });
+      thead.appendChild(tr0);
+      const tbody = tbl.querySelector('tbody');
+      tbody.innerHTML = '';
+      // 구분선 행
+      const makeGroupRow = (label) => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'background:#e2e8f0;';
+        const td = document.createElement('td');
+        td.textContent = label; td.colSpan = periods.length + 1;
+        td.style.cssText = 'font-weight:700;font-size:11px;color:#475569;padding:4px 10px;';
+        tr.appendChild(td); return tr;
+      };
+      tbody.appendChild(makeGroupRow('▶ 평균이자율'));
+      ['대출자산평균', '취급대출평균'].forEach(lbl => {
+        const tr = document.createElement('tr');
+        const td0 = document.createElement('td'); td0.textContent = lbl; td0.className = 'bs-sub-col';
+        td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;';
+        tr.appendChild(td0);
+        const rowData = assetData.sections['평균이자율'][lbl] || {};
+        periods.forEach(ym => {
+          const td = document.createElement('td');
+          const v = rowData[ym] ?? null;
+          td.textContent = v !== null && v > 0 ? v.toFixed(2) + '%' : '–';
+          td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      tbody.appendChild(makeGroupRow('▶ 평균이자율2 (담보구분별)'));
+      ['신용', '담보'].forEach(lbl => {
+        const tr = document.createElement('tr');
+        const td0 = document.createElement('td'); td0.textContent = lbl; td0.className = 'bs-sub-col';
+        td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;';
+        tr.appendChild(td0);
+        const rowData = assetData.sections['평균이자율2'][lbl] || {};
+        periods.forEach(ym => {
+          const td = document.createElement('td');
+          const v = rowData[ym] ?? null;
+          td.textContent = v !== null && v > 0 ? v.toFixed(2) + '%' : '–';
+          td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+  }
+  else if (sid === '06') laBuildTable('la-tbl-06', '상환방식', LA_ROW_DEFS['상환방식'], periods);
+  else if (sid === '07') laBuildTable('la-tbl-07', '금액별', LA_ROW_DEFS['금액별'], periods);
+  else if (sid === '08') laBuildTable('la-tbl-08', '접수경로', LA_ROW_DEFS['접수경로'], periods);
+  else if (sid === '09') laBuildTable('la-tbl-09', '상품별', LA_ROW_DEFS['상품별'], periods);
+  else if (sid === '10') {
+    laBuildTable('la-tbl-10a', '상품구분',        LA_ROW_DEFS['상품구분'], periods);
+    laBuildTable('la-tbl-10b', '상품구분상세',     LA_ROW_DEFS['상품구분상세'], periods);
+    laBuildTable('la-tbl-10c', '상품구분화해채권', LA_ROW_DEFS['상품구분화해채권'], periods);
+  }
+  else if (sid === '11') {
+    laBuildTable('la-tbl-11a', '성별',   LA_ROW_DEFS['성별'], periods);
+    laBuildTable('la-tbl-11b', '연령별', LA_ROW_DEFS['연령별'], periods);
+    laBuildTable('la-tbl-11c', '직업별', LA_ROW_DEFS['직업별'], periods);
+  }
+  else if (sid === '12') laBuildTable('la-tbl-12', '지역별', LA_ROW_DEFS['지역별'], periods);
+  else if (sid === '13') laBuildTable('la-tbl-13', 'CB등급', LA_ROW_DEFS['CB등급'], periods);
+  else if (sid === '14') laRenderCbProduct();
+}
+
+// ── 상품별CB등급 렌더 ─────────────────────────────────────────
+function laRenderCbProduct() {
+  if (!assetData) return;
+  const sel = document.getElementById('la-cb-product-sel');
+  const product = sel?.value;
+  if (!product) return;
+  const grades = assetData.cb_products[product] || {};
+  const periods = laGetPeriods();
+  const tbl = document.getElementById('la-tbl-14');
+  if (!tbl) return;
+
+  const thead = tbl.querySelector('thead');
+  thead.innerHTML = '';
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '등급'; th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:180px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym.replace('-', '.').replace(/^20/, '');
+    th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  const tbody = tbl.querySelector('tbody');
+  tbody.innerHTML = '';
+  LA_CB_GRADES.forEach(grade => {
+    const rowData = grades[grade] || {};
+    const tr = document.createElement('tr');
+    const isTotal = grade === '융잔합계';
+    if (isTotal) tr.style.cssText = 'background:#f8fafc;font-weight:700;';
+    const td0 = document.createElement('td');
+    td0.textContent = grade; td0.className = 'bs-sub-col';
+    td0.style.cssText = 'position:sticky;left:0;z-index:2;background:' + (isTotal ? '#f1f5f9' : '#fff') + ';min-width:180px;white-space:nowrap;';
+    tr.appendChild(td0);
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      const v = rowData[ym] ?? null;
+      const mln = v !== null ? v / 1_000_000 : null;
+      td.textContent = mln !== null && mln !== 0 ? Math.round(mln).toLocaleString() : '–';
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 기간 변경 시 현재 섹션 재렌더 ────────────────────────────
+function laRenderCurrent() {
+  laRenderSection(laCurSection);
+}
+
+// ── 데이터 로드 ────────────────────────────────────────────────
+async function loadAssetData() {
+  try {
+    const res = await fetch('/api/data/asset');
+    if (!res.ok) return;
+    assetData = await res.json();
+    // 상태 도트
+    const dot = document.getElementById('dot-asset');
+    if (dot) { dot.style.background = '#22c55e'; dot.title = '데이터 로드 완료'; }
+    // UI 전환
+    document.getElementById('la-empty').style.display = 'none';
+    document.getElementById('la-content').style.display = '';
+    // 상품별CB등급 select 초기화
+    const sel = document.getElementById('la-cb-product-sel');
+    if (sel) {
+      sel.innerHTML = '';
+      Object.keys(assetData.cb_products || {}).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        sel.appendChild(opt);
+      });
+    }
+    // 첫 번째 섹션 렌더
+    laRenderSection(laCurSection);
+  } catch (e) {
+    // 데이터 없으면 무시
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initCompanyInfoEmpty();   // 기업정보 빈 행 초기화
   loadAllData();
@@ -5092,7 +5566,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPaymentData();        // 입금명세 별도 로드
   loadWriteoffData();       // 대손리스트 별도 로드
   loadSaleData();           // 매각리스트 별도 로드
+  loadAssetData();          // 대출자산속성 별도 로드
 });
+
 </script>
 </body>
 </html>
