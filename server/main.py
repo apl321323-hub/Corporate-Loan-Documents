@@ -727,6 +727,7 @@ async def delete_custom_excel_label(request: Request):
     return JSONResponse({"success": True, "message": f"'{label}' 과목이 삭제되었습니다."})
 
 
+@app.post("/api/pdf-mapping/apply")
 async def apply_pdf_mapping(request: Request):
     """
     저장된 pdf_raw + pdf_mapping으로 bsis를 재반영 (PDF 재업로드 없이 즉시 적용)
