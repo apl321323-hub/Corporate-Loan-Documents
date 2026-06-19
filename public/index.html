@@ -4606,7 +4606,6 @@ function bsBuildTableS1() {
       subTd.textContent = sub || '';
       if (sourceBorderColor) {
         subTd.title = `${sourceLabel} 기준`;
-        subTd.style.borderLeft = `3px solid ${sourceBorderColor}`;
       }
       tr.appendChild(subTd);
     }
@@ -4700,7 +4699,6 @@ function bsBuildTableS3() {
       subTd.className = 'bs-sub-col';
       subTd.textContent = sub;
       if (contractData && cls === 'bs-row-deal') {
-        subTd.style.borderLeft = '3px solid #b45309';
         subTd.title = '계약리스트 기준';
       }
       tr.appendChild(subTd);
@@ -4903,7 +4901,7 @@ function bsBuildTableS4() {
       g.rowSpan = SUB_DEFS.length; tr.appendChild(g);
     }
     const s = document.createElement('td'); s.className = 'bs-sub-col'; s.textContent = sub;
-    if (cls === 'bs-row-deal') { s.style.borderLeft = '3px solid #b45309'; s.title = '계약리스트 기준'; }
+    if (cls === 'bs-row-deal') { s.title = '계약리스트 기준'; }
     tr.appendChild(s);
     indices.forEach(i => {
       const td = document.createElement('td');
