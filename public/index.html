@@ -1238,7 +1238,7 @@
     <div id="bs-no-data" class="card" style="padding:40px;text-align:center;color:#94a3b8;">
       <i class="fas fa-cloud-upload-alt" style="font-size:36px;margin-bottom:12px;display:block;"></i>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px;">영업현황 데이터가 없습니다</div>
-      <div style="font-size:13px;">엑셀 업로드 → 섹터 7에서 <strong>기업여신자료 - 영업현황.xlsx</strong>을 업로드하세요</div>
+      <div style="font-size:13px;">엑셀 업로드 → <strong>섹터 7</strong>: 영업현황.xlsx &nbsp;|&nbsp; <strong>섹터 8</strong>: 계약리스트.xlsx</div>
     </div>
 
     <!-- KPI 카드 (최신 기간 기준) -->
@@ -1273,10 +1273,6 @@
         <button class="aq-stab active" id="bs-stab-s1" onclick="bsSwitchSection('s1')">
           <i class="fas fa-table"></i> 전체 영업현황
         </button>
-        <button class="aq-stab" id="bs-stab-s2" onclick="bsSwitchSection('s2')">
-          <i class="fas fa-layer-group"></i> 대출구분별
-          <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/기업)</span>
-        </button>
         <button class="aq-stab" id="bs-stab-s3" onclick="bsSwitchSection('s3')">
           <i class="fas fa-shield-alt"></i> 담보구분별
           <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/담보)</span>
@@ -1299,27 +1295,6 @@
                 </tr>
               </thead>
               <tbody id="bs-body-s1"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 섹션2: 대출구분별 (신용/기업) ── -->
-      <div id="bs-view-s2" style="display:none;">
-        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-          <div class="bs-section-header green">
-            <i class="fas fa-layer-group"></i> 대출구분별 — 신용대출 / 기업대출
-            <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
-          </div>
-          <div class="table-scroll" style="max-height:400px;overflow:auto;">
-            <table class="data-table bs-time-table" style="width:max-content;min-width:100%;">
-              <thead>
-                <tr id="bs-head-s2">
-                  <th class="bs-group-col" style="min-width:80px;">구분</th>
-                  <th class="bs-sub-col" style="min-width:110px;">소분류</th>
-                </tr>
-              </thead>
-              <tbody id="bs-body-s2"></tbody>
             </table>
           </div>
         </div>
@@ -1619,6 +1594,41 @@
       </div>
       <div class="upload-action-row">
         <button class="btn-upload" onclick="uploadFile('business')" id="upload-btn-business" disabled style="background:#0f766e;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- 섹터 8: 계약리스트 -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#b45309;">섹터 8</span>
+        <div>
+          <div class="upload-sector-title">계약리스트</div>
+          <div class="upload-sector-desc">계약리스트_YYYYMM.xlsx → 영업현황 취급액 집계</div>
+        </div>
+        <span class="upload-status-dot" id="dot-contract"></span>
+      </div>
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#b45309;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-contract" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-contract" class="upload-period-select"></select>
+        <span id="period-badge-contract" class="upload-period-badge" style="display:none;"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-contract" onclick="document.getElementById('file-input-contract').click()">
+        <i class="fas fa-file-contract" style="color:#b45309;"></i>
+        <div class="drop-text" id="drop-text-contract">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">계약리스트_YYYYMM.xlsx (C열:상품명 / Q열:계약구분 / AD열:계약일 / T열:대출액)</div>
+      </div>
+      <input type="file" id="file-input-contract" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'contract')">
+      <div class="upload-progress" id="upload-progress-contract">
+        <div class="upload-status-text" id="upload-status-contract">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-contract"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('contract')" id="upload-btn-contract" disabled style="background:#b45309;">
           <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
@@ -1934,7 +1944,7 @@ const selectedFiles = { main: null, settle: null, company: null, bsis: null, 'pd
     }
   }
   // 업로드 섹터별 년월 셀렉트
-  const sectors = ['main','settle','company','bsis','aq','business'];
+  const sectors = ['main','settle','company','bsis','aq','business','contract'];
   sectors.forEach(s => {
     const ySel = document.getElementById(`year-${s}`);
     const mSel = document.getElementById(`month-${s}`);
@@ -1989,12 +1999,13 @@ async function uploadFile(sector) {
   const periodStr = (ySel && mSel) ? `${ySel.value}.${mSel.value}` : '';
 
   const endpointMap = {
-    main:   '/api/upload',
+    main:     '/api/upload',
     settle:   '/api/upload/settlement-aq',
     company:  '/api/upload/company_info',
     bsis:     '/api/upload/bsis',
     aq:       '/api/upload/asset-quality',
     business: '/api/upload/business',
+    contract: '/api/upload/contract',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -2051,6 +2062,10 @@ async function uploadFile(sector) {
     } else if (sector === 'business') {
       await loadBusinessData();
       showToast(`✅ 영업현황 업로드 완료 (${res.data.periods}개월)${periodStr ? ' — 기준: ' + periodStr : ''}`, 'success');
+    } else if (sector === 'contract') {
+      await loadContractData();
+      const ps = (res.data.periods || []).join(', ');
+      showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps})`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -2677,7 +2692,7 @@ function renderAll() {
   renderCompanyInfo();
   renderBSIS();
   renderCashflow();
-  renderBusiness();
+  // renderBusiness() → loadBusinessData()로 분리 (영업현황은 별도 API)
   renderLoanAsset();
   renderBorrowing();
 }
@@ -4048,20 +4063,13 @@ function bsBuildTable(headId, bodyId, rowDefs, sectionData) {
 
 function bsSwitchSection(sec) {
   bsCurrentSection = sec;
-  ['s1','s2','s3'].forEach(s => {
+  ['s1','s3'].forEach(s => {
     const el = document.getElementById(`bs-view-${s}`);
     if (el) el.style.display = s === sec ? '' : 'none';
     const btn = document.getElementById(`bs-stab-${s}`);
     if (btn) btn.classList.toggle('active', s === sec);
   });
   bsRenderSection();
-}
-
-function bsRenderSection() {
-  if (!bsData) return;
-  if (bsCurrentSection === 's1') bsBuildTable('bs-head-s1','bs-body-s1', BS_S1_ROWS, bsData.section1);
-  else if (bsCurrentSection === 's2') bsBuildTable('bs-head-s2','bs-body-s2', BS_S2_ROWS, bsData.section2);
-  else if (bsCurrentSection === 's3') bsBuildTable('bs-head-s3','bs-body-s3', BS_S3_ROWS, bsData.section3);
 }
 
 function bsUpdateKPI() {
@@ -4119,9 +4127,289 @@ async function loadBusinessData() {
   }
 }
 
-// 기존 renderBusiness() 호환 유지 (다른 곳에서 호출 시)
-function renderBusiness() {
-  bsRenderSection();
+// ── 계약리스트 데이터 ─────────────────────────────────────────────
+let contractData = null;   // parse_contract_list 결과
+
+async function loadContractData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/contract`);
+    if (res.data && !res.data.error) {
+      contractData = res.data;
+
+      // 영업현황 no-data 패널 숨김 (contractData만 있어도 표시 가능)
+      const noData = document.getElementById('bs-no-data');
+      const kpiArea = document.getElementById('bs-kpi-area');
+      const tabsArea = document.getElementById('bs-tabs-area');
+      if (noData) noData.style.display = 'none';
+      if (kpiArea) kpiArea.style.display = '';
+      if (tabsArea) tabsArea.style.display = '';
+
+      // 데이터 배지 업데이트 (bsData 없이 contractData만 있는 경우)
+      if (!bsData) {
+        const badge = document.getElementById('bs-data-badge');
+        if (badge) {
+          const periods = contractData.periods || [];
+          badge.textContent = periods.length
+            ? `계약리스트: ${periods[0]} ~ ${periods[periods.length-1]} (${periods.length}개월)`
+            : '계약리스트 로드됨';
+          badge.style.background = '#fef3c7';
+          badge.style.color = '#92400e';
+        }
+      }
+
+      bsRenderSection();
+      bsUpdateKPIFromContract();
+    }
+  } catch(e) {
+    // 데이터 없음 — 무시
+  }
+}
+
+// ── 계약리스트 기반 KPI 갱신 (S1 취급액) ────────────────────────
+function bsUpdateKPIFromContract() {
+  if (!contractData) return;
+  const periods = contractData.periods || [];
+  if (!periods.length) return;
+  const lastPeriod = periods[periods.length - 1];
+  const s1 = contractData.section1;
+  const deal = s1['취급액(대출)']?.[lastPeriod];
+  const fmt = v => (v != null ? Math.round(v).toLocaleString() : '-');
+  if (deal != null) {
+    document.getElementById('kpi-bs-deal').innerHTML =
+      fmt(deal) + `<span style="font-size:10px;color:#0369a1;display:block;margin-top:2px;">계약리스트 기준</span>`;
+  }
+}
+
+// ── bsRenderSection 개선: S3에 계약리스트 데이터 사용 ────────────
+function bsRenderSection() {
+  if (!bsData && !contractData) return;
+
+  if (bsCurrentSection === 's1') {
+    // S1: 기말자산/원금회수/충당금은 bsData, 신규/추가/재대출/취급액은 contractData 우선
+    bsBuildTableS1();
+  } else if (bsCurrentSection === 's3') {
+    // S3: 계약리스트 기반 (상품구성 그룹별 신규/추가/재대출)
+    bsBuildTableS3();
+  }
+}
+
+// ── 섹션1 빌드: bsData(기본) + contractData(취급액 덮어쓰기) ──────
+// ※ bsData 없이 contractData만 있어도 신규/추가/재대출/취급액 표시 가능
+function bsBuildTableS1() {
+  if (!bsData && !contractData) return;
+
+  // ── 기간 결정 ──────────────────────────────────────────────────
+  // bsData가 있으면 bsData 기간 기준 (더 많은 기간),
+  // 없으면 contractData 기간 기준
+  const useBsBase = !!bsData;
+  const periods = useBsBase ? bsData.periods : (contractData.periods || []);
+
+  // 필터 인덱스 계산
+  let indices;
+  if (useBsBase) {
+    indices = bsFilteredIndices();
+  } else {
+    const n = document.getElementById('bs-period-filter')?.value || '12';
+    if (n === 'all') {
+      indices = periods.map((_, i) => i);
+    } else {
+      const count = parseInt(n);
+      const start = Math.max(0, periods.length - count);
+      indices = Array.from({length: periods.length - start}, (_, i) => start + i);
+    }
+  }
+
+  // thead
+  const headRow = document.getElementById('bs-head-s1');
+  while (headRow.children.length > 2) headRow.removeChild(headRow.lastChild);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
+  });
+
+  // tbody
+  const tbody = document.getElementById('bs-body-s1');
+  tbody.innerHTML = '';
+
+  // contractData 키 매핑 (bsData 행키 → contractData.section1 키)
+  const contractKeyMap = {
+    '대출_신규':         '신규',
+    '대출_추가':         '추가대출',
+    '대출_재대출':       '재대출',
+    '대출_취급액(대출)': '취급액(대출)',
+  };
+
+  BS_S1_ROWS.forEach(({ key, group, sub, mergeSub, rowspan, cls }) => {
+    const contractKey = contractKeyMap[key];
+
+    // ── 값 배열 결정 (인덱스 기준) ─────────────────────────────
+    let vals = null;
+
+    if (key === '기초대출자산' && useBsBase) {
+      // 기초대출자산: bsData에 이미 전월 기말자산 값으로 저장되어 있음
+      vals = bsData.section1['기초대출자산'] || null;
+    } else if (contractKey && contractData) {
+      // contractData 우선 적용
+      const cdSeries = contractData.section1[contractKey];
+      if (cdSeries) {
+        vals = periods.map(ym => cdSeries[ym] ?? null);
+      }
+    }
+    // contractData 없으면 bsData fallback
+    if (!vals && useBsBase) {
+      vals = bsData.section1[key] || null;
+    }
+
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+
+    // 계약리스트 출처 표시
+    const isContractRow = !!(contractKey && contractData && contractData.section1[contractKey]);
+    const isInitialAsset = (key === '기초대출자산');
+
+    if (rowspan > 0) {
+      const groupTd = document.createElement('td');
+      groupTd.className = 'bs-group-col';
+      groupTd.textContent = group || '';
+      if (rowspan > 1) groupTd.rowSpan = rowspan;
+      if (mergeSub) {
+        groupTd.colSpan = 2;
+        groupTd.style.textAlign = 'left';
+        groupTd.style.paddingLeft = '12px';
+        groupTd.style.zIndex = '4';
+        groupTd.style.minWidth = '190px';
+      }
+      tr.appendChild(groupTd);
+    }
+
+    if (!mergeSub) {
+      const subTd = document.createElement('td');
+      subTd.className = 'bs-sub-col';
+      subTd.textContent = sub || '';
+      if (isContractRow) {
+        subTd.title = '계약리스트 기준';
+        subTd.style.borderLeft = '3px solid #b45309';
+      }
+      tr.appendChild(subTd);
+    }
+
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      const v = vals ? vals[i] : null;
+      td.textContent = bsFmt(v);
+      if (v !== null && v < 0) td.style.color = '#dc2626';
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 섹션3 빌드: contractData 기반 (담보구분별) ───────────────────
+function bsBuildTableS3() {
+  // 기간 결정: contractData 우선, 없으면 bsData
+  const source   = contractData || bsData;
+  const periods  = contractData ? contractData.periods : bsData.periods;
+  if (!periods || !periods.length) return;
+
+  // 필터 인덱스 — contractData는 기간 수가 적으니 전체 표시
+  let indices;
+  if (contractData) {
+    const n = document.getElementById('bs-period-filter')?.value || '12';
+    if (n === 'all') {
+      indices = periods.map((_, i) => i);
+    } else {
+      const count = parseInt(n);
+      const start = Math.max(0, periods.length - count);
+      indices = Array.from({length: periods.length - start}, (_, i) => start + i);
+    }
+  } else {
+    indices = bsFilteredIndices();
+  }
+
+  // thead
+  const headRow = document.getElementById('bs-head-s3');
+  while (headRow.children.length > 2) headRow.removeChild(headRow.lastChild);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
+  });
+
+  const tbody = document.getElementById('bs-body-s3');
+  tbody.innerHTML = '';
+
+  const section3 = contractData ? contractData.section3 : (bsData ? bsData.section3 : {});
+  const groupNames = Object.keys(section3);
+
+  if (!groupNames.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 2 + indices.length;
+    td.textContent = contractData ? '계약리스트 데이터를 업로드하세요' : '데이터 없음';
+    td.style.cssText = 'text-align:center;padding:20px;color:#94a3b8;';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // 그룹별 행 정의 (신규/추가대출/재대출/취급액)
+  const SUB_DEFS = [
+    { key: '신규',         sub: '신규',         cls: 'bs-row-sub'  },
+    { key: '추가대출',     sub: '추가대출',      cls: 'bs-row-sub'  },
+    { key: '재대출',       sub: '재대출',        cls: 'bs-row-sub'  },
+    { key: '취급액(대출)', sub: '취급액(대출)',   cls: 'bs-row-deal' },
+  ];
+
+  groupNames.forEach((gname, gi) => {
+    const gdata = section3[gname] || {};
+
+    SUB_DEFS.forEach(({ key, sub, cls }, si) => {
+      const vals = gdata[key] || {};
+      const tr = document.createElement('tr');
+      tr.className = cls;
+
+      // 구분열: 그룹명 첫 행에만 (rowspan=4)
+      if (si === 0) {
+        const groupTd = document.createElement('td');
+        groupTd.className = 'bs-group-col';
+        groupTd.textContent = gname;
+        groupTd.rowSpan = SUB_DEFS.length;
+        tr.appendChild(groupTd);
+      }
+
+      const subTd = document.createElement('td');
+      subTd.className = 'bs-sub-col';
+      subTd.textContent = sub;
+      if (contractData && cls === 'bs-row-deal') {
+        subTd.style.borderLeft = '3px solid #b45309';
+        subTd.title = '계약리스트 기준';
+      }
+      tr.appendChild(subTd);
+
+      indices.forEach(i => {
+        const ym = periods[i];
+        const v = vals[ym] ?? null;
+        const td = document.createElement('td');
+        td.textContent = bsFmt(v);
+        if (v !== null && v < 0) td.style.color = '#dc2626';
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    // 그룹 구분선 (마지막 그룹 제외)
+    if (gi < groupNames.length - 1) {
+      const sep = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 2 + indices.length;
+      td.style.cssText = 'padding:0;height:6px;background:#e2e8f0;';
+      sep.appendChild(td);
+      tbody.appendChild(sep);
+    }
+  });
 }
 
 // ===== 대출자산속성 렌더링 =====
@@ -4297,6 +4585,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAQData();             // 자산건전성 별도 로드 (기업여신자료 형식)
   loadSettlementAQData();   // 결산자료 기반 자산건전성 로드 (우선순위: 기업여신자료 없으면 표시)
   loadBusinessData();       // 영업현황 별도 로드
+  loadContractData();       // 계약리스트 별도 로드
 });
 </script>
 </body>
