@@ -1673,6 +1673,24 @@ async function loadMappingConfig() {
     mappingConfig = mapRes.data;
     excelOptions  = optRes.data;
 
+    // 서버에 저장된 수기 추가 과목 + 순서 복원
+    const savedCustom  = optRes.data._custom_labels  || { bs:[], is_:[], summary:[] };
+    const savedOrdered = optRes.data._ordered_labels || { bs:null, is_:null, summary:null };
+    for (const sh of ['bs','is_','summary']) {
+      // customExcelLabels 복원 (서버 저장값 우선, 현재 메모리에 없는 것만 추가)
+      for (const lbl of (savedCustom[sh] || [])) {
+        if (!customExcelLabels[sh].includes(lbl)) {
+          customExcelLabels[sh].push(lbl);
+        }
+      }
+      // allOrderedLabels 복원 (서버 저장값 있으면 우선, 없으면 null → getAllLabels에서 재초기화)
+      if (savedOrdered[sh] && savedOrdered[sh].length > 0) {
+        allOrderedLabels[sh] = savedOrdered[sh];
+      } else {
+        allOrderedLabels[sh] = null;
+      }
+    }
+
     // PDF 과목 목록 구성 (당기값 포함)
     for (const sh of ['bs','is_','summary']) {
       pdfKeys[sh] = (mappingConfig[sh] || []).map(r => ({
@@ -1684,7 +1702,6 @@ async function loadMappingConfig() {
     // mpRows 초기화: 기존 매핑에서 엑셀 과목 기준으로 재구성
     for (const sh of ['bs','is_','summary']) {
       mpRows[sh] = legacyToMpRows(mappingConfig[sh] || []);
-      allOrderedLabels[sh] = null;  // excelOptions 기준으로 재초기화
     }
 
     renderMappingTable(currentMappingSheet);
@@ -1935,7 +1952,9 @@ const allOrderedLabels   = { bs:null, is_:null, summary:[] };  // null = 아직 
 // allOrderedLabels 반환 (없으면 excelOptions 기준으로 초기화)
 function getAllLabels(sheet) {
   if (!allOrderedLabels[sheet]) {
-    allOrderedLabels[sheet] = [...(excelOptions[sheet] || [])];
+    // excelOptions에서 수기 추가 과목은 제외하고 초기화 (수기 과목이 bsis에 반영된 후 섞이지 않도록)
+    const custom = customExcelLabels[sheet] || [];
+    allOrderedLabels[sheet] = (excelOptions[sheet] || []).filter(lbl => !custom.includes(lbl));
   }
   // customExcelLabels 중 아직 allOrdered에 없는 것 뒤에 append
   for (const lbl of customExcelLabels[sheet]) {

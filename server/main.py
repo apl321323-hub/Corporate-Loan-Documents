@@ -672,12 +672,19 @@ async def save_pdf_mapping(request: Request):
 
 @app.get("/api/pdf-mapping/excel-options")
 async def get_excel_options():
-    """엑셀 BS/IS/Summary 과목 목록 반환 (매핑 드롭다운용)"""
-    bsis_data = uploaded_data.get("bsis", {})
+    """엑셀 BS/IS/Summary 과목 목록 반환 (매핑 드롭다운용)
+    - bsis rows 전체 label 반환
+    - 수기 추가 과목(custom_excel_labels) 별도 포함
+    """
+    bsis_data     = uploaded_data.get("bsis", {})
+    custom_labels = uploaded_data.get("custom_excel_labels", {"bs": [], "is_": [], "summary": []})
+    ordered_labels = uploaded_data.get("ordered_excel_labels", {"bs": None, "is_": None, "summary": None})
     return JSONResponse({
         "bs":      [r["label"] for r in bsis_data.get("bs",      {}).get("rows", [])],
         "is_":     [r["label"] for r in bsis_data.get("is_",     {}).get("rows", [])],
         "summary": [r["label"] for r in bsis_data.get("summary", {}).get("rows", [])],
+        "_custom_labels":  custom_labels,
+        "_ordered_labels": ordered_labels,
     })
 
 
