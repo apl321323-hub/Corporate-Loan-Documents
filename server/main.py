@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -15,6 +15,7 @@ from payment_parser import parse_payment
 from writeoff_parser import parse_writeoff
 from sale_parser import parse_sale
 from asset_parser import parse_asset
+from loan_count_parser import parse_loan_count
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -1213,6 +1214,69 @@ async def upload_asset(file: UploadFile = File(...)):
 @app.get("/api/data/asset")
 async def get_asset_data():
     d = uploaded_data.get("asset_data")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/loan-count")
+async def upload_loan_count(file: UploadFile = File(...), period: str = Form(default="")):
+    import tempfile, os
+    suffix = os.path.splitext(file.filename)[1] if file.filename else ".xls"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+    try:
+        data = parse_loan_count(tmp_path, period)
+        # 기존 저장 데이터에 해당 기간 값을 병합
+        existing = uploaded_data.get("loan_count_data", {"periods": [], "rows": {}})
+        ym = data["period"]
+        if ym and ym not in existing["periods"]:
+            existing["periods"].append(ym)
+            existing["periods"].sort()
+        for key, val in data["rows"].items():
+            if key not in existing["rows"]:
+                existing["rows"][key] = {}
+            if ym:
+                existing["rows"][key][ym] = val
+        uploaded_data["loan_count_data"] = existing
+
+        # asset_data의 대출취급건수 섹션도 업데이트 (연동)
+        if ym:
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec = sections.get("대출취급건수", {})
+                for key, val in data["rows"].items():
+                    if key not in sec:
+                        sec[key] = {}
+                    sec[key][ym] = float(val)
+                sections["대출취급건수"] = sec
+                asset_data["sections"] = sections
+                # periods에도 추가
+                asset_periods = asset_data.get("periods", [])
+                if ym not in asset_periods:
+                    asset_periods.append(ym)
+                    asset_periods.sort()
+                    asset_data["periods"] = asset_periods
+                uploaded_data["asset_data"] = asset_data
+
+        return JSONResponse({
+            "status": "ok",
+            "period": ym,
+            "rows": data["rows"],
+            "raw": data["raw"],
+        })
+    except Exception as e:
+        import traceback
+        return JSONResponse({"error": str(e), "detail": traceback.format_exc()}, status_code=500)
+    finally:
+        os.unlink(tmp_path)
+
+
+@app.get("/api/data/loan-count")
+async def get_loan_count_data():
+    d = uploaded_data.get("loan_count_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
