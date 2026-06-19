@@ -688,7 +688,45 @@ async def get_excel_options():
     })
 
 
-@app.post("/api/pdf-mapping/apply")
+@app.delete("/api/custom-excel-label")
+async def delete_custom_excel_label(request: Request):
+    """
+    수기 추가 과목 삭제
+    Body: { "sheet": "bs", "label": "테스트" }
+    - custom_excel_labels.json에서 제거
+    - ordered_excel_labels.json에서 제거
+    - bsis.json 해당 시트 rows에서 제거
+    """
+    body = await request.json()
+    sheet = body.get("sheet")
+    label = body.get("label")
+    if not sheet or not label:
+        raise HTTPException(status_code=400, detail="sheet, label 필수")
+
+    # 1. custom_excel_labels 업데이트
+    custom = uploaded_data.get("custom_excel_labels", {"bs": [], "is_": [], "summary": []})
+    if label in custom.get(sheet, []):
+        custom[sheet] = [l for l in custom[sheet] if l != label]
+        uploaded_data["custom_excel_labels"] = custom
+
+    # 2. ordered_excel_labels 업데이트
+    ordered = uploaded_data.get("ordered_excel_labels", {"bs": None, "is_": None, "summary": None})
+    if ordered.get(sheet) and label in ordered[sheet]:
+        ordered[sheet] = [l for l in ordered[sheet] if l != label]
+        uploaded_data["ordered_excel_labels"] = ordered
+
+    # 3. bsis rows에서 해당 label 행 제거
+    bsis_data = uploaded_data.get("bsis", {})
+    if bsis_data and sheet in bsis_data:
+        rows = bsis_data[sheet].get("rows", [])
+        new_rows = [r for r in rows if r.get("label") != label]
+        if len(new_rows) != len(rows):
+            bsis_data[sheet]["rows"] = new_rows
+            uploaded_data["bsis"] = bsis_data
+
+    return JSONResponse({"success": True, "message": f"'{label}' 과목이 삭제되었습니다."})
+
+
 async def apply_pdf_mapping(request: Request):
     """
     저장된 pdf_raw + pdf_mapping으로 bsis를 재반영 (PDF 재업로드 없이 즉시 적용)

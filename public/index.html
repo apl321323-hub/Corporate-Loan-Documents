@@ -1999,19 +1999,32 @@ function mpAddExcelRow() {
   showToast(`✅ '${label}' 과목이 추가되었습니다.`, 'success');
 }
 
-function mpDelExcelRow(sheet, label) {
-  // customExcelLabels에서만 삭제 가능
+async function mpDelExcelRow(sheet, label) {
+  if (!confirm(`'${label}' 과목을 삭제하시겠습니까?\nBS/IS 테이블에서도 해당 행이 제거됩니다.`)) return;
+
+  // 1. 프론트 메모리에서 제거
   const ci = customExcelLabels[sheet].indexOf(label);
   if (ci !== -1) customExcelLabels[sheet].splice(ci, 1);
-  // allOrderedLabels에서도 제거
   if (allOrderedLabels[sheet]) {
     const ai = allOrderedLabels[sheet].indexOf(label);
     if (ai !== -1) allOrderedLabels[sheet].splice(ai, 1);
   }
-  // mpRows에서도 제거
   const ri = mpRows[sheet].findIndex(r => r.excelLabel === label);
   if (ri !== -1) mpRows[sheet].splice(ri, 1);
+
+  // 2. 서버에 삭제 요청 (bsis rows + custom_excel_labels + ordered_excel_labels)
+  try {
+    await axios.delete(`${API_BASE}/api/custom-excel-label`, {
+      data: { sheet, label }
+    });
+    showToast(`✅ '${label}' 과목이 삭제되었습니다.`, 'success');
+  } catch(e) {
+    showToast(`⚠️ 서버 삭제 실패: ${e.response?.data?.detail || e.message}`, 'error');
+  }
+
+  // 3. 매핑 테이블 + BS/IS 화면 갱신
   renderMappingTable(sheet);
+  await loadBsisData();
 }
 
 function mpMoveExcelRow(sheet, label, dir) {
