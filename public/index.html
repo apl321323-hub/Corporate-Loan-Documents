@@ -3383,15 +3383,57 @@ function pgRenderEditor() {
   const g = pgGroups[pgSelectedGroupIdx];
   const selectedSet = new Set(g.products);
 
+  // ── 다른 그룹에 이미 배정된 상품 계산 ──────────────────────────
+  // Map<productName, ownerGroupName>
+  const usedElsewhere = new Map();
+  pgGroups.forEach((og, i) => {
+    if (i === pgSelectedGroupIdx) return;
+    og.products.forEach(p => usedElsewhere.set(p, og.name));
+  });
+
+  // 선택 가능한 상품 수 (disabled 제외)
+  const availableCount = pgAllProducts.filter(p => !usedElsewhere.has(p)).length;
+
   // 상품 체크박스 렌더
   const productRows = pgAllProducts.map(p => {
-    const chk = selectedSet.has(p) ? 'checked' : '';
-    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;
-        background:${chk ? '#ede9fe' : 'transparent'};transition:.15s;">
+    const isOwn      = selectedSet.has(p);
+    const ownerGroup = usedElsewhere.get(p);          // 다른 그룹 소속이면 그룹명
+    const isDisabled = !!ownerGroup;                  // 다른 그룹 배정 → disabled
+
+    if (isDisabled) {
+      // 비활성 스타일: 회색 배경, 취소선, 소속 그룹명 표시
+      return `<label title="${ownerGroup} 그룹에 배정됨"
+          style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border-radius:6px;
+                 cursor:not-allowed;background:#f1f5f9;border:1px solid #e2e8f0;opacity:.65;">
+        <input type="checkbox" value="${p}" disabled
+               style="accent-color:#94a3b8;width:15px;height:15px;margin-top:2px;flex-shrink:0;">
+        <span style="display:flex;flex-direction:column;gap:1px;">
+          <span style="font-size:13px;color:#94a3b8;text-decoration:line-through;">${p}</span>
+          <span style="font-size:10px;color:#7c3aed;font-weight:600;">
+            <i class="fas fa-lock" style="font-size:9px;"></i> ${ownerGroup}
+          </span>
+        </span>
+      </label>`;
+    }
+
+    // 활성 스타일
+    const chk = isOwn ? 'checked' : '';
+    const bg  = isOwn ? '#ede9fe' : 'transparent';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;
+        cursor:pointer;background:${bg};transition:.15s;">
       <input type="checkbox" value="${p}" ${chk} style="accent-color:#7c3aed;width:15px;height:15px;">
       <span style="font-size:13px;color:#1e293b;">${p}</span>
     </label>`;
   }).join('');
+
+  // 범례 안내 문구 (비활성 상품이 하나라도 있을 때만 표시)
+  const hasDisabled = usedElsewhere.size > 0;
+  const legendHtml  = hasDisabled
+    ? `<div style="padding:6px 14px 0;font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+         <i class="fas fa-lock" style="color:#7c3aed;"></i>
+         자물쇠 표시 상품은 다른 그룹에 배정되어 선택 불가합니다.
+       </div>`
+    : '';
 
   wrap.innerHTML = `
     <div class="card" style="padding:0;overflow:hidden;">
@@ -3400,11 +3442,15 @@ function pgRenderEditor() {
         <span><i class="fas fa-edit"></i> ${g.name} — 상품 선택</span>
         <span style="font-size:11px;font-weight:400;opacity:.8;" id="pg-sel-count">${g.products.length}개 선택됨</span>
       </div>
-      <div style="padding:10px 14px;background:#f8f4ff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;">
+      <div style="padding:10px 14px;background:#f8f4ff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <button onclick="pgCheckAll(true)"  style="font-size:12px;padding:4px 12px;border:1px solid #7c3aed;border-radius:5px;background:#fff;color:#7c3aed;cursor:pointer;">전체 선택</button>
         <button onclick="pgCheckAll(false)" style="font-size:12px;padding:4px 12px;border:1px solid #cbd5e1;border-radius:5px;background:#fff;color:#64748b;cursor:pointer;">전체 해제</button>
+        <span style="font-size:11px;color:#64748b;margin-left:4px;">
+          (선택 가능 <strong>${availableCount}</strong>개 / 전체 ${pgAllProducts.length}개)
+        </span>
       </div>
-      <div id="pg-product-list" style="padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;max-height:400px;overflow-y:auto;">
+      ${legendHtml}
+      <div id="pg-product-list" style="padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:420px;overflow-y:auto;">
         ${productRows}
       </div>
       <div style="padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
@@ -3414,30 +3460,51 @@ function pgRenderEditor() {
       </div>
     </div>`;
 
-  // 체크박스 이벤트
+  // 체크박스 변경 이벤트 (disabled 항목 제외하고 카운트)
   document.getElementById('pg-product-list').addEventListener('change', () => {
-    const checked = [...document.querySelectorAll('#pg-product-list input:checked')];
+    const checked = [...document.querySelectorAll('#pg-product-list input:checked:not(:disabled)')];
     document.getElementById('pg-sel-count').textContent = `${checked.length}개 선택됨`;
-    // 배경 업데이트
+    // 배경 업데이트 (활성 항목만)
     document.querySelectorAll('#pg-product-list label').forEach(lbl => {
-      lbl.style.background = lbl.querySelector('input').checked ? '#ede9fe' : 'transparent';
+      const inp = lbl.querySelector('input');
+      if (!inp.disabled) {
+        lbl.style.background = inp.checked ? '#ede9fe' : 'transparent';
+      }
     });
   });
 }
 
 function pgCheckAll(val) {
-  document.querySelectorAll('#pg-product-list input[type=checkbox]').forEach(cb => {
+  // disabled 항목(다른 그룹 배정 상품)은 건너뜀
+  let count = 0;
+  document.querySelectorAll('#pg-product-list input[type=checkbox]:not(:disabled)').forEach(cb => {
     cb.checked = val;
     cb.closest('label').style.background = val ? '#ede9fe' : 'transparent';
+    if (val) count++;
   });
-  const count = val ? pgAllProducts.length : 0;
+  // 해제 시에는 현재 체크된 수 재집계
+  if (!val) count = 0;
   const cnt = document.getElementById('pg-sel-count');
   if (cnt) cnt.textContent = `${count}개 선택됨`;
 }
 
 async function pgSaveGroup() {
   if (pgSelectedGroupIdx < 0) return;
-  const checked = [...document.querySelectorAll('#pg-product-list input:checked')].map(cb => cb.value);
+  const checked = [...document.querySelectorAll('#pg-product-list input:checked:not(:disabled)')].map(cb => cb.value);
+
+  // ── 저장 전 중복 검증 (안전망) ────────────────────────────────
+  const usedElsewhere = new Map();
+  pgGroups.forEach((og, i) => {
+    if (i === pgSelectedGroupIdx) return;
+    og.products.forEach(p => usedElsewhere.set(p, og.name));
+  });
+  const conflicts = checked.filter(p => usedElsewhere.has(p));
+  if (conflicts.length > 0) {
+    const detail = conflicts.map(p => `"${p}" (→ ${usedElsewhere.get(p)})`).join(', ');
+    showToast(`❌ 중복 상품 저장 불가: ${detail}`, 'error');
+    return;
+  }
+
   pgGroups[pgSelectedGroupIdx].products = checked;
   pgRenderGroupList();
   pgRenderSummary();
