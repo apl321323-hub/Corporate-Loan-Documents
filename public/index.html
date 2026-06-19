@@ -1684,6 +1684,7 @@ async function loadMappingConfig() {
     // mpRows 초기화: 기존 매핑에서 엑셀 과목 기준으로 재구성
     for (const sh of ['bs','is_','summary']) {
       mpRows[sh] = legacyToMpRows(mappingConfig[sh] || []);
+      allOrderedLabels[sh] = null;  // excelOptions 기준으로 재초기화
     }
 
     renderMappingTable(currentMappingSheet);
@@ -1730,9 +1731,9 @@ function renderMappingTable(sheet) {
     return 'indent2';
   }
 
-  // 엑셀 원본 과목 + 수기 추가 과목 합산
+  // 엑셀 원본 과목 + 수기 추가 과목 합산 (allOrderedLabels 기준)
   const customLabels  = customExcelLabels[sheet] || [];
-  const allLabels     = [...excelLabels, ...customLabels];
+  const allLabels     = getAllLabels(sheet);
 
   let html = '';
   for (let ei = 0; ei < allLabels.length; ei++) {
@@ -1771,20 +1772,41 @@ function renderMappingTable(sheet) {
       });
     }
 
-    // 추가 버튼
-    const addBtn = `<button class="mp-add" onclick="mpAddBinding('${sheet}',${ei})"><i class="fas fa-plus" style="font-size:9px;"></i> PDF 추가</button>`;
+    // 수기 추가 과목: 라벨 셀에 ▲▼ 이동 버튼 + 과목삭제 버튼
+    const escapedLbl = lbl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const addBtn     = `<button class="mp-add" onclick="mpAddBinding('${sheet}',${ei})"><i class="fas fa-plus" style="font-size:9px;"></i> PDF 추가</button>`;
+    const canMoveUp   = isCustom && ei > 0;
+    const canMoveDown = isCustom && ei < allLabels.length - 1;
+    const moveBtns = isCustom ? `
+      <div style="display:flex;flex-direction:column;gap:1px;margin-left:4px;flex-shrink:0;">
+        <button onclick="mpMoveExcelRow('${sheet}','${escapedLbl}',-1)"
+          title="위로 이동" ${canMoveUp ? '' : 'disabled'}
+          style="width:18px;height:13px;border:1px solid #c7d4e3;border-radius:3px 3px 0 0;
+                 background:${canMoveUp ? '#f8fafc' : '#f1f5f9'};cursor:${canMoveUp ? 'pointer' : 'default'};
+                 color:${canMoveUp ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;
+                 display:flex;align-items:center;justify-content:center;padding:0;">▲</button>
+        <button onclick="mpMoveExcelRow('${sheet}','${escapedLbl}',+1)"
+          title="아래로 이동" ${canMoveDown ? '' : 'disabled'}
+          style="width:18px;height:13px;border:1px solid #c7d4e3;border-top:none;border-radius:0 0 3px 3px;
+                 background:${canMoveDown ? '#f8fafc' : '#f1f5f9'};cursor:${canMoveDown ? 'pointer' : 'default'};
+                 color:${canMoveDown ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;
+                 display:flex;align-items:center;justify-content:center;padding:0;">▼</button>
+      </div>` : '';
 
     // 수기 추가 과목에만 과목 삭제 버튼 표시
     const delExcelBtn = isCustom
-      ? `<button class="mp-del-excel" onclick="mpDelExcelRow('${sheet}','${lbl.replace(/'/g,"\\'")}')"\
+      ? `<button class="mp-del-excel" onclick="mpDelExcelRow('${sheet}','${escapedLbl}')"
            title="이 과목 전체 삭제" style="width:auto;padding:2px 7px;font-size:10px;color:#ef4444;border:1px solid #fecaca;border-radius:4px;background:#fff5f5;margin:2px 8px 4px;">✕ 과목삭제</button>`
       : '';
 
     html += `
       <tr data-ei="${ei}">
         <td>
-          <div class="mp-label-cell ${lblClass}${isCustom ? ' mp-custom' : ''}" title="${lbl}">
-            ${lbl}${isCustom ? ' <span style="font-size:9px;color:#3b82f6;font-weight:400;margin-left:3px;">[추가됨]</span>' : ''}
+          <div style="display:flex;align-items:center;">
+            <div class="mp-label-cell ${lblClass}${isCustom ? ' mp-custom' : ''}" title="${lbl}" style="flex:1;">
+              ${lbl}${isCustom ? ' <span style="font-size:9px;color:#3b82f6;font-weight:400;margin-left:3px;">[추가됨]</span>' : ''}
+            </div>
+            ${moveBtns}
           </div>
         </td>
         <td>
@@ -1806,10 +1828,8 @@ function renderMappingTable(sheet) {
 
 // ── 이벤트 핸들러 ───────────────────────────────────────────────
 function mpGetOrCreate(sheet, ei) {
-  // ei는 allLabels(엑셀원본 + 수기추가) 기준 인덱스
-  const baseLabels   = excelOptions[sheet] || [];
-  const customLabels = customExcelLabels[sheet] || [];
-  const allLabels    = [...baseLabels, ...customLabels];
+  // ei는 getAllLabels(엑셀원본 + 수기추가 정렬순서) 기준 인덱스
+  const allLabels = getAllLabels(sheet);
   const lbl = allLabels[ei];
   if (!lbl) return null;
   let row = mpRows[sheet].find(r => r.excelLabel === lbl);
@@ -1854,9 +1874,25 @@ function mpDelBinding(sheet, ei, bi) {
   renderMappingTable(sheet);
 }
 
-// ── 엑셀 과목 수기 추가/삭제 ───────────────────────────────────────
+// ── 엑셀 과목 수기 추가/이동/삭제 ───────────────────────────────────
 // customExcelLabels[sheet] = ['새과목1', '새과목2', ...]
-const customExcelLabels = { bs:[], is_:[], summary:[] };
+// allOrderedLabels[sheet]  = 원본 + 수기 과목 전체 순서 배열
+const customExcelLabels  = { bs:[], is_:[], summary:[] };
+const allOrderedLabels   = { bs:null, is_:null, summary:[] };  // null = 아직 초기화 안 됨
+
+// allOrderedLabels 반환 (없으면 excelOptions 기준으로 초기화)
+function getAllLabels(sheet) {
+  if (!allOrderedLabels[sheet]) {
+    allOrderedLabels[sheet] = [...(excelOptions[sheet] || [])];
+  }
+  // customExcelLabels 중 아직 allOrdered에 없는 것 뒤에 append
+  for (const lbl of customExcelLabels[sheet]) {
+    if (!allOrderedLabels[sheet].includes(lbl)) {
+      allOrderedLabels[sheet].push(lbl);
+    }
+  }
+  return allOrderedLabels[sheet];
+}
 
 function mpAddExcelRow() {
   const input = document.getElementById('mp-new-excel-input');
@@ -1865,19 +1901,16 @@ function mpAddExcelRow() {
   if (!label) { input.focus(); return; }
 
   const sheet = currentMappingSheet;
+  const all   = getAllLabels(sheet);
 
-  // 이미 존재하는 과목인지 확인 (엑셀 원본 + 수기 추가 모두)
-  const allLabels = [
-    ...(excelOptions[sheet] || []),
-    ...customExcelLabels[sheet],
-  ];
-  if (allLabels.includes(label)) {
+  if (all.includes(label)) {
     showToast(`⚠️ '${label}' 과목이 이미 존재합니다.`, 'error');
     return;
   }
 
-  // customExcelLabels에 추가
+  // customExcelLabels + allOrderedLabels 둘 다 끝에 추가
   customExcelLabels[sheet].push(label);
+  allOrderedLabels[sheet].push(label);
 
   // mpRows에도 빈 binding으로 추가
   if (!mpRows[sheet].find(r => r.excelLabel === label)) {
@@ -1886,16 +1919,42 @@ function mpAddExcelRow() {
 
   input.value = '';
   renderMappingTable(sheet);
+  // 새로 추가된 행으로 스크롤
+  const tbody = document.getElementById('mp-tbody');
+  if (tbody) {
+    const lastRow = tbody.lastElementChild;
+    if (lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   showToast(`✅ '${label}' 과목이 추가되었습니다.`, 'success');
 }
 
 function mpDelExcelRow(sheet, label) {
   // customExcelLabels에서만 삭제 가능
-  const idx = customExcelLabels[sheet].indexOf(label);
-  if (idx !== -1) customExcelLabels[sheet].splice(idx, 1);
+  const ci = customExcelLabels[sheet].indexOf(label);
+  if (ci !== -1) customExcelLabels[sheet].splice(ci, 1);
+  // allOrderedLabels에서도 제거
+  if (allOrderedLabels[sheet]) {
+    const ai = allOrderedLabels[sheet].indexOf(label);
+    if (ai !== -1) allOrderedLabels[sheet].splice(ai, 1);
+  }
   // mpRows에서도 제거
   const ri = mpRows[sheet].findIndex(r => r.excelLabel === label);
   if (ri !== -1) mpRows[sheet].splice(ri, 1);
+  renderMappingTable(sheet);
+}
+
+function mpMoveExcelRow(sheet, label, dir) {
+  // dir: -1 = 위로, +1 = 아래로
+  // 수기 추가 과목만 이동 가능 (원본 엑셀 과목은 고정)
+  const all  = getAllLabels(sheet);
+  const cur  = all.indexOf(label);
+  if (cur === -1) return;
+  const next = cur + dir;
+  if (next < 0 || next >= all.length) return;
+  // 원본 엑셀 과목(excelOptions)을 건너뛰지 않도록 — 수기 과목은 어디든 이동 가능
+  // 배열 swap
+  [all[cur], all[next]] = [all[next], all[cur]];
+  allOrderedLabels[sheet] = all;
   renderMappingTable(sheet);
 }
 
