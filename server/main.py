@@ -11,6 +11,7 @@ from asset_quality_parser import parse_asset_quality_excel
 from settlement_aq_parser import parse_settlement_asset_quality
 from business_parser import parse_business_excel
 from contract_parser import parse_contract_list
+from payment_parser import parse_payment
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -1050,6 +1051,50 @@ async def upload_contract(file: UploadFile = File(...), period: str = ""):
 async def get_contract_data():
     """계약리스트 집계 데이터 반환 (section1 / section3)"""
     d = uploaded_data.get("contract_data")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/payment")
+async def upload_payment(file: UploadFile = File(...), period: str = ""):
+    """
+    입금명세 엑셀 업로드
+    K열(회계)='+', AY열(계약구분)=신규/추가대출/재대출 필터 후
+    N열(원금입금) → 원금회수액, Q열(이자입금) → 이자회수액 월별 집계
+    """
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_payment(tmp_path)
+        if period:
+            data['upload_period'] = period
+        uploaded_data['payment_data'] = data
+        os.unlink(tmp_path)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"입금명세 '{file.filename}' 업로드 완료",
+            "periods": data.get('periods', []),
+            "rows": {
+                "원금회수액": list(data.get('section1', {}).get('원금회수액', {}).values()),
+                "이자회수액": list(data.get('section1', {}).get('이자회수액', {}).values()),
+            },
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/api/data/payment")
+async def get_payment_data():
+    """입금명세 집계 데이터 반환 (원금회수액 / 이자회수액)"""
+    d = uploaded_data.get("payment_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)

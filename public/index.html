@@ -1238,7 +1238,7 @@
     <div id="bs-no-data" class="card" style="padding:40px;text-align:center;color:#94a3b8;">
       <i class="fas fa-cloud-upload-alt" style="font-size:36px;margin-bottom:12px;display:block;"></i>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px;">영업현황 데이터가 없습니다</div>
-      <div style="font-size:13px;">엑셀 업로드 → <strong>섹터 7</strong>: 영업현황.xlsx &nbsp;|&nbsp; <strong>섹터 8</strong>: 계약리스트.xlsx</div>
+      <div style="font-size:13px;">엑셀 업로드 → <strong>섹터 7</strong>: 영업현황.xlsx &nbsp;|&nbsp; <strong>섹터 8</strong>: 계약리스트.xlsx &nbsp;|&nbsp; <strong>섹터 9</strong>: 입금명세.xlsx</div>
     </div>
 
     <!-- KPI 카드 (최신 기간 기준) -->
@@ -1634,6 +1634,41 @@
       </div>
     </div>
 
+    <!-- 섹터 9: 입금명세 -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#0f766e;">섹터 9</span>
+        <div>
+          <div class="upload-sector-title">입금명세</div>
+          <div class="upload-sector-desc">입금명세_YYYYMMDD.xlsx → 원금회수액 · 이자회수액</div>
+        </div>
+        <span class="upload-status-dot" id="dot-payment"></span>
+      </div>
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#0f766e;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-payment" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-payment" class="upload-period-select"></select>
+        <span id="period-badge-payment" class="upload-period-badge" style="display:none;"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-payment" onclick="document.getElementById('file-input-payment').click()">
+        <i class="fas fa-file-invoice-dollar" style="color:#0f766e;"></i>
+        <div class="drop-text" id="drop-text-payment">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">입금명세_YYYYMMDD.xlsx (K열:회계='+' / AY열:계약구분 / N열:원금입금 / Q열:이자입금)</div>
+      </div>
+      <input type="file" id="file-input-payment" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'payment')">
+      <div class="upload-progress" id="upload-progress-payment">
+        <div class="upload-status-text" id="upload-status-payment">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-payment"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('payment')" id="upload-btn-payment" disabled style="background:#0f766e;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
     <!-- 섹터 6: 재무제표 PDF (월별 업데이트) -->
     <div class="upload-sector-card upload-sector-card--pdf" style="grid-column: 1 / -1;">
       <div class="upload-sector-header">
@@ -1944,7 +1979,7 @@ const selectedFiles = { main: null, settle: null, company: null, bsis: null, 'pd
     }
   }
   // 업로드 섹터별 년월 셀렉트
-  const sectors = ['main','settle','company','bsis','aq','business','contract'];
+  const sectors = ['main','settle','company','bsis','aq','business','contract','payment'];
   sectors.forEach(s => {
     const ySel = document.getElementById(`year-${s}`);
     const mSel = document.getElementById(`month-${s}`);
@@ -2006,6 +2041,7 @@ async function uploadFile(sector) {
     aq:       '/api/upload/asset-quality',
     business: '/api/upload/business',
     contract: '/api/upload/contract',
+    payment:  '/api/upload/payment',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -2066,6 +2102,11 @@ async function uploadFile(sector) {
       await loadContractData();
       const ps = (res.data.periods || []).join(', ');
       showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps})`, 'success');
+    } else if (sector === 'payment') {
+      await loadPaymentData();
+      const ps = (res.data.periods || []).join(', ');
+      const r1 = (res.data.rows?.원금회수액 || []).map(v => Math.round(v).toLocaleString()).join(', ');
+      showToast(`✅ 입금명세 업로드 완료 (기간: ${ps} / 원금: ${r1}백만)`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -4127,6 +4168,61 @@ async function loadBusinessData() {
   }
 }
 
+// ── 입금명세 데이터 ───────────────────────────────────────────────
+let paymentData = null;   // parse_payment 결과
+
+async function loadPaymentData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/payment`);
+    if (res.data && !res.data.error) {
+      paymentData = res.data;
+
+      // 영업현황 no-data 패널 숨김 (paymentData만으로도 원금/이자 표시 가능)
+      if (!bsData && !contractData) {
+        const noData  = document.getElementById('bs-no-data');
+        const kpiArea = document.getElementById('bs-kpi-area');
+        const tabsArea = document.getElementById('bs-tabs-area');
+        if (noData)  noData.style.display  = 'none';
+        if (kpiArea) kpiArea.style.display = '';
+        if (tabsArea) tabsArea.style.display = '';
+        const badge = document.getElementById('bs-data-badge');
+        if (badge) {
+          const periods = paymentData.periods || [];
+          badge.textContent = periods.length
+            ? `입금명세: ${periods[0]} ~ ${periods[periods.length-1]}`
+            : '입금명세 로드됨';
+          badge.style.background = '#ccfbf1';
+          badge.style.color = '#134e4a';
+        }
+      }
+
+      bsRenderSection();
+      bsUpdateKPIFromPayment();
+    }
+  } catch(e) {
+    // 데이터 없음 — 무시
+  }
+}
+
+// ── 입금명세 기반 KPI 갱신 ────────────────────────────────────────
+function bsUpdateKPIFromPayment() {
+  if (!paymentData) return;
+  const periods = paymentData.periods || [];
+  if (!periods.length) return;
+  const lastPeriod = periods[periods.length - 1];
+  const s1 = paymentData.section1;
+  const fmt = v => (v != null ? Math.round(v).toLocaleString() : '-');
+
+  const repay = s1['원금회수액']?.[lastPeriod];
+  const intst = s1['이자회수액']?.[lastPeriod];
+
+  if (repay != null) {
+    document.getElementById('kpi-bs-repay').innerHTML =
+      fmt(repay) + `<span style="font-size:10px;color:#0f766e;display:block;margin-top:2px;">입금명세 기준</span>`;
+  }
+  // 이자회수액은 KPI 카드가 없으므로 필요 시 추가
+}
+
 // ── 계약리스트 데이터 ─────────────────────────────────────────────
 let contractData = null;   // parse_contract_list 결과
 
@@ -4180,9 +4276,9 @@ function bsUpdateKPIFromContract() {
   }
 }
 
-// ── bsRenderSection 개선: S3에 계약리스트 데이터 사용 ────────────
+// ── bsRenderSection ──────────────────────────────────────────────
 function bsRenderSection() {
-  if (!bsData && !contractData) return;
+  if (!bsData && !contractData && !paymentData) return;
 
   if (bsCurrentSection === 's1') {
     // S1: 기말자산/원금회수/충당금은 bsData, 신규/추가/재대출/취급액은 contractData 우선
@@ -4193,16 +4289,17 @@ function bsRenderSection() {
   }
 }
 
-// ── 섹션1 빌드: bsData(기본) + contractData(취급액 덮어쓰기) ──────
-// ※ bsData 없이 contractData만 있어도 신규/추가/재대출/취급액 표시 가능
+// ── 섹션1 빌드: bsData(기본) + contractData(취급액) + paymentData(원금/이자) ──
+// ※ bsData 없이 contractData / paymentData만 있어도 해당 행 표시 가능
 function bsBuildTableS1() {
-  if (!bsData && !contractData) return;
+  if (!bsData && !contractData && !paymentData) return;
 
   // ── 기간 결정 ──────────────────────────────────────────────────
-  // bsData가 있으면 bsData 기간 기준 (더 많은 기간),
-  // 없으면 contractData 기간 기준
+  // bsData > contractData > paymentData 순서로 기간 기준 선택
   const useBsBase = !!bsData;
-  const periods = useBsBase ? bsData.periods : (contractData.periods || []);
+  const periods = useBsBase
+    ? bsData.periods
+    : (contractData?.periods || paymentData?.periods || []);
 
   // 필터 인덱스 계산
   let indices;
@@ -4240,23 +4337,39 @@ function bsBuildTableS1() {
     '대출_취급액(대출)': '취급액(대출)',
   };
 
+  // paymentData 키 매핑 (bsData 행키 → paymentData.section1 키)
+  const paymentKeyMap = {
+    '원금회수액': '원금회수액',
+    '이자회수액': '이자회수액',
+  };
+
   BS_S1_ROWS.forEach(({ key, group, sub, mergeSub, rowspan, cls }) => {
     const contractKey = contractKeyMap[key];
+    const paymentKey  = paymentKeyMap[key];
 
     // ── 값 배열 결정 (인덱스 기준) ─────────────────────────────
     let vals = null;
+    let sourceLabel = null;   // 데이터 출처 표시용
 
     if (key === '기초대출자산' && useBsBase) {
-      // 기초대출자산: bsData에 이미 전월 기말자산 값으로 저장되어 있음
+      // 기초대출자산: bsData에 이미 전월 기말자산 값으로 저장됨
       vals = bsData.section1['기초대출자산'] || null;
+    } else if (paymentKey && paymentData) {
+      // 입금명세 데이터 우선 (원금회수액/이자회수액)
+      const pdSeries = paymentData.section1[paymentKey];
+      if (pdSeries) {
+        vals = periods.map(ym => pdSeries[ym] ?? null);
+        sourceLabel = '입금명세';
+      }
     } else if (contractKey && contractData) {
-      // contractData 우선 적용
+      // 계약리스트 데이터 우선 (신규/추가/재대출/취급액)
       const cdSeries = contractData.section1[contractKey];
       if (cdSeries) {
         vals = periods.map(ym => cdSeries[ym] ?? null);
+        sourceLabel = '계약리스트';
       }
     }
-    // contractData 없으면 bsData fallback
+    // 외부 데이터 없으면 bsData fallback
     if (!vals && useBsBase) {
       vals = bsData.section1[key] || null;
     }
@@ -4264,9 +4377,12 @@ function bsBuildTableS1() {
     const tr = document.createElement('tr');
     if (cls) tr.className = cls;
 
-    // 계약리스트 출처 표시
-    const isContractRow = !!(contractKey && contractData && contractData.section1[contractKey]);
-    const isInitialAsset = (key === '기초대출자산');
+    // 출처 색상 매핑
+    const sourceColors = {
+      '계약리스트': '#b45309',
+      '입금명세':   '#0f766e',
+    };
+    const sourceBorderColor = sourceColors[sourceLabel] || null;
 
     if (rowspan > 0) {
       const groupTd = document.createElement('td');
@@ -4287,9 +4403,9 @@ function bsBuildTableS1() {
       const subTd = document.createElement('td');
       subTd.className = 'bs-sub-col';
       subTd.textContent = sub || '';
-      if (isContractRow) {
-        subTd.title = '계약리스트 기준';
-        subTd.style.borderLeft = '3px solid #b45309';
+      if (sourceBorderColor) {
+        subTd.title = `${sourceLabel} 기준`;
+        subTd.style.borderLeft = `3px solid ${sourceBorderColor}`;
       }
       tr.appendChild(subTd);
     }
@@ -4586,6 +4702,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettlementAQData();   // 결산자료 기반 자산건전성 로드 (우선순위: 기업여신자료 없으면 표시)
   loadBusinessData();       // 영업현황 별도 로드
   loadContractData();       // 계약리스트 별도 로드
+  loadPaymentData();        // 입금명세 별도 로드
 });
 </script>
 </body>
