@@ -642,7 +642,14 @@ async def save_pdf_mapping(request: Request):
 
     body.pop("excel_options", None)
     body.pop("_reset", None)
+    # _custom_labels, _ordered_labels는 별도 키로 분리 저장
+    custom_labels  = body.pop("_custom_labels", None)
+    ordered_labels = body.pop("_ordered_labels", None)
     uploaded_data["pdf_mapping"] = body
+    if custom_labels is not None:
+        uploaded_data["custom_excel_labels"] = custom_labels
+    if ordered_labels is not None:
+        uploaded_data["ordered_excel_labels"] = ordered_labels
     return JSONResponse({"success": True, "message": "매핑 설정이 저장되었습니다."})
 
 
@@ -694,6 +701,44 @@ async def apply_pdf_mapping(request: Request):
 
     if not period:
         raise HTTPException(status_code=400, detail="적용할 기간을 지정하세요 (예: {\"period\": \"2026.05\"})")
+
+    # 5. 수기 추가 과목을 bsis rows에 없으면 삽입
+    custom_labels  = uploaded_data.get("custom_excel_labels", {})
+    ordered_labels = uploaded_data.get("ordered_excel_labels", {})
+
+    sheet_map = {"bs": "bs", "is_": "is_", "summary": "summary"}
+    for sh_key, sh_name in sheet_map.items():
+        sheet = bsis_data.get(sh_key)
+        if not sheet:
+            continue
+        existing_labels = {r["label"] for r in sheet.get("rows", [])}
+        custom_list = custom_labels.get(sh_key, [])
+        if not custom_list:
+            continue
+
+        # ordered_labels가 있으면 그 순서대로, 없으면 기존 rows 뒤에 append
+        ordered = ordered_labels.get(sh_key)  # None 이면 순서 정보 없음
+        headers = sheet.get("headers", [])
+        n_cols  = len(headers)
+
+        for lbl in custom_list:
+            if lbl not in existing_labels:
+                # 새 row 생성 (모든 기간 None으로 초기화)
+                sheet["rows"].append({
+                    "label":  lbl,
+                    "values": [None] * n_cols,
+                    "indent": 0,
+                    "bold":   False,
+                })
+                existing_labels.add(lbl)
+
+        # ordered 순서가 있으면 rows를 재정렬
+        if ordered:
+            # ordered 에 없는 label은 뒤에 붙임
+            order_idx = {lbl: i for i, lbl in enumerate(ordered)}
+            sheet["rows"].sort(
+                key=lambda r: order_idx.get(r["label"], len(ordered))
+            )
 
     # raw는 { norm_key: [cur, prev] } 형태 — apply_user_mapping과 동일 형태
     from pdf_parser import apply_user_mapping, apply_pdf_to_bsis

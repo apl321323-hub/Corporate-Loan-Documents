@@ -1979,14 +1979,21 @@ async function applyMappingToBsis() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 반영 중...';
   try {
-    // 먼저 현재 매핑 저장
+    // 먼저 현재 매핑 저장 (수기 추가 과목 목록도 함께 전송)
     const payload = { bs: [], is_: [], summary: [] };
     for (const sh of ['bs','is_','summary']) {
       payload[sh] = mpRowsToLegacy(sh);
     }
+    // 수기 추가 과목 + 전체 순서를 payload에 포함
+    payload._custom_labels = {};
+    payload._ordered_labels = {};
+    for (const sh of ['bs','is_','summary']) {
+      payload._custom_labels[sh]  = [...customExcelLabels[sh]];
+      payload._ordered_labels[sh] = allOrderedLabels[sh] ? [...allOrderedLabels[sh]] : null;
+    }
     await axios.post(`${API_BASE}/api/pdf-mapping`, payload);
 
-    // 저장된 raw + 매핑으로 bsis 재반영
+    // 저장된 raw + 매핑으로 bsis 재반영 (수기 과목 포함 지시)
     const res = await axios.post(`${API_BASE}/api/pdf-mapping/apply`, {});
     const d = res.data;
     showToast(
@@ -1995,8 +2002,8 @@ async function applyMappingToBsis() {
       'success'
     );
 
-    // bsis 데이터 재로드 → 화면 갱신
-    await loadAllData();
+    // bsis 데이터만 재로드 → 화면 갱신 (loadAllData() 쓰면 allOrderedLabels 리셋될 수 있음)
+    await loadBsisData();
   } catch(e) {
     const detail = e.response?.data?.detail || e.message;
     showToast('❌ 반영 실패: ' + detail, 'error');
