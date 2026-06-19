@@ -12,6 +12,7 @@ from settlement_aq_parser import parse_settlement_asset_quality
 from business_parser import parse_business_excel
 from contract_parser import parse_contract_list
 from payment_parser import parse_payment
+from writeoff_parser import parse_writeoff
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -1095,6 +1096,50 @@ async def upload_payment(file: UploadFile = File(...), period: str = ""):
 async def get_payment_data():
     """입금명세 집계 데이터 반환 (원금회수액 / 이자회수액)"""
     d = uploaded_data.get("payment_data")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/writeoff")
+async def upload_writeoff(file: UploadFile = File(...), period: str = ""):
+    """
+    대손리스트 엑셀 업로드
+    AZ열(대손일) 기준 월별, V열(대출잔액) 합산 → 월중상각액
+    """
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_writeoff(tmp_path)
+        if period:
+            data['upload_period'] = period
+        uploaded_data['writeoff_data'] = data
+        os.unlink(tmp_path)
+
+        s1 = data.get('section1', {})
+        series = s1.get('실상각액_월중상각액', {})
+        total_vals = list(series.values())
+
+        return JSONResponse({
+            "success": True,
+            "message": f"대손리스트 '{file.filename}' 업로드 완료",
+            "periods": data.get('periods', []),
+            "total": sum(total_vals),
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/api/data/writeoff")
+async def get_writeoff_data():
+    """대손리스트 집계 데이터 반환 (월중상각액)"""
+    d = uploaded_data.get("writeoff_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
