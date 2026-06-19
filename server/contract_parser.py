@@ -129,12 +129,19 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
     # 잔액 집계용 기간 Set (계약구분 필터 없이 모든 행에서 수집)
     balance_yms: set[str] = set()
 
+    # ── 취급대출 평균이율 집계 버킷 ──────────────────────────────
+    # 가중평균이율 = Σ(대출액 × 정상이율) / Σ대출액 × 100
+    # {ym: Σ(대출액 × 정상이율%)}, {ym: Σ대출액}
+    rate_sum_deal: dict[str, float] = defaultdict(float)  # Σ(T × Z)
+    amt_sum_deal:  dict[str, float] = defaultdict(float)  # Σ T
+
     for row in range(2, ws.max_row + 1):
         prod = ws.cell(row=row, column=3).value    # C: 상품명
         q    = ws.cell(row=row, column=17).value   # Q: 계약구분
         ad   = ws.cell(row=row, column=30).value   # AD: 계약일
         t    = ws.cell(row=row, column=20).value   # T: 대출액
         v    = ws.cell(row=row, column=22).value   # V: 대출잔액
+        z    = ws.cell(row=row, column=26).value   # Z: 정상이율(%)
 
         ym = _ym(ad)
         if not ym:
@@ -158,7 +165,7 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         if q not in DEAL_TYPES:
             continue
 
-        amt = _safe_amt(t)
+        amt   = _safe_amt(t)
         label = Q_LABEL[q]
 
         # 섹션1: 전체 합산
@@ -170,6 +177,12 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
             gname = prod_to_group.get(str(prod).strip())
             if gname:
                 s3_raw[gname][ym][label] += amt
+
+        # ── 취급대출 평균이율: DEAL_TYPES 행만, Z열(정상이율) × T열(대출액) ──
+        rate_z = _safe_amt(z)   # 정상이율(%) — None/빈값 → 0.0
+        if amt > 0 and rate_z > 0:
+            rate_sum_deal[ym] += amt * rate_z
+            amt_sum_deal[ym]  += amt
 
     wb.close()
 
@@ -244,12 +257,21 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         ym: balance_total[ym]["잔액"] for ym in periods        # 원 단위
     }
 
+    # ── 취급대출 가중평균이율 계산 ────────────────────────────────
+    # {ym: Σ(T×Z) / Σ T} — 소수 둘째자리, 집계 없으면 None
+    avg_rate_deal: dict[str, float | None] = {}
+    for ym in periods:
+        ws_ = rate_sum_deal.get(ym, 0.0)
+        wa  = amt_sum_deal.get(ym, 0.0)
+        avg_rate_deal[ym] = round(ws_ / wa, 2) if wa > 0 else None
+
     return {
         "periods":          periods,
         "section1":         section1,
         "section3":         section3,
         "section_deal":     section_deal,
         "section_balance":  section_balance,
+        "avg_rate_deal":    avg_rate_deal,   # 취급대출 가중평균이율 {ym: float|None}
         "products":         sorted(products_set),
     }
 

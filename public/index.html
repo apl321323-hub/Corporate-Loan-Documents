@@ -2376,9 +2376,24 @@ async function uploadFile(sector) {
 
     if (sector === 'settle') {
       await loadSettlementAQData();
+      // 대출만기 섹션 갱신: 결산자료 maturity → assetData 반영
+      if (res.data.maturity_updated) {
+        await loadAssetData();
+      } else if (assetData && res.data.period) {
+        // asset_data가 메모리에만 있는 경우도 대비: settlement-aq 데이터로 직접 갱신
+        await loadAndMergeMaturityToAsset(res.data.period);
+      }
+      // 평균이자율 섹션 갱신: 결산자료 avg_rate → assetData 반영
+      if (res.data.avg_rate_updated) {
+        await loadAssetData();
+      } else if (assetData && res.data.period) {
+        await loadAndMergeAvgRateToAsset(res.data.period);
+      }
       const p = res.data.period ? ` [${res.data.period}]` : '';
       const total = res.data.section1_total ? ` · 융잔합계 ${res.data.section1_total.toLocaleString()}백만원` : '';
-      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total})`, 'success');
+      const matMsg = res.data.maturity_updated ? ' / 대출만기 갱신' : '';
+      const rateMsg = res.data.avg_rate_updated ? ' / 평균이자율 갱신' : '';
+      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total}${matMsg}${rateMsg})`, 'success');
     } else if (sector === 'company') {
       const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
       appData.company_info = ciRes.data;
@@ -2403,8 +2418,20 @@ async function uploadFile(sector) {
       if (balRows.length > 0) {
         await loadAssetData();
       }
+      // 취급대출평균이율 갱신: avg_rate_deal → assetData 반영
+      if (res.data.avg_rate_deal && Object.keys(res.data.avg_rate_deal).length > 0) {
+        if (balRows.length === 0) {
+          // loadAssetData 호출 안 된 경우만 직접 병합
+          await loadAndMergeAvgRateDealToAsset();
+        } else {
+          // loadAssetData 호출 후에도 취급대출평균은 asset_parser 엑셀에 없으므로 추가 병합
+          await loadAndMergeAvgRateDealToAsset();
+        }
+      }
       const balMsg = balRows.length > 0 ? ` / 대출채권잔액 ${balRows.length}행 갱신` : '';
-      showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps}${balMsg})`, 'success');
+      const avgDealKeys = Object.keys(res.data.avg_rate_deal || {});
+      const rateMsg = avgDealKeys.length > 0 ? ` / 취급대출평균이율 갱신(${avgDealKeys.length}개월)` : '';
+      showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps}${balMsg}${rateMsg})`, 'success');
     } else if (sector === 'payment') {
       await loadPaymentData();
       const ps = (res.data.periods || []).join(', ');
@@ -4031,6 +4058,29 @@ async function loadSettlementAQData() {
     aqUpdateKPI();
     switchAQSection(aqCurrentSection);
 
+    // ── 대출만기 → assetData 실시간 병합 ──────────────────────────
+    // 결산자료에 maturity 데이터가 있으면 assetData 대출만기 섹션에도 반영
+    if (d.maturity && Object.keys(d.maturity).length > 0 && assetData) {
+      const pkey = period;
+      const MATURITY_KEYS = ['12개월 미만', '12~24개월 미만', '24~36개월 미만', '36개월 이상', '전체융잔 합계'];
+      if (!assetData.sections) assetData.sections = {};
+      if (!assetData.sections['대출만기']) assetData.sections['대출만기'] = {};
+      const sec = assetData.sections['대출만기'];
+      MATURITY_KEYS.forEach(key => {
+        const val = d.maturity[key];
+        if (val != null) {
+          if (!sec[key]) sec[key] = {};
+          sec[key][pkey] = val;
+        }
+      });
+      if (!assetData.periods) assetData.periods = [];
+      if (!assetData.periods.includes(pkey)) {
+        assetData.periods.push(pkey);
+        assetData.periods.sort();
+      }
+      if (laCurSection === '04') laRenderSection('04');
+    }
+
   } catch(e) {
     console.warn('결산자료 AQ 로드 실패:', e.message);
   }
@@ -5313,9 +5363,10 @@ const LA_SEC_MAP = {
 // ── 숫자 포맷 ──────────────────────────────────────────────────
 function laFmt(v, secKey, label) {
   if (v === null || v === undefined) return '–';
-  // 이자율 섹션: % 표시
+  // 이자율 섹션: % 표시 (값이 1 이하면 소수 비율 → ×100 변환, 초과면 이미 %값)
   if (secKey === '평균이자율' || secKey === '평균이자율2') {
-    return v === 0 ? '–' : v.toFixed(2) + '%';
+    if (v === 0) return '–';
+    return Math.abs(v) <= 1 ? (v * 100).toFixed(2) + '%' : v.toFixed(2) + '%';
   }
   // 건수 섹션
   if (secKey === '대출취급건수') {
@@ -5486,7 +5537,9 @@ function laRenderSection(sid) {
         periods.forEach(ym => {
           const td = document.createElement('td');
           const v = rowData[ym] ?? null;
-          td.textContent = v !== null && v > 0 ? v.toFixed(2) + '%' : '–';
+          td.textContent = v !== null && v > 0
+            ? (Math.abs(v) <= 1 ? (v * 100).toFixed(2) : v.toFixed(2)) + '%'
+            : '–';
           td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
           tr.appendChild(td);
         });
@@ -5502,7 +5555,9 @@ function laRenderSection(sid) {
         periods.forEach(ym => {
           const td = document.createElement('td');
           const v = rowData[ym] ?? null;
-          td.textContent = v !== null && v > 0 ? v.toFixed(2) + '%' : '–';
+          td.textContent = v !== null && v > 0
+            ? (Math.abs(v) <= 1 ? (v * 100).toFixed(2) : v.toFixed(2)) + '%'
+            : '–';
           td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
           tr.appendChild(td);
         });
@@ -5581,6 +5636,138 @@ function laRenderCbProduct() {
 // ── 기간 변경 시 현재 섹션 재렌더 ────────────────────────────
 function laRenderCurrent() {
   laRenderSection(laCurSection);
+}
+
+/**
+ * 결산자료 maturity 데이터를 assetData의 대출만기 섹션에 직접 병합
+ * (대출자산속성 엑셀이 없거나 서버 반영 전 메모리 갱신용)
+ */
+async function loadAndMergeMaturityToAsset(period) {
+  try {
+    if (!assetData) return;
+    const res = await fetch(`/api/data/settlement-aq`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || d.error || !d.maturity) return;
+
+    const pkey = d.period || period;
+    if (!pkey) return;
+
+    const MATURITY_KEYS = ['12개월 미만', '12~24개월 미만', '24~36개월 미만', '36개월 이상', '전체융잔 합계'];
+
+    if (!assetData.sections) assetData.sections = {};
+    if (!assetData.sections['대출만기']) assetData.sections['대출만기'] = {};
+    const sec = assetData.sections['대출만기'];
+
+    MATURITY_KEYS.forEach(key => {
+      const val = d.maturity[key];
+      if (val != null) {
+        if (!sec[key]) sec[key] = {};
+        sec[key][pkey] = val;
+      }
+    });
+
+    // 기간 목록에 추가
+    if (!assetData.periods) assetData.periods = [];
+    if (!assetData.periods.includes(pkey)) {
+      assetData.periods.push(pkey);
+      assetData.periods.sort();
+    }
+
+    // 현재 대출만기 탭이 열려 있으면 즉시 재렌더
+    if (laCurSection === '04') laRenderSection('04');
+  } catch(e) {
+    console.warn('maturity 병합 실패:', e.message);
+  }
+}
+
+/**
+ * 결산자료(settlement-aq)의 avg_rate → assetData.sections['평균이자율'/'평균이자율2'] 실시간 병합
+ * - "대출자산평균" → sections['평균이자율']['대출자산평균']
+ * - 그룹명(신용/담보 등) → sections['평균이자율2'][그룹명]
+ * 업로드 직후 asset_data JSON이 아직 갱신되기 전에도 메모리 상태 즉시 반영
+ */
+async function loadAndMergeAvgRateToAsset(period) {
+  try {
+    if (!assetData) return;
+    const res = await fetch(`/api/data/settlement-aq`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || d.error || !d.avg_rate) return;
+
+    const pkey = d.period || period;
+    if (!pkey) return;
+
+    if (!assetData.sections) assetData.sections = {};
+    if (!assetData.sections['평균이자율'])  assetData.sections['평균이자율']  = {};
+    if (!assetData.sections['평균이자율2']) assetData.sections['평균이자율2'] = {};
+
+    const secRate  = assetData.sections['평균이자율'];
+    const secRate2 = assetData.sections['평균이자율2'];
+
+    // avg_rate 키 분류:
+    //   "대출자산평균" → 평균이자율 섹션
+    //   그 외(신용/담보 등 그룹명) → 평균이자율2 섹션
+    Object.entries(d.avg_rate).forEach(([rowKey, val]) => {
+      if (val == null) return;
+      if (rowKey === '대출자산평균') {
+        if (!secRate[rowKey]) secRate[rowKey] = {};
+        secRate[rowKey][pkey] = val;
+      } else {
+        // 담보구분 그룹별 → 평균이자율2
+        if (!secRate2[rowKey]) secRate2[rowKey] = {};
+        secRate2[rowKey][pkey] = val;
+      }
+    });
+
+    // 기간 목록에 추가
+    if (!assetData.periods) assetData.periods = [];
+    if (!assetData.periods.includes(pkey)) {
+      assetData.periods.push(pkey);
+      assetData.periods.sort();
+    }
+
+    // 현재 평균이자율 탭이 열려 있으면 즉시 재렌더
+    if (laCurSection === '05') laRenderSection('05');
+  } catch(e) {
+    console.warn('avg_rate 병합 실패:', e.message);
+  }
+}
+
+/**
+ * 계약리스트의 avg_rate_deal → assetData.sections['평균이자율']['취급대출평균'] 실시간 병합
+ */
+async function loadAndMergeAvgRateDealToAsset() {
+  try {
+    if (!assetData) return;
+    const res = await fetch(`/api/data/contract`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || d.error || !d.avg_rate_deal) return;
+
+    if (!assetData.sections) assetData.sections = {};
+    if (!assetData.sections['평균이자율']) assetData.sections['평균이자율'] = {};
+    const sec = assetData.sections['평균이자율'];
+    if (!sec['취급대출평균']) sec['취급대출평균'] = {};
+
+    // avg_rate_deal: {"YYYY-MM": float, ...}
+    Object.entries(d.avg_rate_deal).forEach(([ym, val]) => {
+      if (val != null) {
+        sec['취급대출평균'][ym] = val;
+        // 기간 목록에 추가
+        if (!assetData.periods) assetData.periods = [];
+        if (!assetData.periods.includes(ym)) {
+          assetData.periods.push(ym);
+          assetData.periods.sort();
+        }
+      }
+    });
+
+    // 현재 평균이자율 탭이 열려 있으면 즉시 재렌더
+    if (laCurSection === '05') laRenderSection('05');
+  } catch(e) {
+    console.warn('avg_rate_deal 병합 실패:', e.message);
+  }
 }
 
 // ── 데이터 로드 ────────────────────────────────────────────────

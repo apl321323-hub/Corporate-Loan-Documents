@@ -37,7 +37,7 @@ def _find_latest_pdf() -> str | None:
 
 @asynccontextmanager
 async def lifespan(app_):
-    """서버 시작 시 최근 PDF → pdf_raw 복원"""
+    """서버 시작 시 최근 PDF → pdf_raw 복원 + settlement_aq maturity 재처리"""
     _data_dir = os.path.join(os.path.dirname(__file__), "data")
     _raw_path = os.path.join(_data_dir, "pdf_raw.json")
     # 이미 저장된 pdf_raw가 없으면 최신 PDF 파싱
@@ -54,6 +54,105 @@ async def lifespan(app_):
                 print(f"[startup] pdf_raw 복원 완료: {len(raw)}개 항목")
             except Exception as ex:
                 print(f"[startup] pdf_raw 복원 실패: {ex}")
+
+    # ── settlement_aq maturity 재처리 ────────────────────────────────
+    # 저장된 settlement_aq에 maturity가 비어있으면 uploaded_files에서 원본 파일 재파싱
+    _saq_path = os.path.join(_data_dir, "settlement_aq.json")
+    _asset_path = os.path.join(_data_dir, "asset_data.json")
+    if os.path.exists(_saq_path) and os.path.exists(_asset_path):
+        try:
+            with open(_saq_path, encoding="utf-8") as f:
+                saq_store = json.load(f)
+            needs_rebuild = any(
+                not pdata.get("maturity") or not any(v > 0 for v in pdata["maturity"].values())
+                or not pdata.get("avg_rate")
+                for pdata in saq_store.values()
+            )
+            if needs_rebuild:
+                # uploaded_files 디렉토리에서 결산자료 파일 탐색
+                _search_dirs = [
+                    os.path.join(os.path.dirname(__file__), "..", "..", "uploaded_files"),
+                    os.path.join(os.path.dirname(__file__), "..", "..", "uploaded_files2"),
+                ]
+                settlement_files = []
+                for d in _search_dirs:
+                    d = os.path.abspath(d)
+                    if os.path.exists(d):
+                        for fn in os.listdir(d):
+                            if '결산' in fn and fn.lower().endswith(('.xlsx', '.xls')):
+                                settlement_files.append(os.path.join(d, fn))
+                settlement_files.sort(key=os.path.getmtime, reverse=True)
+
+                if settlement_files:
+                    from settlement_aq_parser import parse_settlement_asset_quality
+                    with open(os.path.join(_data_dir, "product_groups.json"), encoding="utf-8") as f:
+                        product_groups = json.load(f)
+                    with open(_asset_path, encoding="utf-8") as f:
+                        asset_data = json.load(f)
+
+                    for sf in settlement_files:
+                        try:
+                            result = parse_settlement_asset_quality(sf, product_groups)
+                            pkey = result.get("period", "")
+                            maturity = result.get("maturity", {})
+                            if not pkey or not maturity:
+                                continue
+                            # settlement_aq 업데이트
+                            if pkey in saq_store:
+                                saq_store[pkey]["maturity"] = maturity
+                            # asset_data 대출만기 섹션 업데이트
+                            sections = asset_data.get("sections", {})
+                            sec_m = sections.get("대출만기", {})
+                            for row_key, val in maturity.items():
+                                if val is not None:
+                                    if row_key not in sec_m:
+                                        sec_m[row_key] = {}
+                                    # 백만원 → 원 단위 변환 (기존 데이터와 단위 통일)
+                                    sec_m[row_key][pkey] = float(val) * 1_000_000
+                            sections["대출만기"] = sec_m
+                            asset_periods = asset_data.get("periods", [])
+                            if pkey not in asset_periods:
+                                asset_periods.append(pkey)
+                                asset_periods.sort()
+                                asset_data["periods"] = asset_periods
+                            asset_data["sections"] = sections
+
+                            # ── 평균이자율 섹션 업데이트 ─────────────────────
+                            avg_rate = result.get("avg_rate", {})
+                            if avg_rate:
+                                if pkey in saq_store:
+                                    saq_store[pkey]["avg_rate"] = avg_rate
+                                sections = asset_data.get("sections", {})
+                                sec_rate  = sections.get("평균이자율",  {})
+                                sec_rate2 = sections.get("평균이자율2", {})
+                                for row_key, val in avg_rate.items():
+                                    if val is None:
+                                        continue
+                                    if row_key == "대출자산평균":
+                                        if row_key not in sec_rate:
+                                            sec_rate[row_key] = {}
+                                        sec_rate[row_key][pkey] = val
+                                    else:
+                                        if row_key not in sec_rate2:
+                                            sec_rate2[row_key] = {}
+                                        sec_rate2[row_key][pkey] = val
+                                sections["평균이자율"]  = sec_rate
+                                sections["평균이자율2"] = sec_rate2
+                                asset_data["sections"] = sections
+
+                            print(f"[startup] settlement_aq maturity/avg_rate 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}")
+                        except Exception as ex:
+                            print(f"[startup] {sf} 재처리 실패: {ex}")
+
+                    # 변경된 데이터 저장
+                    with open(_saq_path, "w", encoding="utf-8") as f:
+                        json.dump(saq_store, f, ensure_ascii=False, indent=2)
+                    with open(_asset_path, "w", encoding="utf-8") as f:
+                        json.dump(asset_data, f, ensure_ascii=False, indent=2)
+                    print("[startup] maturity 재처리 저장 완료")
+        except Exception as ex:
+            print(f"[startup] maturity 재처리 오류: {ex}")
+
     yield
 
 app = FastAPI(title="기업여신자료 분석 시스템", lifespan=lifespan)
@@ -485,6 +584,68 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
         saq_store[pkey] = data
         uploaded_data["settlement_aq"] = saq_store
 
+        # ── 대출만기 → asset_data.sections['대출만기'] 병합 ─────────
+        # 결산자료의 maturity 집계값을 대출자산속성 '대출만기' 섹션에 반영
+        # pkey: 'YYYY-MM' 형태 (대출자산속성 기간 키와 동일)
+        # ※ 대출자산속성 기존 데이터는 원 단위, maturity는 백만원 단위
+        #   → asset_data에 저장 시 백만원 × 1,000,000 = 원 단위로 변환
+        maturity = data.get("maturity", {})
+        if maturity and pkey and pkey != "unknown":
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec_maturity = sections.get("대출만기", {})
+                MATURITY_ROW_KEYS = [
+                    "12개월 미만", "12~24개월 미만",
+                    "24~36개월 미만", "36개월 이상", "전체융잔 합계"
+                ]
+                for row_key in MATURITY_ROW_KEYS:
+                    val = maturity.get(row_key)
+                    if val is not None:
+                        if row_key not in sec_maturity:
+                            sec_maturity[row_key] = {}
+                        # 백만원 → 원 단위 변환 (기존 데이터와 단위 통일)
+                        sec_maturity[row_key][pkey] = float(val) * 1_000_000
+                sections["대출만기"] = sec_maturity
+
+                # periods 통합
+                asset_periods = asset_data.get("periods", [])
+                if pkey not in asset_periods:
+                    asset_periods.append(pkey)
+                    asset_periods.sort()
+                    asset_data["periods"] = asset_periods
+
+                asset_data["sections"] = sections
+                uploaded_data["asset_data"] = asset_data
+
+        # ── 평균이자율 → asset_data.sections['평균이자율'/'평균이자율2'] 병합 ────
+        # avg_rate 구조: {"대출자산평균": float, "신용": float, "담보": float, ...}
+        # - "대출자산평균" → sections['평균이자율']['대출자산평균']
+        # - 그룹명(신용/담보) → sections['평균이자율2'][그룹명]
+        avg_rate = data.get("avg_rate", {})
+        if avg_rate and pkey and pkey != "unknown":
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec_rate  = sections.get("평균이자율",  {})
+                sec_rate2 = sections.get("평균이자율2", {})
+                for row_key, val in avg_rate.items():
+                    if val is None:
+                        continue
+                    if row_key == "대출자산평균":
+                        if row_key not in sec_rate:
+                            sec_rate[row_key] = {}
+                        sec_rate[row_key][pkey] = val
+                    else:
+                        # 그룹별(신용/담보 등) → 평균이자율2
+                        if row_key not in sec_rate2:
+                            sec_rate2[row_key] = {}
+                        sec_rate2[row_key][pkey] = val
+                sections["평균이자율"]  = sec_rate
+                sections["평균이자율2"] = sec_rate2
+                asset_data["sections"] = sections
+                uploaded_data["asset_data"] = asset_data
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -492,6 +653,8 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "products": len(data.get("products", [])),
             "section1_total": data["section1"].get("융잔합계", 0),
             "upload_period": period or "(미지정)",
+            "maturity_updated": bool(maturity and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "avg_rate_updated": bool(avg_rate and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
         })
     except Exception as e:
         import traceback
@@ -1074,6 +1237,23 @@ async def upload_contract(file: UploadFile = File(...), period: str = ""):
                 asset_data["periods"] = asset_periods
                 uploaded_data["asset_data"] = asset_data
 
+        # ── 평균이자율(취급대출평균) → asset_data.sections['평균이자율'] 병합 ──
+        # 계약리스트의 avg_rate_deal {ym: float} → '취급대출평균' 행으로 반영
+        avg_rate_deal = data.get("avg_rate_deal", {})
+        if avg_rate_deal:
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec_rate = sections.get("평균이자율", {})
+                if "취급대출평균" not in sec_rate:
+                    sec_rate["취급대출평균"] = {}
+                for ym, val in avg_rate_deal.items():
+                    if val is not None:
+                        sec_rate["취급대출평균"][ym] = val
+                sections["평균이자율"] = sec_rate
+                asset_data["sections"] = sections
+                uploaded_data["asset_data"] = asset_data
+
         return JSONResponse({
             "success": True,
             "message": f"계약리스트 '{file.filename}' 업로드 완료",
@@ -1081,6 +1261,7 @@ async def upload_contract(file: UploadFile = File(...), period: str = ""):
             "products": len(data.get('products', [])),
             "balance_rows": list(section_balance.keys()),
             "deal_rows": list(data.get("section_deal", {}).keys()),
+            "avg_rate_deal": {k: v for k, v in avg_rate_deal.items() if v is not None},
         })
     except Exception as e:
         import traceback
@@ -1316,6 +1497,81 @@ async def get_loan_count_data():
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
+
+
+@app.post("/api/settlement-aq/rebuild-maturity")
+async def rebuild_maturity():
+    """
+    저장된 settlement_aq 데이터에서 maturity 정보가 비어있는 경우
+    asset_data의 대출만기 섹션을 재빌드합니다.
+    (기존 업로드된 결산자료 파일이 있으면 재파싱, 없으면 settlement_aq 데이터에서 재계산 불가)
+    """
+    import traceback
+    from datetime import date
+    import calendar
+
+    saq_store = uploaded_data.get("settlement_aq") or {}
+    if not saq_store:
+        return JSONResponse({"error": "결산자료 데이터가 없습니다. 결산자료를 먼저 업로드하세요."}, status_code=404)
+
+    results = []
+    for pkey, pdata in saq_store.items():
+        maturity = pdata.get("maturity", {})
+        # maturity가 비어있거나 전체융잔 합계가 0이면 재처리 시도
+        if not maturity or not any(v > 0 for v in maturity.values()):
+            results.append({"period": pkey, "status": "maturity_empty", "note": "결산자료 파일을 다시 업로드하세요."})
+            continue
+        # maturity 값이 있는 경우 → asset_data에 반영
+        asset_data = uploaded_data.get("asset_data")
+        if asset_data is None:
+            results.append({"period": pkey, "status": "no_asset_data", "note": "대출자산속성 파일 없음 — 반영 불가"})
+            continue
+
+        sections = asset_data.get("sections", {})
+        sec_maturity = sections.get("대출만기", {})
+        MATURITY_ROW_KEYS = ["12개월 미만", "12~24개월 미만", "24~36개월 미만", "36개월 이상", "전체융잔 합계"]
+        for row_key in MATURITY_ROW_KEYS:
+            val = maturity.get(row_key)
+            if val is not None:
+                if row_key not in sec_maturity:
+                    sec_maturity[row_key] = {}
+                # 백만원 → 원 단위 변환 (기존 데이터와 단위 통일)
+                sec_maturity[row_key][pkey] = float(val) * 1_000_000
+        sections["대출만기"] = sec_maturity
+
+        asset_periods = asset_data.get("periods", [])
+        if pkey not in asset_periods:
+            asset_periods.append(pkey)
+            asset_periods.sort()
+            asset_data["periods"] = asset_periods
+
+        asset_data["sections"] = sections
+
+        # ── 평균이자율 섹션도 함께 재적용 ────────────────────────
+        avg_rate = pdata.get("avg_rate", {})
+        if avg_rate:
+            sections = asset_data.get("sections", {})
+            sec_rate  = sections.get("평균이자율",  {})
+            sec_rate2 = sections.get("평균이자율2", {})
+            for row_key, val in avg_rate.items():
+                if val is None:
+                    continue
+                if row_key == "대출자산평균":
+                    if row_key not in sec_rate:
+                        sec_rate[row_key] = {}
+                    sec_rate[row_key][pkey] = val
+                else:
+                    if row_key not in sec_rate2:
+                        sec_rate2[row_key] = {}
+                    sec_rate2[row_key][pkey] = val
+            sections["평균이자율"]  = sec_rate
+            sections["평균이자율2"] = sec_rate2
+            asset_data["sections"] = sections
+
+        uploaded_data["asset_data"] = asset_data
+        results.append({"period": pkey, "status": "merged", "maturity": maturity, "avg_rate": avg_rate})
+
+    return JSONResponse({"success": True, "results": results})
 
 
 if __name__ == "__main__":

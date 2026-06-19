@@ -6,6 +6,7 @@
   H열 (index 7)  : 현재상품
   J열 (index 9)  : 연체일수  (문자열로 저장됨)
   L열 (index 11) : 잔액      (숫자)
+  X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
 
 연체 구간 (자산건전성 기존 테이블 기준):
   무연체  : 0일
@@ -21,6 +22,13 @@
   연체합계: 1일 이상 전체
   융잔합계: 전체 (무연체 + 연체합계)
 
+대출만기 구간 (기준일 = 업로드 월 말일):
+  12개월 미만   : 기준일 ~ +12개월 미만 (이미 만기된 건 포함)
+  12~24개월 미만: +12개월 이상 ~ +24개월 미만
+  24~36개월 미만: +24개월 이상 ~ +36개월 미만
+  36개월 이상   : +36개월 이상
+  전체융잔 합계 : 전체
+
 섹션3 담보구분별:
   product_groups.json 의 그룹 이름으로 분류
   '신용' 그룹, '보증' 그룹, '담보' 그룹
@@ -31,6 +39,8 @@
 
 from typing import Optional
 import openpyxl
+from datetime import date, datetime
+import calendar
 
 
 # ── 연체 구간 정의 ──────────────────────────────────────────────────
@@ -53,6 +63,57 @@ S1_KEYS = ["무연체","1~30","1~10","11~30","31~60","61~90","91~120","121~150",
 
 # 섹션3 메인 구간 (자산건전성 엑셀의 섹션3 행 레이아웃과 일치)
 S3_KEYS = ["무연체","1~30","31~60","61~90","91~180","181~","연체합계","융잔합계","연체율(%)"]
+
+# ── 대출만기 구간 정의 ──────────────────────────────────────────
+MATURITY_KEYS = ["12개월 미만", "12~24개월 미만", "24~36개월 미만", "36개월 이상", "전체융잔 합계"]
+
+
+def _last_day_of_month(year: int, month: int) -> date:
+    """해당 연월의 마지막 날 반환"""
+    return date(year, month, calendar.monthrange(year, month)[1])
+
+
+def _months_remaining(maturity_val, base_date: date) -> Optional[int]:
+    """
+    만기일(문자열 또는 datetime/date 객체) → 기준일 기준 남은 개월 수
+    - 만기일 <= 기준일  → 0 (이미 만기, 12개월 미만 처리)
+    - 계산: (만기년*12 + 만기월) - (기준년*12 + 기준월) + (일 보정)
+    """
+    if maturity_val is None:
+        return None
+    try:
+        # datetime / date 객체 직접 처리 (엑셀 날짜 셀)
+        if isinstance(maturity_val, (datetime, date)):
+            mat = maturity_val.date() if isinstance(maturity_val, datetime) else maturity_val
+        elif isinstance(maturity_val, str):
+            s = maturity_val.strip()
+            if not s:
+                return None
+            mat = date.fromisoformat(s[:10])
+        else:
+            return None
+    except (ValueError, TypeError):
+        return None
+    if mat <= base_date:
+        return 0
+    # 월 단위 차이: 만기월 - 기준월 (일수는 올림 처리)
+    months = (mat.year - base_date.year) * 12 + (mat.month - base_date.month)
+    # 만기일의 일(day)이 기준일의 일(day)보다 크면 +1
+    if mat.day > base_date.day:
+        months += 1
+    return max(months, 0)
+
+
+def _classify_maturity(months: int) -> str:
+    """남은 개월 수 → 만기 구간 키"""
+    if months < 12:
+        return "12개월 미만"
+    elif months < 24:
+        return "12~24개월 미만"
+    elif months < 36:
+        return "24~36개월 미만"
+    else:
+        return "36개월 이상"
 
 
 def _to_int(v) -> Optional[int]:
@@ -128,6 +189,15 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     sheet_name = ws.title  # 예: 결산자료_20260531
     period = _extract_period(sheet_name)
 
+    # ── 기준일: 업로드 월 말일 ──────────────────────────────────────
+    base_date: Optional[date] = None
+    if period and len(period) == 7:  # 'YYYY-MM'
+        try:
+            y, m = int(period[:4]), int(period[5:7])
+            base_date = _last_day_of_month(y, m)
+        except (ValueError, TypeError):
+            base_date = None
+
     # ── 상품→그룹 매핑 ───────────────────────────────────────────────
     product_to_group: dict[str, str] = {}
     for g in product_groups:
@@ -144,12 +214,26 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # 섹션4 집계 버킷 (상품명 → 버킷)
     s4: dict[str, dict] = {}
 
+    # 대출만기 집계 버킷 (원 단위)
+    maturity_raw: dict[str, float] = {k: 0.0 for k in MATURITY_KEYS}
+
+    # ── 평균이율 집계 버킷 ────────────────────────────────────────
+    # 가중평균이율 = Σ(잔액 × 정상이율) / Σ잔액 × 100
+    # 전체(대출자산평균)
+    rate_sum_total: float = 0.0   # Σ(잔액 × 정상이율)
+    bal_sum_total:  float = 0.0   # Σ잔액
+    # 그룹별(신용/담보 등)
+    rate_sum_group: dict[str, float] = {g: 0.0 for g in group_names}
+    bal_sum_group:  dict[str, float] = {g: 0.0 for g in group_names}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
-        product = str(row[7]).strip() if row[7] is not None else None  # H열
-        days    = _to_int(row[9])                                       # J열
-        balance = _to_float(row[11])                                    # L열
+        product      = str(row[7]).strip() if row[7] is not None else None  # H열
+        days         = _to_int(row[9])                                       # J열
+        balance      = _to_float(row[11])                                    # L열
+        rate         = _to_float(row[14]) if len(row) > 14 else None         # O열: 정상이율(%)
+        maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
 
         if product is None or days is None or balance is None:
             continue
@@ -175,6 +259,25 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
             if clf.get(k):
                 s4[product][k] += balance
 
+        # ── 대출만기: X열 만기일 → 기준일 기준 남은 개월 집계 ───────
+        if base_date and maturity_str:
+            months = _months_remaining(maturity_str, base_date)
+            if months is not None:
+                band = _classify_maturity(months)
+                maturity_raw[band]            += balance
+                maturity_raw["전체융잔 합계"] += balance
+
+        # ── 평균이율: O열 정상이율 × L열 잔액 집계 ─────────────────
+        if rate is not None and balance > 0:
+            weighted = balance * rate
+            # 전체 (대출자산평균)
+            rate_sum_total += weighted
+            bal_sum_total  += balance
+            # 그룹별 (신용/담보 등)
+            if gname and gname in rate_sum_group:
+                rate_sum_group[gname] += weighted
+                bal_sum_group[gname]  += balance
+
     wb.close()
 
     # ── 섹션3 연체율(%) 계산 ────────────────────────────────────────
@@ -198,15 +301,31 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         prod: {k: round(v / 1_000_000) for k, v in bucket.items()}
         for prod, bucket in s4.items()
     }
+    # 대출만기: 원 단위 → 백만원
+    maturity_m = {k: round(v / 1_000_000) for k, v in maturity_raw.items()}
+
+    # ── 평균이율 계산 (소수 둘째자리 반올림) ────────────────────────
+    def _wavg(wsum: float, bsum: float) -> Optional[float]:
+        """가중평균이율 계산. 잔액 합계가 0이면 None"""
+        if bsum <= 0:
+            return None
+        return round(wsum / bsum, 2)
+
+    avg_rate = {
+        "대출자산평균": _wavg(rate_sum_total, bal_sum_total),
+        **{gname: _wavg(rate_sum_group[gname], bal_sum_group[gname]) for gname in group_names},
+    }
 
     products_list = sorted(s4_m.keys())
 
     return {
-        "period"  : period,
-        "section1": s1_m,
-        "section3": s3_m,
-        "section4": s4_m,
-        "products": products_list,
+        "period"   : period,
+        "section1" : s1_m,
+        "section3" : s3_m,
+        "section4" : s4_m,
+        "maturity" : maturity_m,
+        "avg_rate" : avg_rate,   # 평균이율 집계 결과
+        "products" : products_list,
     }
 
 
