@@ -1710,114 +1710,165 @@ function renderMappingTable(sheet) {
   const pdfList     = pdfKeys[sheet]      || [];
   const rows        = mpRows[sheet]       || [];
 
-  // PDF 과목 드롭다운 옵션 HTML
-  const pdfOptHtml = `<option value="">-- 없음 --</option>` +
-    pdfList.map(p => {
-      const v = p.pdf_val != null ? ` (${Number(p.pdf_val).toLocaleString('ko-KR')})` : '';
-      const bold = p.pdf_val != null ? ' font-weight:600;' : '';
-      return `<option value="${p.pdf_key}" style="${bold}">${p.pdf_key}${v}</option>`;
-    }).join('');
+  // PDF 드롭다운 옵션 목록
+  const pdfOptBase = pdfList.map(p => {
+    const v    = p.pdf_val != null ? ` (${Number(p.pdf_val).toLocaleString('ko-KR')})` : '';
+    const bold = p.pdf_val != null ? ' font-weight:600;' : '';
+    return { key: p.pdf_key, label: `${p.pdf_key}${v}`, style: bold };
+  });
 
-  // 엑셀 과목 목록 전체 렌더
-  // 엑셀 과목 트리 순서대로 출력
+  function buildPdfOpts(selectedKey) {
+    return '<option value="">-- 없음 --</option>' +
+      pdfOptBase.map(p =>
+        `<option value="${p.key}" style="${p.style}"${p.key === selectedKey ? ' selected' : ''}>${p.label}</option>`
+      ).join('');
+  }
+
   const tbody = document.getElementById('mp-tbody');
   if (!tbody) return;
 
-  // excelLabels 순서로 행 생성
-  // indent 판별: Ⅰ/Ⅱ... → group, 1./2.... → indent0, 나머지 → indent1(들여쓰기)
   function getLabelClass(lbl) {
-    if (/^[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹ]/.test(lbl)) return 'group';
-    if (/^[\d]+\./.test(lbl)) return 'indent1';
+    if (/^[ⅠⅡⅢⅣⅤ]/.test(lbl)) return 'group';
+    if (/^[\d]+\./.test(lbl))     return 'indent1';
     return 'indent2';
   }
 
-  // 엑셀 원본 과목 + 수기 추가 과목 합산 (allOrderedLabels 기준)
-  const customLabels  = customExcelLabels[sheet] || [];
-  const allLabels     = getAllLabels(sheet);
+  const customLabels = customExcelLabels[sheet] || [];
+  const allLabels    = getAllLabels(sheet);
 
-  let html = '';
+  // DOM 직접 구성 (innerHTML 문자열 연결 제거 → label 특수문자 완전 안전)
+  tbody.innerHTML = '';
+
+  if (allLabels.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2" style="padding:20px;text-align:center;color:#94a3b8;">데이터 없음</td></tr>';
+  }
+
   for (let ei = 0; ei < allLabels.length; ei++) {
     const lbl      = allLabels[ei];
-    const isCustom = customLabels.includes(lbl);   // 수기 추가 여부
+    const isCustom = customLabels.includes(lbl);
     const lblClass = getLabelClass(lbl);
-    // 이 엑셀 과목에 연결된 bindings
     const rowObj   = rows.find(r => r.excelLabel === lbl);
     const bindings = rowObj ? rowObj.bindings : [];
 
-    // 바인딩 행 HTML
-    let bindHtml = '';
+    const tr = document.createElement('tr');
+    tr.dataset.ei = ei;
+
+    // ── 왼쪽 셀: 라벨 + (수기 과목이면) ▲▼ 이동 버튼 ──
+    const tdLabel = document.createElement('td');
+    const labelWrap = document.createElement('div');
+    labelWrap.style.cssText = 'display:flex;align-items:center;';
+
+    const labelDiv = document.createElement('div');
+    labelDiv.className = `mp-label-cell ${lblClass}${isCustom ? ' mp-custom' : ''}`;
+    labelDiv.title = lbl;
+    labelDiv.style.flex = '1';
+    labelDiv.textContent = lbl;
+    if (isCustom) {
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:9px;color:#3b82f6;font-weight:400;margin-left:3px;';
+      badge.textContent = '[추가됨]';
+      labelDiv.appendChild(badge);
+    }
+    labelWrap.appendChild(labelDiv);
+
+    if (isCustom) {
+      const canUp   = ei > 0;
+      const canDown = ei < allLabels.length - 1;
+      const moveWrap = document.createElement('div');
+      moveWrap.style.cssText = 'display:flex;flex-direction:column;gap:1px;margin-left:4px;flex-shrink:0;';
+
+      const btnUp = document.createElement('button');
+      btnUp.title = '위로 이동';
+      btnUp.disabled = !canUp;
+      btnUp.textContent = '▲';
+      btnUp.style.cssText = 'width:18px;height:13px;border:1px solid #c7d4e3;border-radius:3px 3px 0 0;' +
+        `background:${canUp ? '#f8fafc' : '#f1f5f9'};cursor:${canUp ? 'pointer' : 'default'};` +
+        `color:${canUp ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;` +
+        'display:flex;align-items:center;justify-content:center;padding:0;';
+      btnUp.addEventListener('click', () => mpMoveExcelRow(sheet, lbl, -1));
+
+      const btnDown = document.createElement('button');
+      btnDown.title = '아래로 이동';
+      btnDown.disabled = !canDown;
+      btnDown.textContent = '▼';
+      btnDown.style.cssText = 'width:18px;height:13px;border:1px solid #c7d4e3;border-top:none;border-radius:0 0 3px 3px;' +
+        `background:${canDown ? '#f8fafc' : '#f1f5f9'};cursor:${canDown ? 'pointer' : 'default'};` +
+        `color:${canDown ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;` +
+        'display:flex;align-items:center;justify-content:center;padding:0;';
+      btnDown.addEventListener('click', () => mpMoveExcelRow(sheet, lbl, +1));
+
+      moveWrap.appendChild(btnUp);
+      moveWrap.appendChild(btnDown);
+      labelWrap.appendChild(moveWrap);
+    }
+
+    tdLabel.appendChild(labelWrap);
+    tr.appendChild(tdLabel);
+
+    // ── 오른쪽 셀: 바인딩 + PDF 추가 버튼 + (수기 과목이면) 과목삭제 버튼 ──
+    const tdBind = document.createElement('td');
+
+    function makeBindingRow(bi, pdfKey, sign) {
+      const isSub = sign === -1;
+      const wrap = document.createElement('div');
+      wrap.className = `mp-binding-row${isSub ? ' is-sub' : ''}`;
+      wrap.dataset.ei = ei;
+      wrap.dataset.bi = bi;
+
+      const sel = document.createElement('select');
+      sel.className = 'mp-pdf-select';
+      sel.innerHTML = buildPdfOpts(pdfKey);
+      sel.addEventListener('change', () => mpSetPdf(sheet, ei, bi, sel.value));
+
+      const btnSign = document.createElement('button');
+      btnSign.className = `mp-sign ${isSub ? 'minus' : 'plus'}`;
+      btnSign.textContent = isSub ? '− 차감' : '+ 합산';
+      if (!pdfKey) { btnSign.disabled = true; btnSign.title = '먼저 PDF 과목을 선택하세요'; }
+      else { btnSign.addEventListener('click', () => mpToggleSign(sheet, ei, bi)); }
+
+      const btnDel = document.createElement('button');
+      btnDel.className = 'mp-del';
+      btnDel.title = '이 연결 삭제';
+      btnDel.textContent = '×';
+      if (!pdfKey) { btnDel.disabled = true; }
+      else { btnDel.addEventListener('click', () => mpDelBinding(sheet, ei, bi)); }
+
+      wrap.appendChild(sel);
+      wrap.appendChild(btnSign);
+      wrap.appendChild(btnDel);
+      return wrap;
+    }
+
     if (bindings.length === 0) {
-      // 미매핑: 빈 드롭다운 1개
-      bindHtml = `
-        <div class="mp-binding-row" data-ei="${ei}" data-bi="0">
-          <select class="mp-pdf-select" onchange="mpSetPdf('${sheet}',${ei},0,this.value)">${pdfOptHtml}</select>
-          <button class="mp-sign plus" disabled title="먼저 PDF 과목을 선택하세요">+ 합산</button>
-          <button class="mp-del" disabled title="삭제">×</button>
-        </div>`;
+      tdBind.appendChild(makeBindingRow(0, '', 1));
     } else {
       bindings.forEach((b, bi) => {
-        const isSub = b.sign === -1;
-        const selOpts = pdfList.map(p => {
-          const v = p.pdf_val != null ? ` (${Number(p.pdf_val).toLocaleString('ko-KR')})` : '';
-          const bold = p.pdf_val != null ? ' font-weight:600;' : '';
-          return `<option value="${p.pdf_key}" style="${bold}" ${b.pdf_key === p.pdf_key ? 'selected' : ''}>${p.pdf_key}${v}</option>`;
-        }).join('');
-        const opts = `<option value="">-- 없음 --</option>${selOpts}`;
-        bindHtml += `
-          <div class="mp-binding-row${isSub ? ' is-sub' : ''}" data-ei="${ei}" data-bi="${bi}">
-            <select class="mp-pdf-select" onchange="mpSetPdf('${sheet}',${ei},${bi},this.value)">${opts}</select>
-            <button class="mp-sign ${isSub ? 'minus' : 'plus'}" onclick="mpToggleSign('${sheet}',${ei},${bi})">${isSub ? '− 차감' : '+ 합산'}</button>
-            <button class="mp-del" onclick="mpDelBinding('${sheet}',${ei},${bi})" title="이 연결 삭제">×</button>
-          </div>`;
+        tdBind.appendChild(makeBindingRow(bi, b.pdf_key, b.sign));
       });
     }
 
-    // 수기 추가 과목: 라벨 셀에 ▲▼ 이동 버튼 + 과목삭제 버튼
-    const escapedLbl = lbl.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const addBtn     = `<button class="mp-add" onclick="mpAddBinding('${sheet}',${ei})"><i class="fas fa-plus" style="font-size:9px;"></i> PDF 추가</button>`;
-    const canMoveUp   = isCustom && ei > 0;
-    const canMoveDown = isCustom && ei < allLabels.length - 1;
-    const moveBtns = isCustom ? `
-      <div style="display:flex;flex-direction:column;gap:1px;margin-left:4px;flex-shrink:0;">
-        <button onclick="mpMoveExcelRow('${sheet}','${escapedLbl}',-1)"
-          title="위로 이동" ${canMoveUp ? '' : 'disabled'}
-          style="width:18px;height:13px;border:1px solid #c7d4e3;border-radius:3px 3px 0 0;
-                 background:${canMoveUp ? '#f8fafc' : '#f1f5f9'};cursor:${canMoveUp ? 'pointer' : 'default'};
-                 color:${canMoveUp ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;
-                 display:flex;align-items:center;justify-content:center;padding:0;">▲</button>
-        <button onclick="mpMoveExcelRow('${sheet}','${escapedLbl}',+1)"
-          title="아래로 이동" ${canMoveDown ? '' : 'disabled'}
-          style="width:18px;height:13px;border:1px solid #c7d4e3;border-top:none;border-radius:0 0 3px 3px;
-                 background:${canMoveDown ? '#f8fafc' : '#f1f5f9'};cursor:${canMoveDown ? 'pointer' : 'default'};
-                 color:${canMoveDown ? '#475569' : '#cbd5e1'};font-size:8px;line-height:1;
-                 display:flex;align-items:center;justify-content:center;padding:0;">▼</button>
-      </div>` : '';
+    // PDF 추가 버튼
+    const addBtn = document.createElement('button');
+    addBtn.className = 'mp-add';
+    addBtn.innerHTML = '<i class="fas fa-plus" style="font-size:9px;"></i> PDF 추가';
+    addBtn.addEventListener('click', () => mpAddBinding(sheet, ei));
+    tdBind.appendChild(addBtn);
 
-    // 수기 추가 과목에만 과목 삭제 버튼 표시
-    const delExcelBtn = isCustom
-      ? `<button class="mp-del-excel" onclick="mpDelExcelRow('${sheet}','${escapedLbl}')"
-           title="이 과목 전체 삭제" style="width:auto;padding:2px 7px;font-size:10px;color:#ef4444;border:1px solid #fecaca;border-radius:4px;background:#fff5f5;margin:2px 8px 4px;">✕ 과목삭제</button>`
-      : '';
+    // 수기 과목 삭제 버튼
+    if (isCustom) {
+      const delExcelBtn = document.createElement('button');
+      delExcelBtn.className = 'mp-del-excel';
+      delExcelBtn.title = '이 과목 전체 삭제';
+      delExcelBtn.style.cssText = 'width:auto;padding:2px 7px;font-size:10px;color:#ef4444;' +
+        'border:1px solid #fecaca;border-radius:4px;background:#fff5f5;margin:2px 8px 4px;';
+      delExcelBtn.textContent = '✕ 과목삭제';
+      delExcelBtn.addEventListener('click', () => mpDelExcelRow(sheet, lbl));
+      tdBind.appendChild(delExcelBtn);
+    }
 
-    html += `
-      <tr data-ei="${ei}">
-        <td>
-          <div style="display:flex;align-items:center;">
-            <div class="mp-label-cell ${lblClass}${isCustom ? ' mp-custom' : ''}" title="${lbl}" style="flex:1;">
-              ${lbl}${isCustom ? ' <span style="font-size:9px;color:#3b82f6;font-weight:400;margin-left:3px;">[추가됨]</span>' : ''}
-            </div>
-            ${moveBtns}
-          </div>
-        </td>
-        <td>
-          ${bindHtml}
-          ${addBtn}
-          ${delExcelBtn}
-        </td>
-      </tr>`;
+    tr.appendChild(tdBind);
+    tbody.appendChild(tr);
   }
-
-  tbody.innerHTML = html || '<tr><td colspan="2" style="padding:20px;text-align:center;color:#94a3b8;">데이터 없음</td></tr>';
 
   // 상태 텍스트
   const mappedCnt = rows.reduce((n, r) => n + (r.bindings.length > 0 ? 1 : 0), 0);
@@ -1825,6 +1876,7 @@ function renderMappingTable(sheet) {
   document.getElementById('mapping-status-text').textContent =
     `${sheetName} — 엑셀 과목 ${excelLabels.length}개 중 ${mappedCnt}개 PDF 연결됨`;
 }
+
 
 // ── 이벤트 핸들러 ───────────────────────────────────────────────
 function mpGetOrCreate(sheet, ei) {
