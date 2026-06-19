@@ -168,30 +168,104 @@
   .aq-product-title { padding: 9px 16px; background: #334155; color: #fff; font-weight: 700; font-size: 13px; border-radius: 8px 8px 0 0; }
 
   /* ── 영업현황 시계열 테이블 ── */
-  .bs-time-table th, .bs-time-table td { white-space: nowrap; }
-  .bs-group-col { position: sticky; left: 0; z-index: 3; background: #f1f5f9 !important; min-width: 90px; max-width: 110px; text-align: left !important; font-weight: 700; }
-  .bs-sub-col   { position: sticky; left: 90px; z-index: 2; background: #f8fafc !important; min-width: 105px; max-width: 130px; text-align: left !important; }
-  .bs-time-table thead th { background: #1e3a5f !important; color: #fff !important; font-size: 11px; padding: 6px 10px; text-align: right; }
-  .bs-time-table thead th.bs-group-col { background: #0f2748 !important; left: 0; }
-  .bs-time-table thead th.bs-sub-col   { background: #163558 !important; left: 90px; }
+  .bs-time-table { border-collapse: separate; border-spacing: 0; }
+  .bs-time-table th, .bs-time-table td { white-space: nowrap; border-bottom: 1px solid #e2e8f0; }
+  /* 2열 sticky: 구분열(left:0) + 소분류열(left:80px) */
+  .bs-group-col {
+    position: sticky; left: 0; z-index: 3;
+    background: #eef2f8 !important;
+    min-width: 80px; max-width: 100px;
+    text-align: center !important;
+    font-weight: 700; font-size: 12px;
+    border-right: 1px solid #cbd5e1;
+    vertical-align: middle !important;
+  }
+  .bs-sub-col {
+    position: sticky; left: 80px; z-index: 2;
+    background: #f8fafc !important;
+    min-width: 110px; max-width: 140px;
+    text-align: left !important;
+    padding-left: 10px !important;
+    border-right: 2px solid #cbd5e1;
+  }
+  .bs-time-table thead th {
+    background: #1e3a5f !important; color: #fff !important;
+    font-size: 11px; padding: 6px 10px; text-align: right;
+    border-bottom: 2px solid #0f2748;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .bs-time-table thead th.bs-group-col {
+    background: #0d1f36 !important; left: 0; z-index: 5;
+    text-align: center !important; color: #94a3b8 !important;
+    font-size: 11px;
+  }
+  .bs-time-table thead th.bs-sub-col {
+    background: #132d4a !important; left: 80px; z-index: 4;
+    text-align: center !important; color: #94a3b8 !important;
+    font-size: 11px;
+  }
   .bs-time-table tbody td { font-size: 11.5px; padding: 5px 10px; text-align: right; }
-  .bs-time-table tbody td.bs-group-col { font-size: 12px; font-weight: 700; color: #1e3a5f; background: #f1f5f9 !important; }
-  .bs-time-table tbody td.bs-sub-col   { font-size: 11.5px; font-weight: 500; color: #334155; background: #f8fafc !important; }
-  .bs-time-table tbody tr.bs-row-asset  td { background: #f0fdf4 !important; font-weight: 700; }
-  .bs-time-table tbody tr.bs-row-deal   td { background: #eff6ff !important; }
-  .bs-time-table tbody tr.bs-row-sub    td { background: #fafafa !important; }
-  .bs-time-table tbody tr.bs-row-sub    td.bs-sub-col { padding-left: 18px; color: #64748b; font-weight: 400; font-size: 11px; }
-  .bs-time-table tbody tr.bs-row-repay  td { background: #fff7ed !important; }
-  .bs-time-table tbody tr.bs-row-loss   td { background: #fef2f2 !important; color: #b91c1c; }
-  .bs-time-table tbody tr.bs-row-total  td { background: #fef9c3 !important; font-weight: 700; }
-  .bs-time-table tbody tr.bs-row-prov   td { background: #f5f3ff !important; }
-  .bs-time-table tbody tr.bs-row-provsub td { background: #faf5ff !important; }
-  .bs-time-table tbody tr.bs-row-provsub td.bs-sub-col { padding-left: 18px; color: #7c3aed; font-weight: 400; font-size: 11px; }
-  .bs-time-table tbody tr.bs-row-provend td { background: #ede9fe !important; font-weight: 700; color: #4c1d95; }
-  .bs-section-header { padding: 12px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #fff; }
-  .bs-section-header.blue   { background: #1e3a5f; }
-  .bs-section-header.green  { background: #0f5132; }
-  .bs-section-header.purple { background: #4c1d95; }
+  /* sticky열 td: 행 배경보다 우선 적용 */
+  .bs-time-table tbody td.bs-group-col {
+    font-size: 12px; font-weight: 700; color: #1e3a5f;
+    background: #eef2f8 !important;
+    text-align: center !important;
+    border-right: 1px solid #cbd5e1;
+  }
+  .bs-time-table tbody td.bs-sub-col {
+    font-size: 11.5px; font-weight: 500; color: #334155;
+    background: #f8fafc !important;
+    border-right: 2px solid #cbd5e1;
+  }
+  /* 행 타입별 배경 (엑셀 색상 체계) */
+  .bs-time-table tbody tr.bs-row-asset  > td:not(.bs-group-col):not(.bs-sub-col) { background: #e8f5e9 !important; }
+  .bs-time-table tbody tr.bs-row-asset  td.bs-group-col { background: #d0ebda !important; }
+  .bs-time-table tbody tr.bs-row-asset  td.bs-sub-col   { background: #e0f2e8 !important; }
+  .bs-time-table tbody tr.bs-row-asset  td { font-weight: 700; color: #1a5632; }
+  .bs-time-table tbody tr.bs-row-grp    > td:not(.bs-group-col):not(.bs-sub-col) { background: #dbeafe !important; }
+  .bs-time-table tbody tr.bs-row-grp    td.bs-group-col { background: #bfdbfe !important; }
+  .bs-time-table tbody tr.bs-row-grp    td.bs-sub-col   { background: #dbeafe !important; }
+  .bs-time-table tbody tr.bs-row-grp    td { font-weight: 600; color: #1d4ed8; }
+  .bs-time-table tbody tr.bs-row-sub    > td:not(.bs-group-col):not(.bs-sub-col) { background: #f8fafc !important; }
+  .bs-time-table tbody tr.bs-row-sub    td.bs-sub-col { padding-left: 20px !important; color: #475569; font-weight: 400; font-size: 11px; }
+  .bs-time-table tbody tr.bs-row-deal   > td:not(.bs-group-col):not(.bs-sub-col) { background: #e0f2fe !important; }
+  .bs-time-table tbody tr.bs-row-deal   td { font-weight: 700; color: #0369a1; }
+  .bs-time-table tbody tr.bs-row-buy    > td:not(.bs-group-col):not(.bs-sub-col) { background: #f0f9ff !important; }
+  .bs-time-table tbody tr.bs-row-buy    td { color: #0284c7; }
+  .bs-time-table tbody tr.bs-row-repay  > td:not(.bs-group-col):not(.bs-sub-col) { background: #fff7ed !important; }
+  .bs-time-table tbody tr.bs-row-repay  td { font-weight: 600; color: #9a3412; }
+  .bs-time-table tbody tr.bs-row-int    > td:not(.bs-group-col):not(.bs-sub-col) { background: #fff8f0 !important; }
+  .bs-time-table tbody tr.bs-row-int    td { color: #92400e; }
+  .bs-time-table tbody tr.bs-row-loss   > td:not(.bs-group-col):not(.bs-sub-col) { background: #fef2f2 !important; }
+  .bs-time-table tbody tr.bs-row-loss   td { color: #b91c1c; }
+  .bs-time-table tbody tr.bs-row-losssub > td:not(.bs-group-col):not(.bs-sub-col) { background: #fff5f5 !important; }
+  .bs-time-table tbody tr.bs-row-losssub td { color: #dc2626; }
+  .bs-time-table tbody tr.bs-row-losssub td.bs-sub-col { padding-left: 20px !important; font-size: 11px; }
+  .bs-time-table tbody tr.bs-row-total  > td:not(.bs-group-col):not(.bs-sub-col) { background: #fef9c3 !important; }
+  .bs-time-table tbody tr.bs-row-total  td.bs-group-col { background: #fef08a !important; }
+  .bs-time-table tbody tr.bs-row-total  td.bs-sub-col   { background: #fefce8 !important; }
+  .bs-time-table tbody tr.bs-row-total  td { font-weight: 700; color: #713f12; font-size: 12px; }
+  .bs-time-table tbody tr.bs-row-prov   > td:not(.bs-group-col):not(.bs-sub-col) { background: #f5f3ff !important; }
+  .bs-time-table tbody tr.bs-row-prov   td { font-weight: 600; color: #5b21b6; }
+  .bs-time-table tbody tr.bs-row-provsub > td:not(.bs-group-col):not(.bs-sub-col) { background: #faf5ff !important; }
+  .bs-time-table tbody tr.bs-row-provsub td.bs-sub-col { padding-left: 20px !important; color: #7c3aed; font-weight: 400; font-size: 11px; }
+  .bs-time-table tbody tr.bs-row-provsub td { color: #6d28d9; }
+  .bs-time-table tbody tr.bs-row-provend > td:not(.bs-group-col):not(.bs-sub-col) { background: #ede9fe !important; }
+  .bs-time-table tbody tr.bs-row-provend td.bs-group-col { background: #ddd6fe !important; }
+  .bs-time-table tbody tr.bs-row-provend td.bs-sub-col   { background: #ede9fe !important; }
+  .bs-time-table tbody tr.bs-row-provend td { font-weight: 700; color: #4c1d95; font-size: 12px; }
+  /* 구분 섹션 헤더 행 */
+  .bs-time-table tbody tr.bs-row-header td { background: #1e3a5f !important; color: #e2e8f0 !important; font-weight: 700; font-size: 11px; text-align: center !important; padding: 5px 8px; }
+  .bs-section-header { padding: 10px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #fff; }
+  .bs-section-header.blue   { background: linear-gradient(135deg, #1e3a5f, #2d5a8e); }
+  .bs-section-header.green  { background: linear-gradient(135deg, #0f5132, #156b3f); }
+  .bs-section-header.purple { background: linear-gradient(135deg, #4c1d95, #6d28d9); }
+  /* 기간 열 hover */
+  .bs-time-table tbody td:not(.bs-group-col):not(.bs-sub-col):hover { filter: brightness(0.94); }
+  /* 테이블 외곽 */
+  .bs-table-wrap { border: 1px solid #cbd5e1; border-radius: 0 0 8px 8px; overflow: hidden; }
+  /* KPI 단위 표시 */
+  .bs-unit-badge { font-size: 11px; font-weight: 400; opacity: .75; margin-left: 6px; }
 
   /* Summary KPI cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
@@ -1164,31 +1238,31 @@
     <div id="bs-no-data" class="card" style="padding:40px;text-align:center;color:#94a3b8;">
       <i class="fas fa-cloud-upload-alt" style="font-size:36px;margin-bottom:12px;display:block;"></i>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px;">영업현황 데이터가 없습니다</div>
-      <div style="font-size:13px;">엑셀 업로드 → 섹터 1 또는 섹터 7에서 <strong>기업여신자료 - 영업현황.xlsx</strong>을 업로드하세요</div>
+      <div style="font-size:13px;">엑셀 업로드 → 섹터 7에서 <strong>기업여신자료 - 영업현황.xlsx</strong>을 업로드하세요</div>
     </div>
 
     <!-- KPI 카드 (최신 기간 기준) -->
     <div id="bs-kpi-area" style="display:none;">
-      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
         <div class="kpi-card">
-          <div class="kpi-label">기말자산</div>
-          <div class="kpi-value" id="kpi-bs-asset">-</div>
+          <div class="kpi-label">기말자산<span class="bs-unit-badge">(백만원)</span></div>
+          <div class="kpi-value" id="kpi-bs-asset" style="font-size:20px;">-</div>
           <div class="kpi-sub" id="kpi-bs-period">최근 기준</div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-label">취급액(대출)</div>
-          <div class="kpi-value" id="kpi-bs-deal">-</div>
+          <div class="kpi-label">취급액(대출)<span class="bs-unit-badge">(백만원)</span></div>
+          <div class="kpi-value" id="kpi-bs-deal" style="font-size:20px;">-</div>
           <div class="kpi-sub">신규+추가+재대출</div>
         </div>
         <div class="kpi-card yellow">
-          <div class="kpi-label">원금회수액</div>
-          <div class="kpi-value" id="kpi-bs-repay">-</div>
-          <div class="kpi-sub">최근 기준</div>
+          <div class="kpi-label">원금회수액<span class="bs-unit-badge">(백만원)</span></div>
+          <div class="kpi-value" id="kpi-bs-repay" style="font-size:20px;">-</div>
+          <div class="kpi-sub">최근 기간 기준</div>
         </div>
         <div class="kpi-card red">
-          <div class="kpi-label">기말 충당금</div>
-          <div class="kpi-value" id="kpi-bs-prov">-</div>
-          <div class="kpi-sub">최근 기준</div>
+          <div class="kpi-label">기말 충당금<span class="bs-unit-badge">(백만원)</span></div>
+          <div class="kpi-value" id="kpi-bs-prov" style="font-size:20px;">-</div>
+          <div class="kpi-sub">최근 기간 기준</div>
         </div>
       </div>
     </div>
@@ -1216,12 +1290,12 @@
             <i class="fas fa-table"></i> 전체 영업현황
             <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
           </div>
-          <div class="table-scroll">
-            <table class="data-table bs-time-table">
+          <div class="table-scroll" style="max-height:520px;overflow:auto;">
+            <table class="data-table bs-time-table" style="width:max-content;min-width:100%;">
               <thead>
                 <tr id="bs-head-s1">
-                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
-                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                  <th class="bs-group-col" style="min-width:80px;">구분</th>
+                  <th class="bs-sub-col" style="min-width:110px;">소분류</th>
                 </tr>
               </thead>
               <tbody id="bs-body-s1"></tbody>
@@ -1237,12 +1311,12 @@
             <i class="fas fa-layer-group"></i> 대출구분별 — 신용대출 / 기업대출
             <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
           </div>
-          <div class="table-scroll">
-            <table class="data-table bs-time-table">
+          <div class="table-scroll" style="max-height:400px;overflow:auto;">
+            <table class="data-table bs-time-table" style="width:max-content;min-width:100%;">
               <thead>
                 <tr id="bs-head-s2">
-                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
-                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                  <th class="bs-group-col" style="min-width:80px;">구분</th>
+                  <th class="bs-sub-col" style="min-width:110px;">소분류</th>
                 </tr>
               </thead>
               <tbody id="bs-body-s2"></tbody>
@@ -1258,12 +1332,12 @@
             <i class="fas fa-shield-alt"></i> 담보구분별 — 신용대출 / 담보대출
             <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
           </div>
-          <div class="table-scroll">
-            <table class="data-table bs-time-table">
+          <div class="table-scroll" style="max-height:400px;overflow:auto;">
+            <table class="data-table bs-time-table" style="width:max-content;min-width:100%;">
               <thead>
                 <tr id="bs-head-s3">
-                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
-                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                  <th class="bs-group-col" style="min-width:80px;">구분</th>
+                  <th class="bs-sub-col" style="min-width:110px;">소분류</th>
                 </tr>
               </thead>
               <tbody id="bs-body-s3"></tbody>
@@ -3830,54 +3904,73 @@ async function pgPersist() {
 let bsData = null;          // parse_business_excel 결과
 let bsCurrentSection = 's1';
 
-// 섹션1 행 정의
+// ── 섹션1 행 정의 (엑셀 병합셀 구조 반영) ─────────────────────────────
+// rowspan: 구분열(A열)이 몇 행에 걸쳐 병합되는지
+// sub: 소분류(B열) 텍스트 (null이면 A+B 병합)
+// mergeSub: true이면 구분+소분류 열 병합 (sub 없는 단독 행)
 const BS_S1_ROWS = [
-  { key: '기초대출자산',          group: '기초대출자산', sub: null,          cls: 'bs-row-asset' },
-  { key: '대출_신규',             group: '대출',        sub: '신규',         cls: 'bs-row-sub' },
-  { key: '대출_추가',             group: null,          sub: '추가',         cls: 'bs-row-sub' },
-  { key: '대출_재대출',           group: null,          sub: '재대출',       cls: 'bs-row-sub' },
-  { key: '대출_취급액(대출)',      group: null,          sub: '취급액(대출)', cls: 'bs-row-deal' },
-  { key: '매입',                  group: '매입',        sub: null,          cls: '' },
-  { key: '원금회수액',             group: '원금회수액',  sub: null,          cls: 'bs-row-repay' },
-  { key: '이자회수액',             group: '이자회수액',  sub: null,          cls: '' },
-  { key: '실상각액_월중매각액',    group: '실상각액',    sub: '월중매각액',   cls: 'bs-row-loss' },
-  { key: '실상각액_월중상각액',    group: null,          sub: '월중상각액',   cls: 'bs-row-loss' },
-  { key: '기말자산',              group: '기말자산',    sub: null,           cls: 'bs-row-total' },
-  { key: '대손충당_기초 충당금',   group: '대손충당',    sub: '기초 충당금',  cls: 'bs-row-provsub' },
-  { key: '대손충당_설정분',        group: null,          sub: '설정분',       cls: 'bs-row-provsub' },
-  { key: '대손충당_사용분(환입)',  group: null,          sub: '사용분(환입)', cls: 'bs-row-provsub' },
-  { key: '기말 충당금',           group: '기말 충당금', sub: null,           cls: 'bs-row-provend' },
+  // R4: 기초대출자산 (A4:B4 병합 → mergeSub=true)
+  { key: '기초대출자산',         group: '기초대출자산',  sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-asset'   },
+  // R5~8: 대출 (A5:A8 병합 → rowspan=4)
+  { key: '대출_신규',            group: '대출',          sub: '신규',         mergeSub: false, rowspan: 4, cls: 'bs-row-sub'     },
+  { key: '대출_추가',            group: null,            sub: '추가',         mergeSub: false, rowspan: 0, cls: 'bs-row-sub'     },
+  { key: '대출_재대출',          group: null,            sub: '재대출',       mergeSub: false, rowspan: 0, cls: 'bs-row-sub'     },
+  { key: '대출_취급액(대출)',    group: null,            sub: '취급액(대출)', mergeSub: false, rowspan: 0, cls: 'bs-row-deal'    },
+  // R9: 매입 (A9:B9 병합)
+  { key: '매입',                 group: '매입',          sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-buy'     },
+  // R10: 원금회수액 (A10:B10 병합)
+  { key: '원금회수액',           group: '원금회수액',    sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-repay'   },
+  // R11: 이자회수액 (A11:B11 병합)
+  { key: '이자회수액',           group: '이자회수액',    sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-int'     },
+  // R12~13: 실상각액 (A12:A13 병합 → rowspan=2)
+  { key: '실상각액_월중매각액',  group: '실상각액',      sub: '월중매각액',   mergeSub: false, rowspan: 2, cls: 'bs-row-losssub' },
+  { key: '실상각액_월중상각액',  group: null,            sub: '월중상각액',   mergeSub: false, rowspan: 0, cls: 'bs-row-losssub' },
+  // R14: 기말자산 (A14:B14 병합)
+  { key: '기말자산',             group: '기말자산',      sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-total'   },
+  // R15~17: 대손충당 (A15:A17 병합 → rowspan=3)
+  { key: '대손충당_기초 충당금', group: '대손충당',      sub: '기초 충당금',  mergeSub: false, rowspan: 3, cls: 'bs-row-provsub' },
+  { key: '대손충당_설정분',      group: null,            sub: '설정분',       mergeSub: false, rowspan: 0, cls: 'bs-row-provsub' },
+  { key: '대손충당_사용분(환입)',group: null,            sub: '사용분(환입)', mergeSub: false, rowspan: 0, cls: 'bs-row-provsub' },
+  // R18: 기말 충당금 (A18:B18 병합)
+  { key: '기말 충당금',          group: '기말 충당금',   sub: null,           mergeSub: true,  rowspan: 1, cls: 'bs-row-provend' },
 ];
 
-// 섹션2 행 정의
+// ── 섹션2 행 정의 (대출구분별) ──────────────────────────────────────
 const BS_S2_ROWS = [
-  { key: '신용대출_신규',          group: '신용대출', sub: '신규',         cls: 'bs-row-sub' },
-  { key: '신용대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
-  { key: '신용대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
-  { key: '신용대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
-  { key: '기업대출_신규',          group: '기업대출', sub: '신규',         cls: 'bs-row-sub' },
-  { key: '기업대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
-  { key: '기업대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
-  { key: '기업대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+  // 신용대출 (A21:A24 병합 → rowspan=4)
+  { key: '신용대출_신규',         group: '신용대출', sub: '신규',         mergeSub: false, rowspan: 4, cls: 'bs-row-sub'  },
+  { key: '신용대출_추가',         group: null,       sub: '추가',         mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '신용대출_재대출',       group: null,       sub: '재대출',       mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '신용대출_취급액(대출)', group: null,       sub: '취급액(대출)', mergeSub: false, rowspan: 0, cls: 'bs-row-deal' },
+  // 기업대출 (A25:A28 병합 → rowspan=4)
+  { key: '기업대출_신규',         group: '기업대출', sub: '신규',         mergeSub: false, rowspan: 4, cls: 'bs-row-sub'  },
+  { key: '기업대출_추가',         group: null,       sub: '추가',         mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '기업대출_재대출',       group: null,       sub: '재대출',       mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '기업대출_취급액(대출)', group: null,       sub: '취급액(대출)', mergeSub: false, rowspan: 0, cls: 'bs-row-deal' },
 ];
 
-// 섹션3 행 정의
+// ── 섹션3 행 정의 (담보구분별) ──────────────────────────────────────
 const BS_S3_ROWS = [
-  { key: '신용대출_신규',          group: '신용대출', sub: '신규',         cls: 'bs-row-sub' },
-  { key: '신용대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
-  { key: '신용대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
-  { key: '신용대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
-  { key: '담보대출_신규',          group: '담보대출', sub: '신규',         cls: 'bs-row-sub' },
-  { key: '담보대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
-  { key: '담보대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
-  { key: '담보대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+  // 신용대출 (A31:A34 병합 → rowspan=4)
+  { key: '신용대출_신규',         group: '신용대출', sub: '신규',         mergeSub: false, rowspan: 4, cls: 'bs-row-sub'  },
+  { key: '신용대출_추가',         group: null,       sub: '추가',         mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '신용대출_재대출',       group: null,       sub: '재대출',       mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '신용대출_취급액(대출)', group: null,       sub: '취급액(대출)', mergeSub: false, rowspan: 0, cls: 'bs-row-deal' },
+  // 담보대출 (A35:A38 병합 → rowspan=4)
+  { key: '담보대출_신규',         group: '담보대출', sub: '신규',         mergeSub: false, rowspan: 4, cls: 'bs-row-sub'  },
+  { key: '담보대출_추가',         group: null,       sub: '추가',         mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '담보대출_재대출',       group: null,       sub: '재대출',       mergeSub: false, rowspan: 0, cls: 'bs-row-sub'  },
+  { key: '담보대출_취급액(대출)', group: null,       sub: '취급액(대출)', mergeSub: false, rowspan: 0, cls: 'bs-row-deal' },
 ];
 
+// ── 숫자 포매팅 ─────────────────────────────────────────────────────
 function bsFmt(v) {
   if (v === null || v === undefined) return '-';
-  return Math.round(v).toLocaleString();
+  const n = Math.round(v);
+  return n.toLocaleString();
 }
 
+// ── 기간 필터 인덱스 계산 ────────────────────────────────────────────
 function bsFilteredIndices() {
   if (!bsData) return [];
   const periods = bsData.periods;
@@ -3888,12 +3981,14 @@ function bsFilteredIndices() {
   return Array.from({length: periods.length - start}, (_, i) => start + i);
 }
 
+// ── 테이블 빌드 (rowspan 병합셀 지원) ───────────────────────────────
 function bsBuildTable(headId, bodyId, rowDefs, sectionData) {
   const indices = bsFilteredIndices();
   const periods = bsData.periods;
 
-  // thead: 기간 헤더
+  // ── thead: 기간 헤더 업데이트 ─────────────────────────────────────
   const headRow = document.getElementById(headId);
+  // 기존 기간 열 제거 (처음 2개 = 구분 + 소분류 유지)
   while (headRow.children.length > 2) headRow.removeChild(headRow.lastChild);
   indices.forEach(i => {
     const th = document.createElement('th');
@@ -3901,35 +3996,49 @@ function bsBuildTable(headId, bodyId, rowDefs, sectionData) {
     headRow.appendChild(th);
   });
 
-  // tbody
+  // ── tbody: rowspan 병합셀 적용 ────────────────────────────────────
   const tbody = document.getElementById(bodyId);
   tbody.innerHTML = '';
 
-  rowDefs.forEach(({ key, group, sub, cls }) => {
-    const vals = sectionData[key];
+  rowDefs.forEach(({ key, group, sub, mergeSub, rowspan, cls }) => {
+    const vals = sectionData ? sectionData[key] : null;
     const tr = document.createElement('tr');
     if (cls) tr.className = cls;
 
-    // 구분 셀 (group)
-    const groupTd = document.createElement('td');
-    groupTd.className = 'bs-group-col';
-    groupTd.textContent = group || '';
-    tr.appendChild(groupTd);
-
-    // 소분류 셀 (sub)
-    const subTd = document.createElement('td');
-    subTd.className = 'bs-sub-col';
-    subTd.textContent = sub || '';
-    if (!sub && group) {
-      // group만 있고 sub 없는 행: sub셀은 비움
-      subTd.textContent = '';
+    // ── 구분열(A) ──
+    // rowspan > 0인 경우만 셀 생성 (0이면 위 행에 병합됨)
+    if (rowspan > 0) {
+      const groupTd = document.createElement('td');
+      groupTd.className = 'bs-group-col';
+      groupTd.textContent = group || '';
+      if (rowspan > 1) groupTd.rowSpan = rowspan;
+      // mergeSub=true이면 소분류 열과 colspan 병합
+      if (mergeSub) {
+        groupTd.colSpan = 2;
+        groupTd.style.textAlign = 'left';
+        groupTd.style.paddingLeft = '12px';
+        // 소분류 열 sticky offset이 포함되므로 z-index 올림
+        groupTd.style.zIndex = '4';
+        groupTd.style.minWidth = '190px';
+      }
+      tr.appendChild(groupTd);
     }
-    tr.appendChild(subTd);
 
-    // 데이터 셀
+    // ── 소분류열(B): mergeSub이면 위에서 이미 colspan 처리됨 ──
+    if (!mergeSub) {
+      const subTd = document.createElement('td');
+      subTd.className = 'bs-sub-col';
+      subTd.textContent = sub || '';
+      tr.appendChild(subTd);
+    }
+
+    // ── 데이터 셀 ──
     indices.forEach(i => {
       const td = document.createElement('td');
-      td.textContent = bsFmt(vals ? vals[i] : null);
+      const v = vals ? vals[i] : null;
+      td.textContent = bsFmt(v);
+      // 음수 강조
+      if (v !== null && v < 0) td.style.color = '#dc2626';
       tr.appendChild(td);
     });
 
@@ -3957,7 +4066,9 @@ function bsRenderSection() {
 
 function bsUpdateKPI() {
   if (!bsData || !bsData.periods.length) return;
-  const lastIdx = bsData.periods.length - 1;
+  const n = bsData.periods.length;
+  const lastIdx = n - 1;
+  const prevIdx = n >= 2 ? n - 2 : null;
   const lastPeriod = bsData.periods[lastIdx];
   const s1 = bsData.section1;
 
@@ -3966,12 +4077,24 @@ function bsUpdateKPI() {
   const repay = s1['원금회수액']?.[lastIdx];
   const prov  = s1['기말 충당금']?.[lastIdx];
 
+  // 전월 값
+  const assetPrev = prevIdx !== null ? s1['기말자산']?.[prevIdx] : null;
+  const dealPrev  = prevIdx !== null ? s1['대출_취급액(대출)']?.[prevIdx] : null;
+
   const fmt = v => (v != null ? Math.round(v).toLocaleString() : '-');
-  document.getElementById('kpi-bs-asset').textContent = fmt(asset);
-  document.getElementById('kpi-bs-deal').textContent  = fmt(deal);
-  document.getElementById('kpi-bs-repay').textContent = fmt(repay);
-  document.getElementById('kpi-bs-prov').textContent  = fmt(prov);
-  document.getElementById('kpi-bs-period').textContent = lastPeriod + ' 기준';
+  const diff = (cur, prev) => {
+    if (cur == null || prev == null) return '';
+    const d = Math.round(cur - prev);
+    const sign = d >= 0 ? '+' : '';
+    const cls  = d >= 0 ? 'color:#16a34a' : 'color:#dc2626';
+    return `<span style="font-size:11px;${cls};display:block;margin-top:2px;">${sign}${d.toLocaleString()}</span>`;
+  };
+
+  document.getElementById('kpi-bs-asset').innerHTML  = fmt(asset)  + diff(asset, assetPrev);
+  document.getElementById('kpi-bs-deal').innerHTML   = fmt(deal)   + diff(deal,  dealPrev);
+  document.getElementById('kpi-bs-repay').innerHTML  = fmt(repay);
+  document.getElementById('kpi-bs-prov').innerHTML   = fmt(prov);
+  document.getElementById('kpi-bs-period').textContent = lastPeriod + ' 기준 (단위: 백만원)';
 }
 
 async function loadBusinessData() {
