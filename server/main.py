@@ -163,8 +163,20 @@ async def upload_excel(file: UploadFile = File(...)):
 
 @app.get("/api/data")
 async def get_all_data():
-    """전체 데이터 반환"""
-    return uploaded_data
+    """전체 데이터 반환 — PersistentStore를 dict로 직렬화해서 반환"""
+    # PersistentStore는 dict가 아니므로 FastAPI가 {}로 직렬화함
+    # 모든 키를 명시적으로 읽어 dict로 변환
+    _DATA_KEYS = [
+        "bsis", "bs_is", "cashflow", "asset_quality",
+        "business_status", "loan_asset", "borrowing",
+        "company_info", "settlement_asset_quality",
+    ]
+    result = {}
+    for k in _DATA_KEYS:
+        v = uploaded_data.get(k)
+        if v is not None:
+            result[k] = v
+    return JSONResponse(result)
 
 
 @app.post("/api/upload/settlement")
@@ -645,7 +657,12 @@ async def save_pdf_mapping(request: Request):
     # _custom_labels, _ordered_labels는 별도 키로 분리 저장
     custom_labels  = body.pop("_custom_labels", None)
     ordered_labels = body.pop("_ordered_labels", None)
-    uploaded_data["pdf_mapping"] = body
+
+    # 모든 시트가 빈 배열이면 저장하지 않음 (기본 매핑 덮어쓰기 방지)
+    total_rows = sum(len(body.get(k, [])) for k in ["bs", "is_", "summary"])
+    if total_rows > 0:
+        uploaded_data["pdf_mapping"] = body
+    # custom_labels / ordered_labels는 내용과 관계없이 항상 저장
     if custom_labels is not None:
         uploaded_data["custom_excel_labels"] = custom_labels
     if ordered_labels is not None:
