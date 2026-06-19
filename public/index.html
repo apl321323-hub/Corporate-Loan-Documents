@@ -1704,6 +1704,41 @@
       </div>
     </div>
 
+    <!-- 섹터 11: 매각리스트 -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#d97706;">섹터 11</span>
+        <div>
+          <div class="upload-sector-title">매각리스트</div>
+          <div class="upload-sector-desc">매각리스트_YYYYMMDD.xlsx → 실상각액(월중매각액) · 계약일 기준</div>
+        </div>
+        <span class="upload-status-dot" id="dot-sale"></span>
+      </div>
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#d97706;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-sale" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-sale" class="upload-period-select"></select>
+        <span id="period-badge-sale" class="upload-period-badge" style="display:none;"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-sale" onclick="document.getElementById('file-input-sale').click()">
+        <i class="fas fa-file-excel" style="color:#d97706;"></i>
+        <div class="drop-text" id="drop-text-sale">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">매각리스트_YYYYMMDD.xlsx (V열:대출잔액→월중매각액 / 계약일 기준 월별 집계)</div>
+      </div>
+      <input type="file" id="file-input-sale" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'sale')">
+      <div class="upload-progress" id="upload-progress-sale">
+        <div class="upload-status-text" id="upload-status-sale">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-sale"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('sale')" id="upload-btn-sale" disabled style="background:#d97706;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
     <!-- 섹터 6: 재무제표 PDF (월별 업데이트) -->
     <div class="upload-sector-card upload-sector-card--pdf" style="grid-column: 1 / -1;">
       <div class="upload-sector-header">
@@ -2078,6 +2113,7 @@ async function uploadFile(sector) {
     contract: '/api/upload/contract',
     payment:  '/api/upload/payment',
     writeoff: '/api/upload/writeoff',
+    sale:     '/api/upload/sale',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -2148,6 +2184,10 @@ async function uploadFile(sector) {
       const ps = (res.data.periods || []).join(', ');
       const total = res.data.total != null ? ` / 합계: ${Math.round(res.data.total).toLocaleString()}백만` : '';
       showToast(`✅ 대손리스트 업로드 완료 (기간: ${ps}${total})`, 'success');
+    } else if (sector === 'sale') {
+      await loadSaleData();
+      const total = res.data.total != null ? ` / 합계: ${Math.round(res.data.total).toLocaleString()}백만` : '';
+      showToast(`✅ 매각리스트 업로드 완료 (${res.data.periods?.length || 0}개월${total})`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -4299,6 +4339,21 @@ async function loadWriteoffData() {
   }
 }
 
+// ── 매각리스트 데이터 ─────────────────────────────────────────────
+let saleData = null;   // parse_sale 결과
+
+async function loadSaleData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/sale`);
+    if (res.data && !res.data.error) {
+      saleData = res.data;
+      bsRenderSection();
+    }
+  } catch(e) {
+    // 데이터 없음 — 무시
+  }
+}
+
 // ── 계약리스트 데이터 ─────────────────────────────────────────────
 let contractData = null;   // parse_contract_list 결과
 
@@ -4354,7 +4409,7 @@ function bsUpdateKPIFromContract() {
 
 // ── bsRenderSection ──────────────────────────────────────────────
 function bsRenderSection() {
-  if (!bsData && !contractData && !paymentData && !writeoffData) return;
+  if (!bsData && !contractData && !paymentData && !writeoffData && !saleData) return;
 
   if (bsCurrentSection === 's1') {
     // S1: 기말자산/원금회수/충당금은 bsData, 신규/추가/재대출/취급액은 contractData 우선
@@ -4368,14 +4423,14 @@ function bsRenderSection() {
 // ── 섹션1 빌드: bsData(기본) + contractData(취급액) + paymentData(원금/이자) ──
 // ※ bsData 없이 contractData / paymentData만 있어도 해당 행 표시 가능
 function bsBuildTableS1() {
-  if (!bsData && !contractData && !paymentData && !writeoffData) return;
+  if (!bsData && !contractData && !paymentData && !writeoffData && !saleData) return;
 
   // ── 기간 결정 ──────────────────────────────────────────────────
-  // bsData > contractData > paymentData > writeoffData 순서로 기간 기준 선택
+  // bsData > contractData > paymentData > writeoffData > saleData 순서로 기간 기준 선택
   const useBsBase = !!bsData;
   const periods = useBsBase
     ? bsData.periods
-    : (contractData?.periods || paymentData?.periods || writeoffData?.periods || []);
+    : (contractData?.periods || paymentData?.periods || writeoffData?.periods || saleData?.periods || []);
 
   // 필터 인덱스 계산
   let indices;
@@ -4410,6 +4465,11 @@ function bsBuildTableS1() {
     '실상각액_월중상각액': '실상각액_월중상각액',
   };
 
+  // saleData 키 매핑 (bsData 행키 → saleData.section1 키)
+  const saleKeyMap = {
+    '실상각액_월중매각액': '실상각액_월중매각액',
+  };
+
   // contractData 키 매핑 (bsData 행키 → contractData.section1 키)
   const contractKeyMap = {
     '대출_신규':         '신규',
@@ -4428,6 +4488,7 @@ function bsBuildTableS1() {
     const contractKey = contractKeyMap[key];
     const paymentKey  = paymentKeyMap[key];
     const writeoffKey = writeoffKeyMap[key];
+    const saleKey     = saleKeyMap[key];
 
     // ── 값 배열 결정 (인덱스 기준) ─────────────────────────────
     let vals = null;
@@ -4436,6 +4497,13 @@ function bsBuildTableS1() {
     if (key === '기초대출자산' && useBsBase) {
       // 기초대출자산: bsData에 이미 전월 기말자산 값으로 저장됨
       vals = bsData.section1['기초대출자산'] || null;
+    } else if (saleKey && saleData) {
+      // 매각리스트 데이터 우선 (실상각액_월중매각액)
+      const slSeries = saleData.section1[saleKey];
+      if (slSeries) {
+        vals = periods.map(ym => slSeries[ym] ?? null);
+        sourceLabel = '매각리스트';
+      }
     } else if (writeoffKey && writeoffData) {
       // 대손리스트 데이터 우선 (실상각액_월중상각액)
       const wdSeries = writeoffData.section1[writeoffKey];
@@ -4471,6 +4539,7 @@ function bsBuildTableS1() {
       '계약리스트':  '#b45309',
       '입금명세':    '#0f766e',
       '대손리스트':  '#dc2626',
+      '매각리스트':  '#d97706',
     };
     const sourceBorderColor = sourceColors[sourceLabel] || null;
 
@@ -4794,6 +4863,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadContractData();       // 계약리스트 별도 로드
   loadPaymentData();        // 입금명세 별도 로드
   loadWriteoffData();       // 대손리스트 별도 로드
+  loadSaleData();           // 매각리스트 별도 로드
 });
 </script>
 </body>

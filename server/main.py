@@ -13,6 +13,7 @@ from business_parser import parse_business_excel
 from contract_parser import parse_contract_list
 from payment_parser import parse_payment
 from writeoff_parser import parse_writeoff
+from sale_parser import parse_sale
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -1140,6 +1141,46 @@ async def upload_writeoff(file: UploadFile = File(...), period: str = ""):
 async def get_writeoff_data():
     """대손리스트 집계 데이터 반환 (월중상각액)"""
     d = uploaded_data.get("writeoff_data")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/sale")
+async def upload_sale(file: UploadFile = File(...), period: str = ""):
+    """매각리스트 xlsx 업로드 → 실상각액_월중매각액 월별 집계"""
+    try:
+        content = await file.read()
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_sale(tmp_path)
+        if period:
+            data['upload_period'] = period
+        uploaded_data['sale_data'] = data
+        os.unlink(tmp_path)
+
+        s1 = data.get('section1', {})
+        series = s1.get('실상각액_월중매각액', {})
+        total_vals = list(series.values())
+
+        return JSONResponse({
+            "success": True,
+            "message": f"매각리스트 '{file.filename}' 업로드 완료",
+            "periods": data.get('periods', []),
+            "total": sum(total_vals),
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/api/data/sale")
+async def get_sale_data():
+    """매각리스트 집계 데이터 반환 (월중매각액)"""
+    d = uploaded_data.get("sale_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
