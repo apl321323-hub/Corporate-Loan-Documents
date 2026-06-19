@@ -1240,8 +1240,8 @@
       <div class="upload-sector-header">
         <span class="sector-badge" style="background:#7c3aed;">섹터 2</span>
         <div>
-          <div class="upload-sector-title">결산자료</div>
-          <div class="upload-sector-desc">개인별 대출 결산 데이터 → 자산건전성 분석</div>
+          <div class="upload-sector-title">결산자료 <span style="font-size:11px;font-weight:400;color:#7c3aed;">(자산건전성 계산)</span></div>
+          <div class="upload-sector-desc">결산자료_YYYYMMDD.xlsx → H(상품) · J(연체일수) · L(잔액) 기준 자산건전성 집계</div>
         </div>
         <span class="upload-status-dot" id="dot-settle"></span>
       </div>
@@ -1257,7 +1257,7 @@
       <div class="drop-zone" id="drop-zone-settle" onclick="document.getElementById('file-input-settle').click()">
         <i class="fas fa-table"></i>
         <div class="drop-text" id="drop-text-settle">클릭하거나 파일을 드래그하여 선택</div>
-        <div class="drop-sub">결산자료_YYYYMMDD.xlsx | H=현재상품, J=연체일수, L=잔액</div>
+        <div class="drop-sub">결산자료_YYYYMMDD.xlsx | 섹션1(금액) · 섹션3(담보구분) · 섹션4(상품별) 자동 집계</div>
       </div>
       <input type="file" id="file-input-settle" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'settle')">
       <div class="upload-progress" id="upload-progress-settle">
@@ -1745,7 +1745,7 @@ async function uploadFile(sector) {
 
   const endpointMap = {
     main:   '/api/upload',
-    settle: '/api/upload/settlement',
+    settle: '/api/upload/settlement-aq',
     company:'/api/upload/company_info',
     bsis:   '/api/upload/bsis',
     aq:     '/api/upload/asset-quality',
@@ -1785,8 +1785,10 @@ async function uploadFile(sector) {
     }
 
     if (sector === 'settle') {
-      await loadSettlementData();
-      showToast('✅ ' + res.data.message + ` (상품 ${res.data.total_products}개)`, 'success');
+      await loadSettlementAQData();
+      const p = res.data.period ? ` [${res.data.period}]` : '';
+      const total = res.data.section1_total ? ` · 융잔합계 ${res.data.section1_total.toLocaleString()}백만원` : '';
+      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total})`, 'success');
     } else if (sector === 'company') {
       const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
       appData.company_info = ciRes.data;
@@ -3147,11 +3149,18 @@ function renderAQS2() {
 function renderAQS3() {
   const container = document.getElementById('aq-s3-tables');
   container.innerHTML = '';
-  const colors = { '신용': 'blue', '보증': 'green', '담보': 'purple' };
+  const colorList = ['blue','green','purple','orange','teal'];
   const indices = aqFilteredIndices();
   const periods = aqData.periods;
 
-  ['신용','보증','담보'].forEach(grpName => {
+  // 동적 그룹 목록: aqData.section3 의 키 순서 사용
+  const grpNames = Object.keys(aqData.section3 || {});
+  if (grpNames.length === 0) {
+    container.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:#94a3b8;">담보구분별 데이터가 없습니다.<br><small>상품구성 설정에서 그룹(신용/담보 등)을 설정한 후 결산자료를 업로드하세요.</small></div>';
+    return;
+  }
+
+  grpNames.forEach((grpName, gi) => {
     const grpData = aqData.section3[grpName];
     if (!grpData) return;
 
@@ -3163,7 +3172,7 @@ function renderAQS3() {
     wrap.className = 'card';
     wrap.style.cssText = 'padding:0;overflow:hidden;margin-bottom:16px;';
 
-    const colorCls = colors[grpName] || 'blue';
+    const colorCls = colorList[gi % colorList.length];
     wrap.innerHTML = `
       <div class="aq-section-header ${colorCls}">
         <i class="fas fa-layer-group"></i> * ${grpName}
@@ -3196,7 +3205,12 @@ function renderAQS3() {
       tr.appendChild(labelTd);
       indices.forEach(i => {
         const td = document.createElement('td');
-        td.textContent = aqFmt(vals ? vals[i] : null, fmt || 'num');
+        // 연체율(%)은 이미 백분율 값으로 저장됨
+        if (key === '연체율(%)' && vals) {
+          td.textContent = (vals[i] !== null && vals[i] !== undefined) ? vals[i].toFixed(2) + '%' : '-';
+        } else {
+          td.textContent = aqFmt(vals ? vals[i] : null, fmt || 'num');
+        }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -3323,6 +3337,75 @@ async function loadAQData() {
     }
   } catch(e) {
     // 데이터 없음 — 무시
+  }
+}
+
+/**
+ * 결산자료 기반 자산건전성 데이터 로드
+ * /api/data/settlement-aq → 단일 기간 스냅샷을 aqData 형식으로 변환하여 렌더링
+ */
+async function loadSettlementAQData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/settlement-aq`);
+    const d = res.data;
+    if (!d || d.error) return;
+
+    // 결산자료 단일 기간 → aqData 시계열 구조로 변환
+    // periods 배열에 단일 기간만 포함
+    const period = d.period || '미지정';
+
+    // 섹션1: { 무연체: [v], 1~30: [v], ... }
+    const s1 = {};
+    for (const [k, v] of Object.entries(d.section1 || {})) {
+      s1[k] = [v];
+    }
+
+    // 섹션3: { 신용: { 무연체: [v], ... }, 담보: { ... } }
+    const s3 = {};
+    for (const [gname, bucket] of Object.entries(d.section3 || {})) {
+      s3[gname] = {};
+      for (const [k, v] of Object.entries(bucket)) {
+        s3[gname][k] = [v];
+      }
+    }
+
+    // 섹션4: { N론: { 무연체: [v], ... }, ... }
+    const s4 = {};
+    for (const [prod, bucket] of Object.entries(d.section4 || {})) {
+      s4[prod] = {};
+      for (const [k, v] of Object.entries(bucket)) {
+        s4[prod][k] = [v];
+      }
+    }
+
+    // aqData 갱신
+    aqData = {
+      periods: [period],
+      section1: s1,
+      section2: {},    // 결산자료엔 비율 섹션 없음
+      section3: s3,
+      section4: s4,
+      products: d.products || [],
+      source: 'settlement',  // 소스 구분
+    };
+
+    // UI 업데이트
+    const noDataEl = document.getElementById('aq-no-data');
+    if (noDataEl) noDataEl.style.display = 'none';
+
+    const badge = document.getElementById('aq-data-badge');
+    if (badge) {
+      badge.textContent = `결산자료 ${period} (1개월)`;
+      badge.style.background = '#ede9fe';
+      badge.style.color = '#4c1d95';
+    }
+
+    aqInitProductSelect();
+    aqUpdateKPI();
+    switchAQSection(aqCurrentSection);
+
+  } catch(e) {
+    console.warn('결산자료 AQ 로드 실패:', e.message);
   }
 }
 
@@ -3775,9 +3858,10 @@ function hideLoading() { document.getElementById('loading').classList.remove('sh
 document.addEventListener('DOMContentLoaded', () => {
   initCompanyInfoEmpty();   // 기업정보 빈 행 초기화
   loadAllData();
-  loadSettlementData();     // 결산자료 별도 로드
+  loadSettlementData();     // 결산자료 별도 로드 (기존 방식)
   loadBsisData();           // BS/IS 별도 로드
-  loadAQData();             // 자산건전성 별도 로드
+  loadAQData();             // 자산건전성 별도 로드 (기업여신자료 형식)
+  loadSettlementAQData();   // 결산자료 기반 자산건전성 로드 (우선순위: 기업여신자료 없으면 표시)
 });
 </script>
 </body>

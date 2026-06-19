@@ -8,6 +8,7 @@ import json
 import io
 from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info, parse_bsis
 from asset_quality_parser import parse_asset_quality_excel
+from settlement_aq_parser import parse_settlement_asset_quality
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -444,6 +445,72 @@ async def get_asset_quality_detail():
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
+
+
+@app.post("/api/upload/settlement-aq")
+async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
+    """결산자료 엑셀 업로드 → 자산건전성 데이터 계산
+    H열(현재상품), J열(연체일수), L열(잔액) 기준으로
+    섹션1(금액), 섹션3(담보구분별), 섹션4(상품별) 집계
+    """
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        # 상품 그룹 로드 (담보구분별 집계에 사용)
+        product_groups = uploaded_data.get("product_groups", [])
+
+        data = parse_settlement_asset_quality(tmp_path, product_groups)
+        if period:
+            data['upload_period'] = period
+        os.unlink(tmp_path)
+
+        # 기존 asset_quality_detail 에 결산자료 기반 데이터를 병합
+        # period 기준으로 단일 기간 데이터로 저장
+        existing = uploaded_data.get("asset_quality_detail") or {}
+        # settlement_aq 키에 별도 저장 (기간별 여러 건 누적 가능)
+        saq_store = uploaded_data.get("settlement_aq") or {}
+        pkey = data["period"] or period or "unknown"
+        saq_store[pkey] = data
+        uploaded_data["settlement_aq"] = saq_store
+
+        return JSONResponse({
+            "success": True,
+            "message": f"결산자료 '{file.filename}' 업로드 완료",
+            "period": data["period"],
+            "products": len(data.get("products", [])),
+            "section1_total": data["section1"].get("융잔합계", 0),
+            "upload_period": period or "(미지정)",
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
+
+
+@app.get("/api/data/settlement-aq")
+async def get_settlement_aq(period: str = ""):
+    """결산자료 기반 자산건전성 데이터 반환
+    period 지정 시 해당 기간, 미지정 시 최신 기간
+    """
+    store = uploaded_data.get("settlement_aq") or {}
+    if not store:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    if period and period in store:
+        return JSONResponse(store[period])
+    # 최신 기간 반환
+    latest_key = sorted(store.keys())[-1]
+    return JSONResponse(store[latest_key])
+
+
+@app.get("/api/data/settlement-aq/periods")
+async def get_settlement_aq_periods():
+    """업로드된 결산자료 기간 목록 반환"""
+    store = uploaded_data.get("settlement_aq") or {}
+    return JSONResponse(sorted(store.keys()))
 
 
 # ── 상품 그룹 API ─────────────────────────────────────────
