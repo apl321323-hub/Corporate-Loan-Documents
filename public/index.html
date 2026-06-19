@@ -2398,7 +2398,13 @@ async function uploadFile(sector) {
     } else if (sector === 'contract') {
       await loadContractData();
       const ps = (res.data.periods || []).join(', ');
-      showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps})`, 'success');
+      const balRows = res.data.balance_rows || [];
+      // 대출채권잔액이 계산된 경우 asset_data도 갱신 반영
+      if (balRows.length > 0) {
+        await loadAssetData();
+      }
+      const balMsg = balRows.length > 0 ? ` / 대출채권잔액 ${balRows.length}행 갱신` : '';
+      showToast(`✅ 계약리스트 업로드 완료 (${res.data.products}개 상품 / 기간: ${ps}${balMsg})`, 'success');
     } else if (sector === 'payment') {
       await loadPaymentData();
       const ps = (res.data.periods || []).join(', ');
@@ -5305,7 +5311,7 @@ const LA_SEC_MAP = {
 };
 
 // ── 숫자 포맷 ──────────────────────────────────────────────────
-function laFmt(v, secKey) {
+function laFmt(v, secKey, label) {
   if (v === null || v === undefined) return '–';
   // 이자율 섹션: % 표시
   if (secKey === '평균이자율' || secKey === '평균이자율2') {
@@ -5314,6 +5320,16 @@ function laFmt(v, secKey) {
   // 건수 섹션
   if (secKey === '대출취급건수') {
     return v === 0 ? '–' : Math.round(v).toLocaleString();
+  }
+  // 대출채권잔액: 행 레이블로 건수/잔액 구분
+  if (secKey === '대출채권잔액') {
+    if (label && label.includes('건수')) {
+      return v === 0 ? '–' : Math.round(v).toLocaleString();
+    }
+    // 잔액: 원 단위 → 백만원
+    const mln = v / 1_000_000;
+    if (mln === 0) return '–';
+    return mln >= 1 ? Math.round(mln).toLocaleString() : mln.toFixed(1);
   }
   // 금액(원) → 백만원 단위
   const mln = v / 1_000_000;
@@ -5377,7 +5393,7 @@ function laBuildTable(tblId, secKey, rowLabels, periods) {
     periods.forEach(ym => {
       const td = document.createElement('td');
       const v = rowData[ym] ?? null;
-      td.textContent = laFmt(v, secKey);
+      td.textContent = laFmt(v, secKey, label);
       td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (v !== null && v < 0 ? 'color:#dc2626;' : '');
       tr.appendChild(td);
     });

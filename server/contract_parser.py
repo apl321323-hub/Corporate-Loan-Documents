@@ -7,6 +7,7 @@
   Q(17) : 계약구분  — '신규' | '추가대출' | '재대출' | '만기연장(전환)'
   AD(30): 계약일   — 'YYYY-MM-DD' 문자열
   T(20) : 대출액   — float (원 단위)
+  V(22) : 대출잔액  — float (원 단위)  ← 대출채권잔액 집계용
 
 집계 결과:
   {
@@ -25,6 +26,16 @@
         "취급액(대출)": {...}
       },
       ...
+    },
+    "section_balance": {                   # 대출채권잔액 (건수/잔액, V열 기반)
+      "신용채권 건수":  {"2026-05": 1234, ...},
+      "신용채권 잔액":  {"2026-05": 5678.9, ...},  # 백만원
+      "담보채권 건수":  {...},
+      "담보채권 잔액":  {...},
+      "보증채권 건수":  {...},
+      "보증채권 잔액":  {...},
+      "전체채권 건수":  {...},
+      "전체채권 잔액":  {...},
     },
     "products": ["담보론", "오투N론", ...],  # 파일 내 C열 상품명 고유값
     "source_file": "계약리스트_202606.xlsx",
@@ -102,29 +113,49 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         for p in g.get('products', []):
             prod_to_group[p] = gname
 
-    # ── 행 순회: C(3)/Q(17)/AD(30)/T(20) ─────────────────────────
+    # ── 행 순회: C(3)/Q(17)/AD(30)/T(20)/V(22) ───────────────────
     # s1_raw[ym][q_label] = 합계(원)
     s1_raw: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     # s3_raw[group][ym][q_label] = 합계(원)
     s3_raw: dict[str, dict[str, dict[str, float]]] = \
         defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
+    # balance_raw[group][ym] = {"건수": int, "잔액": float(원)}  ← 모든 행 집계
+    balance_raw: dict = defaultdict(lambda: defaultdict(lambda: {"건수": 0, "잔액": 0.0}))
+    # balance_total[ym] = {"건수": int, "잔액": float(원)}
+    balance_total: dict = defaultdict(lambda: {"건수": 0, "잔액": 0.0})
+
     products_set: set[str] = set()
+    # 잔액 집계용 기간 Set (계약구분 필터 없이 모든 행에서 수집)
+    balance_yms: set[str] = set()
 
     for row in range(2, ws.max_row + 1):
         prod = ws.cell(row=row, column=3).value    # C: 상품명
         q    = ws.cell(row=row, column=17).value   # Q: 계약구분
         ad   = ws.cell(row=row, column=30).value   # AD: 계약일
         t    = ws.cell(row=row, column=20).value   # T: 대출액
+        v    = ws.cell(row=row, column=22).value   # V: 대출잔액
 
+        ym = _ym(ad)
+        if not ym:
+            continue
+
+        # ── 대출채권잔액: 계약구분 무관, 모든 행 집계 ────────────
+        bal = _safe_amt(v)
+        balance_yms.add(ym)
+        balance_total[ym]["건수"] += 1
+        balance_total[ym]["잔액"] += bal
+        if prod:
+            gname_bal = prod_to_group.get(str(prod).strip())
+            if gname_bal:
+                balance_raw[gname_bal][ym]["건수"] += 1
+                balance_raw[gname_bal][ym]["잔액"] += bal
+
+        # ── 취급액(section1/section3): DEAL_TYPES 행만 집계 ──────
         if not q:
             continue
         q = str(q).strip()
         if q not in DEAL_TYPES:
-            continue
-
-        ym = _ym(ad)
-        if not ym:
             continue
 
         amt = _safe_amt(t)
@@ -143,7 +174,8 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
     wb.close()
 
     # ── 기간 목록 ─────────────────────────────────────────────────
-    periods = sorted(s1_raw.keys())
+    # 취급액 기간 + 잔액 기간을 합쳐 정렬 (한쪽만 있는 월도 포함)
+    periods = sorted(set(s1_raw.keys()) | balance_yms)
 
     # ── dict → 백만원 시계열 변환 헬퍼 ──────────────────────────
     def to_series(ym_label_dict: dict) -> dict:
@@ -176,11 +208,31 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         gname = g.get('name', '')
         section3[gname] = to_series(s3_raw.get(gname, {}))
 
+    # ── 대출채권잔액 (section_balance) ────────────────────────────
+    # 잔액은 원(raw) 단위로 저장 — asset_parser 엑셀 데이터와 단위 통일
+    # (laFmt에서 /1_000_000 변환, 건수는 그대로)
+    GROUP_ORDER = ['신용', '담보', '보증']
+    section_balance: dict = {}
+    for g in GROUP_ORDER:
+        section_balance[f"{g}채권 건수"] = {
+            ym: balance_raw[g][ym]["건수"] for ym in periods
+        }
+        section_balance[f"{g}채권 잔액"] = {
+            ym: balance_raw[g][ym]["잔액"] for ym in periods   # 원 단위
+        }
+    section_balance["전체채권 건수"] = {
+        ym: balance_total[ym]["건수"] for ym in periods
+    }
+    section_balance["전체채권 잔액"] = {
+        ym: balance_total[ym]["잔액"] for ym in periods        # 원 단위
+    }
+
     return {
-        "periods":     periods,
-        "section1":    section1,
-        "section3":    section3,
-        "products":    sorted(products_set),
+        "periods":          periods,
+        "section1":         section1,
+        "section3":         section3,
+        "section_balance":  section_balance,
+        "products":         sorted(products_set),
     }
 
 
@@ -213,3 +265,7 @@ if __name__ == "__main__":
         print(f"  [{gname}]")
         for label, series in gs.items():
             print(f"    {label:15s}: {series}")
+    print()
+    print("=== 대출채권잔액 ===")
+    for label, series in result['section_balance'].items():
+        print(f"  {label:15s}: {series}")

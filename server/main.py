@@ -1040,11 +1040,35 @@ async def upload_contract(file: UploadFile = File(...), period: str = ""):
         uploaded_data['contract_data'] = data
         os.unlink(tmp_path)
 
+        # ── asset_data['sections']['대출채권잔액'] 자동 업데이트 ──
+        section_balance = data.get("section_balance", {})
+        if section_balance:
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                # 기존 대출채권잔액 섹션에 기간별 값 병합 (덮어쓰기)
+                existing_sec = sections.get("대출채권잔액", {})
+                for row_label, ym_vals in section_balance.items():
+                    if row_label not in existing_sec:
+                        existing_sec[row_label] = {}
+                    existing_sec[row_label].update(ym_vals)
+                sections["대출채권잔액"] = existing_sec
+                asset_data["sections"] = sections
+                # periods 병합
+                asset_periods = asset_data.get("periods", [])
+                for ym in data.get("periods", []):
+                    if ym not in asset_periods:
+                        asset_periods.append(ym)
+                asset_periods.sort()
+                asset_data["periods"] = asset_periods
+                uploaded_data["asset_data"] = asset_data
+
         return JSONResponse({
             "success": True,
             "message": f"계약리스트 '{file.filename}' 업로드 완료",
             "periods": data.get('periods', []),
             "products": len(data.get('products', [])),
+            "balance_rows": list(section_balance.keys()),
         })
     except Exception as e:
         import traceback
