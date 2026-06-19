@@ -9,6 +9,7 @@ import io
 from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info, parse_bsis
 from asset_quality_parser import parse_asset_quality_excel
 from settlement_aq_parser import parse_settlement_asset_quality
+from business_parser import parse_business_excel
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -551,8 +552,45 @@ async def get_all_products():
 
 @app.get("/api/data/business_status")
 async def get_business_status():
-    """영업현황 데이터"""
+    """영업현황 데이터 (기존 형식)"""
     return uploaded_data.get("business_status", {})
+
+
+@app.get("/api/data/business")
+async def get_business_detail():
+    """영업현황 3섹션 데이터 (엑셀 파싱 기반)"""
+    d = uploaded_data.get("business_detail")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
+
+
+@app.post("/api/upload/business")
+async def upload_business(file: UploadFile = File(...), period: str = ""):
+    """영업현황 엑셀 업로드 (기업여신자료 - 영업현황.xlsx)"""
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_business_excel(tmp_path)
+        if period:
+            data['upload_period'] = period
+        uploaded_data['business_detail'] = data
+        os.unlink(tmp_path)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"영업현황 '{file.filename}' 업로드 완료",
+            "periods": len(data.get('periods', [])),
+            "upload_period": period or "(미지정)",
+        })
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}\n{traceback.format_exc()}")
 
 
 @app.get("/api/data/loan_asset")

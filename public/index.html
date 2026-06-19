@@ -167,6 +167,32 @@
   .aq-product-block { margin-bottom: 16px; }
   .aq-product-title { padding: 9px 16px; background: #334155; color: #fff; font-weight: 700; font-size: 13px; border-radius: 8px 8px 0 0; }
 
+  /* ── 영업현황 시계열 테이블 ── */
+  .bs-time-table th, .bs-time-table td { white-space: nowrap; }
+  .bs-group-col { position: sticky; left: 0; z-index: 3; background: #f1f5f9 !important; min-width: 90px; max-width: 110px; text-align: left !important; font-weight: 700; }
+  .bs-sub-col   { position: sticky; left: 90px; z-index: 2; background: #f8fafc !important; min-width: 105px; max-width: 130px; text-align: left !important; }
+  .bs-time-table thead th { background: #1e3a5f !important; color: #fff !important; font-size: 11px; padding: 6px 10px; text-align: right; }
+  .bs-time-table thead th.bs-group-col { background: #0f2748 !important; left: 0; }
+  .bs-time-table thead th.bs-sub-col   { background: #163558 !important; left: 90px; }
+  .bs-time-table tbody td { font-size: 11.5px; padding: 5px 10px; text-align: right; }
+  .bs-time-table tbody td.bs-group-col { font-size: 12px; font-weight: 700; color: #1e3a5f; background: #f1f5f9 !important; }
+  .bs-time-table tbody td.bs-sub-col   { font-size: 11.5px; font-weight: 500; color: #334155; background: #f8fafc !important; }
+  .bs-time-table tbody tr.bs-row-asset  td { background: #f0fdf4 !important; font-weight: 700; }
+  .bs-time-table tbody tr.bs-row-deal   td { background: #eff6ff !important; }
+  .bs-time-table tbody tr.bs-row-sub    td { background: #fafafa !important; }
+  .bs-time-table tbody tr.bs-row-sub    td.bs-sub-col { padding-left: 18px; color: #64748b; font-weight: 400; font-size: 11px; }
+  .bs-time-table tbody tr.bs-row-repay  td { background: #fff7ed !important; }
+  .bs-time-table tbody tr.bs-row-loss   td { background: #fef2f2 !important; color: #b91c1c; }
+  .bs-time-table tbody tr.bs-row-total  td { background: #fef9c3 !important; font-weight: 700; }
+  .bs-time-table tbody tr.bs-row-prov   td { background: #f5f3ff !important; }
+  .bs-time-table tbody tr.bs-row-provsub td { background: #faf5ff !important; }
+  .bs-time-table tbody tr.bs-row-provsub td.bs-sub-col { padding-left: 18px; color: #7c3aed; font-weight: 400; font-size: 11px; }
+  .bs-time-table tbody tr.bs-row-provend td { background: #ede9fe !important; font-weight: 700; color: #4c1d95; }
+  .bs-section-header { padding: 12px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #fff; }
+  .bs-section-header.blue   { background: #1e3a5f; }
+  .bs-section-header.green  { background: #0f5132; }
+  .bs-section-header.purple { background: #4c1d95; }
+
   /* Summary KPI cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
   .kpi-grid.kpi-6col { grid-template-columns: repeat(6, 1fr); }
@@ -1113,28 +1139,137 @@
   <!-- ===== 5. 영업현황 ===== -->
   <section class="page" id="page-business">
     <div class="section-header">
-      <h3>영업현황</h3>
-      <div class="date-filter">
-        <label>기간:</label>
-        <select id="bs2-period" onchange="renderBusiness()">
-          <option value="12">최근 12개월</option>
-          <option value="24">최근 24개월</option>
-          <option value="all">전체</option>
-        </select>
+      <h3><i class="fas fa-chart-line" style="color:#1e3a5f;margin-right:8px;"></i>영업현황</h3>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <!-- 기간 필터 -->
+        <div class="date-filter">
+          <label>기간:</label>
+          <select id="bs-period-filter" onchange="bsRenderSection()">
+            <option value="12">최근 12개월</option>
+            <option value="24">최근 24개월</option>
+            <option value="36">최근 36개월</option>
+            <option value="all">전체</option>
+          </select>
+        </div>
+        <!-- 데이터 배지 -->
+        <span id="bs-data-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#e2e8f0;color:#64748b;">데이터 없음</span>
+        <!-- 업로드 버튼 -->
+        <button onclick="showPage('page-upload')" style="font-size:12px;padding:4px 12px;border:1px solid #1e3a5f;border-radius:5px;background:#fff;color:#1e3a5f;cursor:pointer;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><i class="fas fa-chart-line"></i> 영업현황 추이</div>
-      <div class="chart-wrap"><canvas id="chart-business"></canvas></div>
+    <!-- 데이터 없음 안내 -->
+    <div id="bs-no-data" class="card" style="padding:40px;text-align:center;color:#94a3b8;">
+      <i class="fas fa-cloud-upload-alt" style="font-size:36px;margin-bottom:12px;display:block;"></i>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px;">영업현황 데이터가 없습니다</div>
+      <div style="font-size:13px;">엑셀 업로드 → 섹터 1 또는 섹터 7에서 <strong>기업여신자료 - 영업현황.xlsx</strong>을 업로드하세요</div>
     </div>
 
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-scroll" style="max-height:500px;">
-        <table class="data-table" id="biz-table">
-          <thead><tr id="biz-header"><th class="label">구분</th></tr></thead>
-          <tbody id="biz-body"><tr><td class="label">데이터를 로드하는 중...</td></tr></tbody>
-        </table>
+    <!-- KPI 카드 (최신 기간 기준) -->
+    <div id="bs-kpi-area" style="display:none;">
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="kpi-card">
+          <div class="kpi-label">기말자산</div>
+          <div class="kpi-value" id="kpi-bs-asset">-</div>
+          <div class="kpi-sub" id="kpi-bs-period">최근 기준</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">취급액(대출)</div>
+          <div class="kpi-value" id="kpi-bs-deal">-</div>
+          <div class="kpi-sub">신규+추가+재대출</div>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-label">원금회수액</div>
+          <div class="kpi-value" id="kpi-bs-repay">-</div>
+          <div class="kpi-sub">최근 기준</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">기말 충당금</div>
+          <div class="kpi-value" id="kpi-bs-prov">-</div>
+          <div class="kpi-sub">최근 기준</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 섹션 탭 -->
+    <div id="bs-tabs-area" style="display:none;">
+      <div class="aq-tab-row" style="margin-bottom:12px;">
+        <button class="aq-stab active" id="bs-stab-s1" onclick="bsSwitchSection('s1')">
+          <i class="fas fa-table"></i> 전체 영업현황
+        </button>
+        <button class="aq-stab" id="bs-stab-s2" onclick="bsSwitchSection('s2')">
+          <i class="fas fa-layer-group"></i> 대출구분별
+          <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/기업)</span>
+        </button>
+        <button class="aq-stab" id="bs-stab-s3" onclick="bsSwitchSection('s3')">
+          <i class="fas fa-shield-alt"></i> 담보구분별
+          <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/담보)</span>
+        </button>
+      </div>
+
+      <!-- ── 섹션1: 전체 영업현황 ── -->
+      <div id="bs-view-s1">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="bs-section-header blue">
+            <i class="fas fa-table"></i> 전체 영업현황
+            <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table bs-time-table">
+              <thead>
+                <tr id="bs-head-s1">
+                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
+                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                </tr>
+              </thead>
+              <tbody id="bs-body-s1"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 섹션2: 대출구분별 (신용/기업) ── -->
+      <div id="bs-view-s2" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+          <div class="bs-section-header green">
+            <i class="fas fa-layer-group"></i> 대출구분별 — 신용대출 / 기업대출
+            <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table bs-time-table">
+              <thead>
+                <tr id="bs-head-s2">
+                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
+                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                </tr>
+              </thead>
+              <tbody id="bs-body-s2"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 섹션3: 담보구분별 (신용/담보) ── -->
+      <div id="bs-view-s3" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+          <div class="bs-section-header purple">
+            <i class="fas fa-shield-alt"></i> 담보구분별 — 신용대출 / 담보대출
+            <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table bs-time-table">
+              <thead>
+                <tr id="bs-head-s3">
+                  <th class="bs-group-col label" style="min-width:90px;">구분</th>
+                  <th class="bs-sub-col label" style="min-width:100px;">소분류</th>
+                </tr>
+              </thead>
+              <tbody id="bs-body-s3"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1374,6 +1509,42 @@
       </div>
       <div class="upload-action-row">
         <button class="btn-upload" onclick="uploadFile('aq')" id="upload-btn-aq" disabled style="background:#b45309;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- 섹터 7: 영업현황 -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#0f766e;">섹터 7</span>
+        <div>
+          <div class="upload-sector-title">영업현황</div>
+          <div class="upload-sector-desc">기업여신자료 - 영업현황.xlsx → 영업현황 탭 (3섹션)</div>
+        </div>
+        <span class="upload-status-dot" id="dot-business"></span>
+      </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#0f766e;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-business" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-business" class="upload-period-select"></select>
+        <span id="period-badge-business" class="upload-period-badge" style="display:none;"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-business" onclick="document.getElementById('file-input-business').click()">
+        <i class="fas fa-chart-line" style="color:#0f766e;"></i>
+        <div class="drop-text" id="drop-text-business">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">기업여신자료 - 영업현황.xlsx (영업현황 APL기준 시트)</div>
+      </div>
+      <input type="file" id="file-input-business" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'business')">
+      <div class="upload-progress" id="upload-progress-business">
+        <div class="upload-status-text" id="upload-status-business">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-business"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('business')" id="upload-btn-business" disabled style="background:#0f766e;">
           <i class="fas fa-upload"></i> 업로드
         </button>
       </div>
@@ -1689,7 +1860,7 @@ const selectedFiles = { main: null, settle: null, company: null, bsis: null, 'pd
     }
   }
   // 업로드 섹터별 년월 셀렉트
-  const sectors = ['main','settle','company','bsis','aq'];
+  const sectors = ['main','settle','company','bsis','aq','business'];
   sectors.forEach(s => {
     const ySel = document.getElementById(`year-${s}`);
     const mSel = document.getElementById(`month-${s}`);
@@ -1745,10 +1916,11 @@ async function uploadFile(sector) {
 
   const endpointMap = {
     main:   '/api/upload',
-    settle: '/api/upload/settlement-aq',
-    company:'/api/upload/company_info',
-    bsis:   '/api/upload/bsis',
-    aq:     '/api/upload/asset-quality',
+    settle:   '/api/upload/settlement-aq',
+    company:  '/api/upload/company_info',
+    bsis:     '/api/upload/bsis',
+    aq:       '/api/upload/asset-quality',
+    business: '/api/upload/business',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
@@ -1802,6 +1974,9 @@ async function uploadFile(sector) {
     } else if (sector === 'aq') {
       await loadAQData();
       showToast(`✅ 자산건전성 업로드 완료 (${res.data.periods}개월, ${res.data.products}개 상품)${periodStr ? ' — 기준: ' + periodStr : ''}`, 'success');
+    } else if (sector === 'business') {
+      await loadBusinessData();
+      showToast(`✅ 영업현황 업로드 완료 (${res.data.periods}개월)${periodStr ? ' — 기준: ' + periodStr : ''}`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -3651,43 +3826,179 @@ async function pgPersist() {
   }
 }
 
-// ===== 영업현황 렌더링 =====
+// ===== 영업현황 렌더링 (신규) =====
+let bsData = null;          // parse_business_excel 결과
+let bsCurrentSection = 's1';
+
+// 섹션1 행 정의
+const BS_S1_ROWS = [
+  { key: '기초대출자산',          group: '기초대출자산', sub: null,          cls: 'bs-row-asset' },
+  { key: '대출_신규',             group: '대출',        sub: '신규',         cls: 'bs-row-sub' },
+  { key: '대출_추가',             group: null,          sub: '추가',         cls: 'bs-row-sub' },
+  { key: '대출_재대출',           group: null,          sub: '재대출',       cls: 'bs-row-sub' },
+  { key: '대출_취급액(대출)',      group: null,          sub: '취급액(대출)', cls: 'bs-row-deal' },
+  { key: '매입',                  group: '매입',        sub: null,          cls: '' },
+  { key: '원금회수액',             group: '원금회수액',  sub: null,          cls: 'bs-row-repay' },
+  { key: '이자회수액',             group: '이자회수액',  sub: null,          cls: '' },
+  { key: '실상각액_월중매각액',    group: '실상각액',    sub: '월중매각액',   cls: 'bs-row-loss' },
+  { key: '실상각액_월중상각액',    group: null,          sub: '월중상각액',   cls: 'bs-row-loss' },
+  { key: '기말자산',              group: '기말자산',    sub: null,           cls: 'bs-row-total' },
+  { key: '대손충당_기초 충당금',   group: '대손충당',    sub: '기초 충당금',  cls: 'bs-row-provsub' },
+  { key: '대손충당_설정분',        group: null,          sub: '설정분',       cls: 'bs-row-provsub' },
+  { key: '대손충당_사용분(환입)',  group: null,          sub: '사용분(환입)', cls: 'bs-row-provsub' },
+  { key: '기말 충당금',           group: '기말 충당금', sub: null,           cls: 'bs-row-provend' },
+];
+
+// 섹션2 행 정의
+const BS_S2_ROWS = [
+  { key: '신용대출_신규',          group: '신용대출', sub: '신규',         cls: 'bs-row-sub' },
+  { key: '신용대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
+  { key: '신용대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
+  { key: '신용대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+  { key: '기업대출_신규',          group: '기업대출', sub: '신규',         cls: 'bs-row-sub' },
+  { key: '기업대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
+  { key: '기업대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
+  { key: '기업대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+];
+
+// 섹션3 행 정의
+const BS_S3_ROWS = [
+  { key: '신용대출_신규',          group: '신용대출', sub: '신규',         cls: 'bs-row-sub' },
+  { key: '신용대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
+  { key: '신용대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
+  { key: '신용대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+  { key: '담보대출_신규',          group: '담보대출', sub: '신규',         cls: 'bs-row-sub' },
+  { key: '담보대출_추가',          group: null,       sub: '추가',         cls: 'bs-row-sub' },
+  { key: '담보대출_재대출',        group: null,       sub: '재대출',       cls: 'bs-row-sub' },
+  { key: '담보대출_취급액(대출)',  group: null,       sub: '취급액(대출)', cls: 'bs-row-deal' },
+];
+
+function bsFmt(v) {
+  if (v === null || v === undefined) return '-';
+  return Math.round(v).toLocaleString();
+}
+
+function bsFilteredIndices() {
+  if (!bsData) return [];
+  const periods = bsData.periods;
+  const n = document.getElementById('bs-period-filter')?.value || '12';
+  if (n === 'all') return periods.map((_, i) => i);
+  const count = parseInt(n);
+  const start = Math.max(0, periods.length - count);
+  return Array.from({length: periods.length - start}, (_, i) => start + i);
+}
+
+function bsBuildTable(headId, bodyId, rowDefs, sectionData) {
+  const indices = bsFilteredIndices();
+  const periods = bsData.periods;
+
+  // thead: 기간 헤더
+  const headRow = document.getElementById(headId);
+  while (headRow.children.length > 2) headRow.removeChild(headRow.lastChild);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
+  });
+
+  // tbody
+  const tbody = document.getElementById(bodyId);
+  tbody.innerHTML = '';
+
+  rowDefs.forEach(({ key, group, sub, cls }) => {
+    const vals = sectionData[key];
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+
+    // 구분 셀 (group)
+    const groupTd = document.createElement('td');
+    groupTd.className = 'bs-group-col';
+    groupTd.textContent = group || '';
+    tr.appendChild(groupTd);
+
+    // 소분류 셀 (sub)
+    const subTd = document.createElement('td');
+    subTd.className = 'bs-sub-col';
+    subTd.textContent = sub || '';
+    if (!sub && group) {
+      // group만 있고 sub 없는 행: sub셀은 비움
+      subTd.textContent = '';
+    }
+    tr.appendChild(subTd);
+
+    // 데이터 셀
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      td.textContent = bsFmt(vals ? vals[i] : null);
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function bsSwitchSection(sec) {
+  bsCurrentSection = sec;
+  ['s1','s2','s3'].forEach(s => {
+    const el = document.getElementById(`bs-view-${s}`);
+    if (el) el.style.display = s === sec ? '' : 'none';
+    const btn = document.getElementById(`bs-stab-${s}`);
+    if (btn) btn.classList.toggle('active', s === sec);
+  });
+  bsRenderSection();
+}
+
+function bsRenderSection() {
+  if (!bsData) return;
+  if (bsCurrentSection === 's1') bsBuildTable('bs-head-s1','bs-body-s1', BS_S1_ROWS, bsData.section1);
+  else if (bsCurrentSection === 's2') bsBuildTable('bs-head-s2','bs-body-s2', BS_S2_ROWS, bsData.section2);
+  else if (bsCurrentSection === 's3') bsBuildTable('bs-head-s3','bs-body-s3', BS_S3_ROWS, bsData.section3);
+}
+
+function bsUpdateKPI() {
+  if (!bsData || !bsData.periods.length) return;
+  const lastIdx = bsData.periods.length - 1;
+  const lastPeriod = bsData.periods[lastIdx];
+  const s1 = bsData.section1;
+
+  const asset = s1['기말자산']?.[lastIdx];
+  const deal  = s1['대출_취급액(대출)']?.[lastIdx];
+  const repay = s1['원금회수액']?.[lastIdx];
+  const prov  = s1['기말 충당금']?.[lastIdx];
+
+  const fmt = v => (v != null ? Math.round(v).toLocaleString() : '-');
+  document.getElementById('kpi-bs-asset').textContent = fmt(asset);
+  document.getElementById('kpi-bs-deal').textContent  = fmt(deal);
+  document.getElementById('kpi-bs-repay').textContent = fmt(repay);
+  document.getElementById('kpi-bs-prov').textContent  = fmt(prov);
+  document.getElementById('kpi-bs-period').textContent = lastPeriod + ' 기준';
+}
+
+async function loadBusinessData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/business`);
+    if (res.data && res.data.periods) {
+      bsData = res.data;
+      document.getElementById('bs-no-data').style.display = 'none';
+      document.getElementById('bs-kpi-area').style.display = '';
+      document.getElementById('bs-tabs-area').style.display = '';
+
+      const badge = document.getElementById('bs-data-badge');
+      badge.textContent = `${bsData.periods[0]} ~ ${bsData.periods[bsData.periods.length-1]} (${bsData.periods.length}개월)`;
+      badge.style.background = '#d1fae5';
+      badge.style.color = '#065f46';
+
+      bsUpdateKPI();
+      bsSwitchSection(bsCurrentSection);
+    }
+  } catch(e) {
+    // 데이터 없음 — 무시
+  }
+}
+
+// 기존 renderBusiness() 호환 유지 (다른 곳에서 호출 시)
 function renderBusiness() {
-  const d = appData.business_status;
-  if (!d) return;
-
-  const period = document.getElementById('bs2-period').value;
-  const filtered = getFilteredDates(d.dates || {}, period);
-
-  const header = document.getElementById('biz-header');
-  header.innerHTML = '<th class="label" style="min-width:200px;">구분</th>' +
-    filtered.map(([, date]) => `<th>${date}</th>`).join('');
-
-  const body = document.getElementById('biz-body');
-  body.innerHTML = Object.entries(d.items || {}).map(([label, vals]) => {
-    const cells = filtered.map(([, date]) => {
-      const v = vals[date];
-      if (v === null || v === undefined) return '<td>-</td>';
-      if (typeof v === 'number' && Math.abs(v) < 1 && v !== 0)
-        return `<td>${(v * 100).toFixed(2)}%</td>`;
-      return `<td>${fmtK(v)}</td>`;
-    }).join('');
-    return `<tr><td class="label">${label}</td>${cells}</tr>`;
-  }).join('');
-
-  // 차트
-  const firstItems = Object.keys(d.items || {}).slice(0, 3);
-  drawLineChart('chart-business', filtered.map(([, d]) => d),
-    firstItems.map((item, i) => ({
-      label: item,
-      data: filtered.map(([, date]) => {
-        const v = d.items[item]?.[date];
-        if (v === null || v === undefined) return 0;
-        if (typeof v === 'number' && Math.abs(v) < 1 && v !== 0) return +(v * 100).toFixed(2);
-        return +(v / 1e8).toFixed(2);
-      }),
-      color: ['#3b82f6', '#10b981', '#f59e0b'][i]
-    })), '');
+  bsRenderSection();
 }
 
 // ===== 대출자산속성 렌더링 =====
@@ -3862,6 +4173,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadBsisData();           // BS/IS 별도 로드
   loadAQData();             // 자산건전성 별도 로드 (기업여신자료 형식)
   loadSettlementAQData();   // 결산자료 기반 자산건전성 로드 (우선순위: 기업여신자료 없으면 표시)
+  loadBusinessData();       // 영업현황 별도 로드
 });
 </script>
 </body>
