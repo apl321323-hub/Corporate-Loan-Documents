@@ -520,6 +520,24 @@
   .mp-del-excel:hover { color:#ef4444; background:#fee2e2; }
   /* 수기 추가 과목 라벨 강조 */
   .mp-label-cell.mp-custom { background:#eef6ff; border-right-color:#93c5fd; }
+
+  /* ── 업로드 년월 선택 행 ── */
+  .upload-period-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 14px; background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0; flex-wrap: wrap;
+  }
+  .upload-period-label { font-size: 12px; color: #475569; font-weight: 600; flex-shrink: 0; }
+  .upload-period-select {
+    border: 1px solid #cbd5e1; border-radius: 5px;
+    padding: 3px 7px; font-size: 12px; color: #1e293b;
+    background: #fff; cursor: pointer;
+  }
+  .upload-period-select:focus { outline: none; border-color: #3b82f6; }
+  .upload-period-badge {
+    font-size: 11px; padding: 2px 9px; border-radius: 99px;
+    background: #d1fae5; color: #065f46; font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -558,6 +576,9 @@
     </a>
     <a onclick="showPage('page-mapping')" id="nav-mapping" class="nav-mapping">
       <i class="fas fa-sliders-h"></i> PDF 매핑 설정
+    </a>
+    <a onclick="showPage('page-product-config')" id="nav-product-config" class="nav-mapping">
+      <i class="fas fa-tags"></i> 상품구성
     </a>
   </nav>
 </aside>
@@ -1188,6 +1209,15 @@
         </div>
         <span class="upload-status-dot" id="dot-main"></span>
       </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#1e3a5f;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-main" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-main" class="upload-period-select"></select>
+        <span id="period-badge-main" class="upload-period-badge" style="display:none;"></span>
+      </div>
       <div class="drop-zone" id="drop-zone-main" onclick="document.getElementById('file-input-main').click()">
         <i class="fas fa-cloud-upload-alt"></i>
         <div class="drop-text" id="drop-text-main">클릭하거나 파일을 드래그하여 선택</div>
@@ -1214,6 +1244,15 @@
           <div class="upload-sector-desc">개인별 대출 결산 데이터 → 자산건전성 분석</div>
         </div>
         <span class="upload-status-dot" id="dot-settle"></span>
+      </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#7c3aed;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-settle" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-settle" class="upload-period-select"></select>
+        <span id="period-badge-settle" class="upload-period-badge" style="display:none;"></span>
       </div>
       <div class="drop-zone" id="drop-zone-settle" onclick="document.getElementById('file-input-settle').click()">
         <i class="fas fa-table"></i>
@@ -1242,6 +1281,15 @@
         </div>
         <span class="upload-status-dot" id="dot-company"></span>
       </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#0891b2;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-company" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-company" class="upload-period-select"></select>
+        <span id="period-badge-company" class="upload-period-badge" style="display:none;"></span>
+      </div>
       <div class="drop-zone" id="drop-zone-company" onclick="document.getElementById('file-input-company').click()">
         <i class="fas fa-building"></i>
         <div class="drop-text" id="drop-text-company">클릭하거나 파일을 드래그하여 선택</div>
@@ -1269,6 +1317,15 @@
         </div>
         <span class="upload-status-dot" id="dot-bsis"></span>
       </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#059669;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-bsis" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-bsis" class="upload-period-select"></select>
+        <span id="period-badge-bsis" class="upload-period-badge" style="display:none;"></span>
+      </div>
       <div class="drop-zone" id="drop-zone-bsis" onclick="document.getElementById('file-input-bsis').click()">
         <i class="fas fa-balance-scale" style="color:#059669;"></i>
         <div class="drop-text" id="drop-text-bsis">클릭하거나 파일을 드래그하여 선택</div>
@@ -1286,10 +1343,46 @@
       </div>
     </div>
 
-    <!-- 섹터 5: 재무제표 PDF (월별 업데이트) -->
+    <!-- 섹터 5: 자산건전성 (기업여신자료 형식, 월별) -->
+    <div class="upload-sector-card">
+      <div class="upload-sector-header">
+        <span class="sector-badge" style="background:#b45309;">섹터 5</span>
+        <div>
+          <div class="upload-sector-title">자산건전성</div>
+          <div class="upload-sector-desc">기업여신자료 - 자산건정성.xlsx → 자산건전성 탭</div>
+        </div>
+        <span class="upload-status-dot" id="dot-aq"></span>
+      </div>
+      <!-- 기준 년월 -->
+      <div class="upload-period-row">
+        <i class="fas fa-calendar-alt" style="color:#b45309;"></i>
+        <span class="upload-period-label">업데이트 기준 년월</span>
+        <select id="year-aq" class="upload-period-select"></select>
+        <span style="color:#64748b;font-weight:700;">.</span>
+        <select id="month-aq" class="upload-period-select"></select>
+        <span id="period-badge-aq" class="upload-period-badge" style="display:none;"></span>
+      </div>
+      <div class="drop-zone" id="drop-zone-aq" onclick="document.getElementById('file-input-aq').click()">
+        <i class="fas fa-shield-alt" style="color:#b45309;"></i>
+        <div class="drop-text" id="drop-text-aq">클릭하거나 파일을 드래그하여 선택</div>
+        <div class="drop-sub">기업여신자료 - 자산건정성.xlsx (자산건전성 APL기준 시트)</div>
+      </div>
+      <input type="file" id="file-input-aq" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event,'aq')">
+      <div class="upload-progress" id="upload-progress-aq">
+        <div class="upload-status-text" id="upload-status-aq">업로드 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar-aq"></div></div>
+      </div>
+      <div class="upload-action-row">
+        <button class="btn-upload" onclick="uploadFile('aq')" id="upload-btn-aq" disabled style="background:#b45309;">
+          <i class="fas fa-upload"></i> 업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- 섹터 6: 재무제표 PDF (월별 업데이트) -->
     <div class="upload-sector-card upload-sector-card--pdf" style="grid-column: 1 / -1;">
       <div class="upload-sector-header">
-        <span class="sector-badge" style="background:#dc2626;">섹터 5</span>
+        <span class="sector-badge" style="background:#dc2626;">섹터 6</span>
         <div>
           <div class="upload-sector-title">재무제표 PDF <span style="font-size:11px;color:#64748b;font-weight:400;">(월별 업데이트)</span></div>
           <div class="upload-sector-desc">재무상태표·손익계산서 PDF → BS/IS/요약 탭의 특정 월 컬럼에 자동 입력</div>
@@ -1429,6 +1522,64 @@
   </div>
 </section>
 
+<!-- ===== 상품구성 설정 페이지 ===== -->
+<section class="page" id="page-product-config">
+  <div class="section-header" style="margin-bottom:16px;">
+    <h3><i class="fas fa-tags" style="color:#7c3aed;margin-right:8px;"></i>상품구성</h3>
+    <span style="font-size:12px;color:#64748b;">상품을 그룹으로 묶어 자산건전성·영업현황·대출자산속성 화면에 반영합니다.</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+
+    <!-- 왼쪽: 그룹 목록 + 신규 추가 -->
+    <div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:12px 16px;background:#4c1d95;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+          <span><i class="fas fa-layer-group"></i> 상품 그룹</span>
+          <span id="pg-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+        </div>
+        <!-- 그룹 목록 -->
+        <div id="pg-group-list" style="max-height:400px;overflow-y:auto;">
+          <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">
+            아직 그룹이 없습니다
+          </div>
+        </div>
+        <!-- 그룹 추가 입력 -->
+        <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+          <div style="display:flex;gap:6px;">
+            <input id="pg-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 신용, 담보…)"
+              style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+              onkeydown="if(event.key==='Enter') pgAddGroup()">
+            <button onclick="pgAddGroup()"
+              style="background:#4c1d95;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+              <i class="fas fa-plus"></i> 추가
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 선택된 그룹의 상품 편집 -->
+    <div id="pg-editor-wrap">
+      <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+        <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>
+        왼쪽에서 그룹을 선택하세요
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 저장된 그룹 현황 (전체 요약) -->
+  <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+    <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
+      <i class="fas fa-list-ul"></i> 전체 그룹 현황
+    </div>
+    <div id="pg-summary" style="padding:16px;">
+      <span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <!-- Loading -->
@@ -1456,13 +1607,15 @@ function showPage(pageId) {
     'page-company': 'nav-company', 'page-bspl': 'nav-bspl',
     'page-cashflow': 'nav-cashflow', 'page-asset': 'nav-asset',
     'page-business': 'nav-business', 'page-loan': 'nav-loan',
-    'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload', 'page-mapping': 'nav-mapping'
+    'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload', 'page-mapping': 'nav-mapping',
+    'page-product-config': 'nav-product-config'
   };
   const titleMap = {
     'page-company': '기업정보', 'page-bspl': '재무상태표 / 손익계산서',
     'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
     'page-business': '영업현황', 'page-loan': '대출자산속성',
-    'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드', 'page-mapping': 'PDF 매핑 설정'
+    'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드', 'page-mapping': 'PDF 매핑 설정',
+    'page-product-config': '상품구성'
   };
   const nav = document.getElementById(navMap[pageId]);
   if (nav) nav.classList.add('active');
@@ -1471,6 +1624,10 @@ function showPage(pageId) {
   // 매핑 설정 페이지 진입 시 자동 로드
   if (pageId === 'page-mapping') {
     loadMappingConfig();
+  }
+  // 상품구성 페이지 진입 시 자동 로드
+  if (pageId === 'page-product-config') {
+    pgInit();
   }
 }
 
@@ -1516,18 +1673,55 @@ const selectedFiles = { main: null, settle: null, company: null, bsis: null, 'pd
   });
 });
 
-// 년도 select 초기화 (현재 연도 기준 ±3년)
-(function initPdfYearSelect() {
-  const sel = document.getElementById('pdf-year');
-  if (!sel) return;
+// 년도 select 초기화 — PDF + 각 섹터 모두
+(function initAllYearSelects() {
   const curYear = new Date().getFullYear();
-  for (let y = curYear - 3; y <= curYear + 1; y++) {
-    const opt = document.createElement('option');
-    opt.value = String(y);
-    opt.textContent = y + '년';
-    if (y === curYear) opt.selected = true;
-    sel.appendChild(opt);
+  const curMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+  // PDF 섹터
+  const pdfSel = document.getElementById('pdf-year');
+  if (pdfSel) {
+    for (let y = curYear - 3; y <= curYear + 1; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = y + '년';
+      if (y === curYear) opt.selected = true;
+      pdfSel.appendChild(opt);
+    }
   }
+  // 업로드 섹터별 년월 셀렉트
+  const sectors = ['main','settle','company','bsis','aq'];
+  sectors.forEach(s => {
+    const ySel = document.getElementById(`year-${s}`);
+    const mSel = document.getElementById(`month-${s}`);
+    if (!ySel || !mSel) return;
+    // 년도
+    for (let y = curYear - 3; y <= curYear + 1; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = y + '년';
+      if (y === curYear) opt.selected = true;
+      ySel.appendChild(opt);
+    }
+    // 월
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = String(m).padStart(2,'0');
+      opt.textContent = String(m).padStart(2,'0') + '월';
+      if (opt.value === curMonth) opt.selected = true;
+      mSel.appendChild(opt);
+    }
+    // 변경 시 뱃지 업데이트
+    const updateBadge = () => {
+      const badge = document.getElementById(`period-badge-${s}`);
+      if (badge) {
+        badge.textContent = `${ySel.value}.${mSel.value}`;
+        badge.style.display = 'inline';
+      }
+    };
+    ySel.addEventListener('change', updateBadge);
+    mSel.addEventListener('change', updateBadge);
+    updateBadge();
+  });
 })();
 
 function handleFileSelect(e, sector) {
@@ -1544,15 +1738,22 @@ async function uploadFile(sector) {
   const file = selectedFiles[sector];
   if (!file) return;
 
+  // 기준 년월 수집
+  const ySel = document.getElementById(`year-${sector}`);
+  const mSel = document.getElementById(`month-${sector}`);
+  const periodStr = (ySel && mSel) ? `${ySel.value}.${mSel.value}` : '';
+
   const endpointMap = {
-    main: '/api/upload',
+    main:   '/api/upload',
     settle: '/api/upload/settlement',
-    company: '/api/upload/company_info',
-    bsis: '/api/upload/bsis'
+    company:'/api/upload/company_info',
+    bsis:   '/api/upload/bsis',
+    aq:     '/api/upload/asset-quality',
   };
   const endpoint = endpointMap[sector] || '/api/upload';
   const formData = new FormData();
   formData.append('file', file);
+  if (periodStr) formData.append('period', periodStr);
 
   document.getElementById(`upload-progress-${sector}`).style.display = 'block';
   document.getElementById(`upload-btn-${sector}`).disabled = true;
@@ -1575,6 +1776,13 @@ async function uploadFile(sector) {
     document.getElementById(`upload-status-${sector}`).textContent = '완료!';
     const dot = document.getElementById(`dot-${sector}`);
     if (dot) dot.classList.add('done');
+    // 기준년월 뱃지 갱신
+    const badge = document.getElementById(`period-badge-${sector}`);
+    if (badge && periodStr) {
+      badge.textContent = periodStr + ' ✓';
+      badge.style.background = '#d1fae5';
+      badge.style.color = '#065f46';
+    }
 
     if (sector === 'settle') {
       await loadSettlementData();
@@ -1589,6 +1797,9 @@ async function uploadFile(sector) {
     } else if (sector === 'bsis') {
       await loadBsisData();
       showToast('✅ ' + res.data.message + ` (${(res.data.sheets||[]).join(', ')})`, 'success');
+    } else if (sector === 'aq') {
+      await loadAQData();
+      showToast(`✅ 자산건전성 업로드 완료 (${res.data.periods}개월, ${res.data.products}개 상품)${periodStr ? ' — 기준: ' + periodStr : ''}`, 'success');
     } else {
       await loadAllData();
       showToast('✅ ' + res.data.message, 'success');
@@ -3112,6 +3323,181 @@ async function loadAQData() {
     }
   } catch(e) {
     // 데이터 없음 — 무시
+  }
+}
+
+// ===== 상품구성 (Product Groups) =====
+let pgGroups = [];           // [{name, products:[]}]
+let pgAllProducts = [];      // 전체 상품 목록
+let pgSelectedGroupIdx = -1; // 현재 편집 중인 그룹 인덱스
+
+async function pgInit() {
+  try {
+    const [gRes, pRes] = await Promise.all([
+      axios.get(`${API_BASE}/api/product-groups`),
+      axios.get(`${API_BASE}/api/product-groups/all-products`),
+    ]);
+    pgGroups = gRes.data || [];
+    pgAllProducts = pRes.data || [];
+  } catch(e) { pgGroups = []; pgAllProducts = []; }
+  pgRenderGroupList();
+  pgRenderSummary();
+}
+
+function pgRenderGroupList() {
+  const list = document.getElementById('pg-group-list');
+  const cnt  = document.getElementById('pg-group-count');
+  if (!list) return;
+  cnt.textContent = `${pgGroups.length}개`;
+  if (pgGroups.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = '';
+  pgGroups.forEach((g, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:center;gap:8px;padding:10px 14px;
+      cursor:pointer;border-bottom:1px solid #f1f5f9;
+      background:${idx === pgSelectedGroupIdx ? '#ede9fe' : '#fff'};`;
+    div.innerHTML = `
+      <span style="flex:1;font-size:13px;font-weight:600;color:#1e293b;">${g.name}</span>
+      <span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:99px;">${g.products.length}개</span>
+      <button title="삭제" onclick="pgDeleteGroup(${idx})" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;">✕</button>`;
+    div.querySelector('span:first-child').addEventListener('click', () => pgSelectGroup(idx));
+    list.appendChild(div);
+  });
+}
+
+function pgSelectGroup(idx) {
+  pgSelectedGroupIdx = idx;
+  pgRenderGroupList();
+  pgRenderEditor();
+}
+
+function pgRenderEditor() {
+  const wrap = document.getElementById('pg-editor-wrap');
+  if (pgSelectedGroupIdx < 0 || pgSelectedGroupIdx >= pgGroups.length) {
+    wrap.innerHTML = '<div class="card" style="padding:32px;text-align:center;color:#94a3b8;"><i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>';
+    return;
+  }
+  const g = pgGroups[pgSelectedGroupIdx];
+  const selectedSet = new Set(g.products);
+
+  // 상품 체크박스 렌더
+  const productRows = pgAllProducts.map(p => {
+    const chk = selectedSet.has(p) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;
+        background:${chk ? '#ede9fe' : 'transparent'};transition:.15s;">
+      <input type="checkbox" value="${p}" ${chk} style="accent-color:#7c3aed;width:15px;height:15px;">
+      <span style="font-size:13px;color:#1e293b;">${p}</span>
+    </label>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#4c1d95;color:#fff;font-weight:700;font-size:14px;
+          display:flex;align-items:center;justify-content:space-between;">
+        <span><i class="fas fa-edit"></i> ${g.name} — 상품 선택</span>
+        <span style="font-size:11px;font-weight:400;opacity:.8;" id="pg-sel-count">${g.products.length}개 선택됨</span>
+      </div>
+      <div style="padding:10px 14px;background:#f8f4ff;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;">
+        <button onclick="pgCheckAll(true)"  style="font-size:12px;padding:4px 12px;border:1px solid #7c3aed;border-radius:5px;background:#fff;color:#7c3aed;cursor:pointer;">전체 선택</button>
+        <button onclick="pgCheckAll(false)" style="font-size:12px;padding:4px 12px;border:1px solid #cbd5e1;border-radius:5px;background:#fff;color:#64748b;cursor:pointer;">전체 해제</button>
+      </div>
+      <div id="pg-product-list" style="padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;max-height:400px;overflow-y:auto;">
+        ${productRows}
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="pgSaveGroup()" style="background:#7c3aed;color:#fff;border:none;padding:8px 20px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">
+          <i class="fas fa-save"></i> 저장
+        </button>
+      </div>
+    </div>`;
+
+  // 체크박스 이벤트
+  document.getElementById('pg-product-list').addEventListener('change', () => {
+    const checked = [...document.querySelectorAll('#pg-product-list input:checked')];
+    document.getElementById('pg-sel-count').textContent = `${checked.length}개 선택됨`;
+    // 배경 업데이트
+    document.querySelectorAll('#pg-product-list label').forEach(lbl => {
+      lbl.style.background = lbl.querySelector('input').checked ? '#ede9fe' : 'transparent';
+    });
+  });
+}
+
+function pgCheckAll(val) {
+  document.querySelectorAll('#pg-product-list input[type=checkbox]').forEach(cb => {
+    cb.checked = val;
+    cb.closest('label').style.background = val ? '#ede9fe' : 'transparent';
+  });
+  const count = val ? pgAllProducts.length : 0;
+  const cnt = document.getElementById('pg-sel-count');
+  if (cnt) cnt.textContent = `${count}개 선택됨`;
+}
+
+async function pgSaveGroup() {
+  if (pgSelectedGroupIdx < 0) return;
+  const checked = [...document.querySelectorAll('#pg-product-list input:checked')].map(cb => cb.value);
+  pgGroups[pgSelectedGroupIdx].products = checked;
+  pgRenderGroupList();
+  pgRenderSummary();
+  await pgPersist();
+  showToast(`✅ "${pgGroups[pgSelectedGroupIdx].name}" 그룹 저장 완료 (${checked.length}개 상품)`, 'success');
+}
+
+async function pgAddGroup() {
+  const inp = document.getElementById('pg-new-group-name');
+  const name = inp.value.trim();
+  if (!name) { showToast('❌ 그룹명을 입력하세요', 'error'); return; }
+  if (pgGroups.find(g => g.name === name)) { showToast('❌ 이미 같은 이름의 그룹이 있습니다', 'error'); return; }
+  pgGroups.push({ name, products: [] });
+  inp.value = '';
+  pgRenderGroupList();
+  pgRenderSummary();
+  await pgPersist();
+  pgSelectGroup(pgGroups.length - 1);
+  showToast(`✅ "${name}" 그룹 추가됨`, 'success');
+}
+
+async function pgDeleteGroup(idx) {
+  const name = pgGroups[idx].name;
+  if (!confirm(`"${name}" 그룹을 삭제하시겠습니까?`)) return;
+  pgGroups.splice(idx, 1);
+  if (pgSelectedGroupIdx === idx) pgSelectedGroupIdx = -1;
+  else if (pgSelectedGroupIdx > idx) pgSelectedGroupIdx--;
+  pgRenderGroupList();
+  pgRenderEditor();
+  pgRenderSummary();
+  await pgPersist();
+  showToast(`🗑️ "${name}" 그룹 삭제됨`, 'success');
+}
+
+function pgRenderSummary() {
+  const el = document.getElementById('pg-summary');
+  if (!el) return;
+  if (pgGroups.length === 0) {
+    el.innerHTML = '<span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>';
+    return;
+  }
+  const colors = ['#4c1d95','#1e3a5f','#0f5132','#7c2d12','#0891b2','#334155','#b45309','#dc2626'];
+  el.innerHTML = pgGroups.map((g, i) => `
+    <div style="display:inline-flex;flex-direction:column;gap:4px;margin:6px;padding:10px 14px;
+        border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;min-width:160px;vertical-align:top;">
+      <div style="font-weight:700;font-size:13px;color:${colors[i % colors.length]};">
+        <i class="fas fa-tag"></i> ${g.name}
+        <span style="margin-left:6px;font-size:11px;font-weight:400;color:#64748b;">${g.products.length}개</span>
+      </div>
+      <div style="font-size:11px;color:#475569;line-height:1.6;">
+        ${g.products.length > 0 ? g.products.join(', ') : '<em style="color:#94a3b8;">상품 없음</em>'}
+      </div>
+    </div>`).join('');
+}
+
+async function pgPersist() {
+  try {
+    await axios.post(`${API_BASE}/api/product-groups`, pgGroups);
+  } catch(e) {
+    console.warn('그룹 저장 실패:', e.message);
   }
 }
 

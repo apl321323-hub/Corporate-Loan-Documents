@@ -133,29 +133,29 @@ async def root():
 
 
 @app.post("/api/upload")
-async def upload_excel(file: UploadFile = File(...)):
-    """엑셀 파일 업로드 및 파싱"""
+async def upload_excel(file: UploadFile = File(...), period: str = ""):
+    """엑셀 파일 업로드 및 파싱 (period: YYYY.MM 업데이트 기준 년월)"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
 
     try:
-        # 임시 파일로 저장
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
             content = await file.read()
             tmp.write(content)
             tmp_path = tmp.name
 
-        # 파싱
         data = parse_excel_file(tmp_path)
         uploaded_data.update(data)
+        if period:
+            uploaded_data["upload_period_main"] = period
 
-        # 임시 파일 삭제
         os.unlink(tmp_path)
 
         return JSONResponse({
             "success": True,
             "message": f"파일 '{file.filename}' 업로드 및 분석 완료",
-            "sheets": list(data.keys())
+            "sheets": list(data.keys()),
+            "upload_period": period or "(미지정)",
         })
 
     except Exception as e:
@@ -182,7 +182,7 @@ async def get_all_data():
 
 
 @app.post("/api/upload/settlement")
-async def upload_settlement(file: UploadFile = File(...)):
+async def upload_settlement(file: UploadFile = File(...), period: str = ""):
     """결산자료 엑셀 업로드 및 자산건전성 계산"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
@@ -194,6 +194,8 @@ async def upload_settlement(file: UploadFile = File(...)):
             tmp_path = tmp.name
 
         data = parse_settlement_asset_quality(tmp_path)
+        if period:
+            data['upload_period'] = period
         uploaded_data['settlement_asset_quality'] = data
         os.unlink(tmp_path)
 
@@ -201,7 +203,8 @@ async def upload_settlement(file: UploadFile = File(...)):
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 및 분석 완료",
             "total_products": len(data.get('products', [])),
-            "total_groups": len(data.get('groups', []))
+            "total_groups": len(data.get('groups', [])),
+            "upload_period": period or "(미지정)",
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
@@ -345,7 +348,7 @@ async def export_asset_quality(view: str = "total", product: str = "", group: st
 
 
 @app.post("/api/upload/company_info")
-async def upload_company_info(file: UploadFile = File(...)):
+async def upload_company_info(file: UploadFile = File(...), period: str = ""):
     """기업정보 엑셀 전용 업로드"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
@@ -365,13 +368,16 @@ async def upload_company_info(file: UploadFile = File(...)):
             ws = wb.active
 
         data = parse_company_info(ws)
+        if period:
+            data['upload_period'] = period
         uploaded_data['company_info'] = data
         os.unlink(tmp_path)
 
         return JSONResponse({
             "success": True,
             "message": f"기업정보 '{file.filename}' 업로드 완료",
-            "company_name": data.get('company', {}).get('name', '')
+            "company_name": data.get('company', {}).get('name', ''),
+            "upload_period": period or "(미지정)",
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
@@ -402,8 +408,10 @@ async def get_asset_quality():
 
 
 @app.post("/api/upload/asset-quality")
-async def upload_asset_quality(file: UploadFile = File(...)):
-    """자산건전성 엑셀 업로드 (기업여신자료 형식)"""
+async def upload_asset_quality(file: UploadFile = File(...), period: str = ""):
+    """자산건전성 엑셀 업로드 (기업여신자료 형식)
+    period: YYYY.MM 형식 업데이트 기준 년월 (선택)
+    """
     if not file.filename.lower().endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
     try:
@@ -413,6 +421,8 @@ async def upload_asset_quality(file: UploadFile = File(...)):
             tmp_path = tmp.name
 
         data = parse_asset_quality_excel(tmp_path)
+        if period:
+            data['upload_period'] = period
         uploaded_data['asset_quality_detail'] = data
         os.unlink(tmp_path)
 
@@ -421,6 +431,7 @@ async def upload_asset_quality(file: UploadFile = File(...)):
             "message": f"자산건전성 '{file.filename}' 업로드 완료",
             "periods": len(data.get('periods', [])),
             "products": len(data.get('products', [])),
+            "upload_period": period or "(미지정)",
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
@@ -433,6 +444,42 @@ async def get_asset_quality_detail():
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
     return JSONResponse(d)
+
+
+# ── 상품 그룹 API ─────────────────────────────────────────
+@app.get("/api/product-groups")
+async def get_product_groups():
+    """저장된 상품 그룹 목록 반환"""
+    groups = uploaded_data.get("product_groups", [])
+    return JSONResponse(groups)
+
+
+@app.post("/api/product-groups")
+async def save_product_groups(request: Request):
+    """상품 그룹 전체 저장 (덮어쓰기)"""
+    body = await request.json()
+    # body: [{"name": "신용", "products": ["N론", "V론", ...]}, ...]
+    if not isinstance(body, list):
+        raise HTTPException(status_code=400, detail="배열 형태로 전송하세요")
+    uploaded_data["product_groups"] = body
+    return JSONResponse({"success": True, "count": len(body)})
+
+
+@app.get("/api/product-groups/all-products")
+async def get_all_products():
+    """자산건전성 데이터에서 상품 목록 반환"""
+    aq = uploaded_data.get("asset_quality_detail")
+    if aq and aq.get("products"):
+        return JSONResponse(aq["products"])
+    # 기본 상품 목록 (엑셀 미업로드 시 fallback)
+    default_products = [
+        "N론","V론","담보론","담보론(지분대출)","레이디론","스타론","스타스위치론",
+        "우량론","큐브론","테일론","토탈론","프리론","프리미엄론","전월세론","플러스론",
+        "토마토론","토마토N론","토마토토탈론","T플러스론","OP론","충성론","오투론",
+        "오투N론","토마토토탈론플러스","다이렉트론(A)","다이렉트론(W)","N론(하이브리드)",
+        "기타","기타N"
+    ]
+    return JSONResponse(default_products)
 
 
 @app.get("/api/data/business_status")
@@ -465,7 +512,7 @@ async def update_company_info(data: dict):
 # ─── BS/IS 엔드포인트 ────────────────────────────────────────────────────────
 
 @app.post("/api/upload/bsis")
-async def upload_bsis(file: UploadFile = File(...)):
+async def upload_bsis(file: UploadFile = File(...), period: str = ""):
     """BS/IS 엑셀 파일 업로드 (재무상태표 + 손익계산서 + BSPL_요약)"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="엑셀 파일만 업로드 가능합니다.")
@@ -477,6 +524,8 @@ async def upload_bsis(file: UploadFile = File(...)):
 
         wb = openpyxl.load_workbook(tmp_path, data_only=True)
         data = parse_bsis(wb)
+        if period:
+            data['upload_period'] = period
         uploaded_data['bsis'] = data
         os.unlink(tmp_path)
 
@@ -491,7 +540,8 @@ async def upload_bsis(file: UploadFile = File(...)):
         return JSONResponse({
             "success": True,
             "message": f"BS/IS '{file.filename}' 업로드 완료",
-            "sheets": sheet_info
+            "sheets": sheet_info,
+            "upload_period": period or "(미지정)",
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
