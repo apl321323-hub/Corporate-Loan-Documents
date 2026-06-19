@@ -7,6 +7,7 @@ import os
 import json
 import io
 from excel_parser import parse_excel_file, parse_settlement_asset_quality, parse_company_info, parse_bsis
+from asset_quality_parser import parse_asset_quality_excel
 from pdf_parser import parse_pdf_fs, apply_pdf_to_bsis
 import openpyxl
 
@@ -170,6 +171,7 @@ async def get_all_data():
         "bsis", "bs_is", "cashflow", "asset_quality",
         "business_status", "loan_asset", "borrowing",
         "company_info", "settlement_asset_quality",
+        "asset_quality_detail",
     ]
     result = {}
     for k in _DATA_KEYS:
@@ -397,6 +399,40 @@ async def get_cashflow():
 async def get_asset_quality():
     """자산건전성 데이터"""
     return uploaded_data.get("asset_quality", {})
+
+
+@app.post("/api/upload/asset-quality")
+async def upload_asset_quality(file: UploadFile = File(...)):
+    """자산건전성 엑셀 업로드 (기업여신자료 형식)"""
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.")
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        data = parse_asset_quality_excel(tmp_path)
+        uploaded_data['asset_quality_detail'] = data
+        os.unlink(tmp_path)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"자산건전성 '{file.filename}' 업로드 완료",
+            "periods": len(data.get('periods', [])),
+            "products": len(data.get('products', [])),
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"파일 처리 오류: {str(e)}")
+
+
+@app.get("/api/data/asset-quality-detail")
+async def get_asset_quality_detail():
+    """자산건전성 상세 데이터 (기업여신자료 형식)"""
+    d = uploaded_data.get("asset_quality_detail")
+    if not d:
+        return JSONResponse({"error": "데이터 없음"}, status_code=404)
+    return JSONResponse(d)
 
 
 @app.get("/api/data/business_status")

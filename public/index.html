@@ -143,6 +143,29 @@
   /* Table scroll wrapper */
   .table-scroll { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
 
+  /* ── 자산건전성 시계열 테이블 ── */
+  .aq-time-table th, .aq-time-table td { white-space: nowrap; }
+  .aq-label-col { position: sticky; left: 0; z-index: 2; background: #f8fafc !important; min-width: 130px; max-width: 160px; text-align: left !important; }
+  .aq-time-table thead th { background: #1e3a5f !important; color: #fff !important; font-size: 11px; padding: 6px 10px; text-align: right; }
+  .aq-time-table thead th.aq-label-col { background: #0f2748 !important; color: #fff !important; text-align: left; }
+  .aq-time-table tbody td { font-size: 11.5px; padding: 5px 10px; text-align: right; }
+  .aq-time-table tbody td.aq-label-col { font-size: 12px; font-weight: 500; color: #1e293b; }
+  .aq-time-table tbody tr.aq-row-sum td { background: #fef9c3 !important; font-weight: 700; }
+  .aq-time-table tbody tr.aq-row-overdue td { background: #fee2e2 !important; font-weight: 700; color: #dc2626; }
+  .aq-time-table tbody tr.aq-row-overdue td.aq-label-col { color: #dc2626; }
+  .aq-time-table tbody tr.aq-row-normal td { background: #f0fdf4 !important; }
+  .aq-time-table tbody tr.aq-row-rate td { background: #eff6ff !important; font-weight: 700; color: #1d4ed8; }
+  .aq-time-table tbody tr.aq-row-rate td.aq-label-col { color: #1d4ed8; }
+  .aq-time-table tbody tr.aq-row-indent td.aq-label-col { padding-left: 22px; color: #64748b; font-weight: 400; font-size: 11px; }
+  .aq-time-table .aq-latest { background: #fafadf !important; }  /* 최신 기간 강조 없음 */
+  .aq-section-header { padding: 12px 16px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #fff; }
+  .aq-section-header.blue { background: #1e3a5f; }
+  .aq-section-header.green { background: #0f5132; }
+  .aq-section-header.purple { background: #4c1d95; }
+  .aq-section-header.teal { background: #134e4a; }
+  .aq-product-block { margin-bottom: 16px; }
+  .aq-product-title { padding: 9px 16px; background: #334155; color: #fff; font-weight: 700; font-size: 13px; border-radius: 8px 8px 0 0; }
+
   /* Summary KPI cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
   .kpi-grid.kpi-6col { grid-template-columns: repeat(6, 1fr); }
@@ -971,71 +994,97 @@
   <section class="page" id="page-asset">
     <div class="section-header">
       <h3>자산건전성</h3>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span id="settle-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">결산자료 미업로드</span>
-        <button onclick="exportAssetQuality()" id="btn-export-aq" style="background:#1e3a5f;color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;" disabled>
-          <i class="fas fa-file-excel"></i> 엑셀 다운로드
-        </button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span id="aq-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">데이터 미업로드</span>
+        <!-- 업로드 버튼 -->
+        <label for="aq-file-input" style="background:#1e3a5f;color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-upload"></i> 자산건전성 업로드
+        </label>
+        <input type="file" id="aq-file-input" accept=".xlsx,.xls" style="display:none" onchange="handleAQUpload(event)">
       </div>
     </div>
 
-    <!-- KPI 카드 -->
+    <!-- KPI 카드 (최근 기간 기준) -->
     <div class="kpi-grid">
-      <div class="kpi-card green"><div class="kpi-label">무연체</div><div class="kpi-value" id="kpi-aq-normal">-</div><div class="kpi-sub">잔액 기준</div></div>
-      <div class="kpi-card yellow"><div class="kpi-label">연체합계</div><div class="kpi-value" id="kpi-aq-overdue">-</div><div class="kpi-sub">잔액 기준</div></div>
-      <div class="kpi-card"><div class="kpi-label">융잔합계</div><div class="kpi-value" id="kpi-aq-total">-</div><div class="kpi-sub">전체 잔액</div></div>
+      <div class="kpi-card green"><div class="kpi-label">무연체</div><div class="kpi-value" id="kpi-aq-normal">-</div><div class="kpi-sub" id="kpi-aq-period">최근 기간</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">연체합계</div><div class="kpi-value" id="kpi-aq-overdue">-</div><div class="kpi-sub">잔액 기준(원)</div></div>
+      <div class="kpi-card"><div class="kpi-label">융잔합계</div><div class="kpi-value" id="kpi-aq-total">-</div><div class="kpi-sub">전체 잔액(원)</div></div>
       <div class="kpi-card red"><div class="kpi-label">연체율</div><div class="kpi-value" id="kpi-aq-ratio">-</div><div class="kpi-sub">연체합계/융잔합계</div></div>
     </div>
 
-    <!-- 3-view 탭 -->
-    <div class="tab-bar" id="aq-tab-bar">
-      <button class="tab-btn active" onclick="switchAQTab('total')" id="aq-tab-btn-total">전체</button>
-      <button class="tab-btn" onclick="switchAQTab('group')" id="aq-tab-btn-group">상품그룹</button>
-      <button class="tab-btn" onclick="switchAQTab('product')" id="aq-tab-btn-product">각 상품</button>
+    <!-- 기간 필터 + 섹션 탭 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+      <div class="tab-bar" id="aq-section-tabs" style="margin-bottom:0;">
+        <button class="tab-btn active" id="aq-stab-s1" onclick="switchAQSection('s1')">■ 금액</button>
+        <button class="tab-btn" id="aq-stab-s2" onclick="switchAQSection('s2')">구분(%)</button>
+        <button class="tab-btn" id="aq-stab-s3" onclick="switchAQSection('s3')">담보구분별</button>
+        <button class="tab-btn" id="aq-stab-s4" onclick="switchAQSection('s4')">상품별</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="font-size:12px;color:#64748b;font-weight:600;">기간:</label>
+        <select id="aq-period-filter" onchange="renderAQSection()" style="border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px;">
+          <option value="12">최근 12개월</option>
+          <option value="24">최근 24개월</option>
+          <option value="36">최근 36개월</option>
+          <option value="all">전체</option>
+        </select>
+      </div>
     </div>
 
-    <!-- 전체 탭 -->
-    <div id="aq-view-total">
-      <div class="card">
-        <div class="card-title"><i class="fas fa-chart-bar"></i> 연체구간별 잔액 현황</div>
-        <div class="chart-wrap"><canvas id="chart-asset-total"></canvas></div>
+    <!-- 섹션 콘텐츠 -->
+    <div id="aq-section-container">
+      <div id="aq-no-data" class="card" style="text-align:center;padding:40px;color:#94a3b8;">
+        <i class="fas fa-file-excel" style="font-size:32px;margin-bottom:8px;display:block;"></i>
+        자산건전성 엑셀 파일을 업로드하세요
       </div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div class="table-scroll">
-          <table class="data-table" id="aq-table-total">
-            <thead><tr>
-              <th class="label" style="min-width:120px;">연체구간</th>
-              <th>건수</th><th>잔액(원)</th><th>비율(%)</th>
-            </tr></thead>
-            <tbody id="aq-body-total"><tr><td class="label" colspan="4">결산자료를 업로드하세요</td></tr></tbody>
-          </table>
+
+      <!-- S1: 금액 -->
+      <div id="aq-view-s1" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;background:#1e3a5f;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-coins"></i> ■ 자산건전성 (금액, 단위: 원)
+          </div>
+          <div class="table-scroll">
+            <table class="data-table aq-time-table" id="aq-table-s1">
+              <thead><tr id="aq-head-s1"><th class="label aq-label-col">구분</th></tr></thead>
+              <tbody id="aq-body-s1"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 상품그룹 탭 -->
-    <div id="aq-view-group" style="display:none;">
-      <div class="card">
-        <div class="card-title"><i class="fas fa-layer-group"></i> 상품그룹별 연체율 비교</div>
-        <div class="chart-wrap"><canvas id="chart-asset-group"></canvas></div>
-      </div>
-      <div id="aq-group-tables"></div>
-    </div>
-
-    <!-- 각 상품 탭 -->
-    <div id="aq-view-product" style="display:none;">
-      <div class="card" style="padding:16px 20px;">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <label style="font-size:13px;font-weight:600;color:#374151;">상품 선택:</label>
-          <select id="aq-product-select" onchange="renderAQProduct()" style="border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:13px;min-width:200px;">
-            <option value="">전체 상품 보기</option>
-          </select>
-          <button onclick="exportAssetQuality('by_product')" style="background:#7c3aed;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
-            <i class="fas fa-file-excel"></i> 이 상품 다운로드
-          </button>
+      <!-- S2: 비율(%) -->
+      <div id="aq-view-s2" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;background:#0f5132;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-percent"></i> 구분 (%)
+          </div>
+          <div class="table-scroll">
+            <table class="data-table aq-time-table" id="aq-table-s2">
+              <thead><tr id="aq-head-s2"><th class="label aq-label-col">구분</th></tr></thead>
+              <tbody id="aq-body-s2"></tbody>
+            </table>
+          </div>
         </div>
       </div>
-      <div id="aq-product-tables"></div>
+
+      <!-- S3: 담보구분별 -->
+      <div id="aq-view-s3" style="display:none;">
+        <div id="aq-s3-tables"></div>
+      </div>
+
+      <!-- S4: 상품별 -->
+      <div id="aq-view-s4" style="display:none;">
+        <div class="card" style="padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;font-weight:600;color:#374151;">상품 선택:</label>
+            <select id="aq-product-select" onchange="renderAQProduct()" style="border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:13px;min-width:180px;">
+              <option value="">-- 상품 선택 --</option>
+            </select>
+          </div>
+        </div>
+        <div id="aq-s4-product-wrap"></div>
+      </div>
     </div>
   </section>
 
@@ -2137,14 +2186,9 @@ async function loadSettlementData() {
     const res = await axios.get(`${API_BASE}/api/data/settlement_asset_quality`);
     if (res.data && res.data.buckets) {
       appData.settlement_asset_quality = res.data;
-      document.getElementById('settle-data-badge').textContent = '결산자료 로드됨';
-      document.getElementById('settle-data-badge').style.background = '#dcfce7';
-      document.getElementById('settle-data-badge').style.color = '#16a34a';
-      document.getElementById('btn-export-aq').disabled = false;
-      renderAssetQuality();
     }
   } catch (e) {
-    console.warn('결산자료 로드 실패:', e.message);
+    // 결산자료 없음 (무시)
   }
 }
 
@@ -2170,7 +2214,6 @@ function renderAll() {
   renderCompanyInfo();
   renderBSIS();
   renderCashflow();
-  renderAssetQuality();
   renderBusiness();
   renderLoanAsset();
   renderBorrowing();
@@ -2738,152 +2781,337 @@ function renderCashflow() {
     ], '억원');
 }
 
-// ===== 자산건전성 탭 전환 =====
-let aqCurrentTab = 'total';
+// ===== 자산건전성 (신규 엑셀 형식) =====
+let aqData = null;       // parse_asset_quality_excel 결과
+let aqCurrentSection = 's1';
 
-function switchAQTab(tab) {
-  aqCurrentTab = tab;
-  ['total','group','product'].forEach(t => {
-    document.getElementById(`aq-view-${t}`).style.display = t === tab ? '' : 'none';
-    const btn = document.getElementById(`aq-tab-btn-${t}`);
-    if (btn) btn.classList.toggle('active', t === tab);
+// 섹션1 행 정의
+const AQ_S1_ROWS = [
+  { key: '무연체',   cls: 'aq-row-normal' },
+  { key: '1~30',    cls: '' },
+  { key: '1~10',    cls: 'aq-row-indent' },
+  { key: '11~30',   cls: 'aq-row-indent' },
+  { key: '31~60',   cls: '' },
+  { key: '61~90',   cls: '' },
+  { key: '91~120',  cls: '' },
+  { key: '121~150', cls: '' },
+  { key: '151~180', cls: '' },
+  { key: '181~',    cls: '' },
+  { key: '연체합계', cls: 'aq-row-overdue' },
+  { key: '융잔합계', cls: 'aq-row-sum' },
+];
+
+// 섹션2 행 정의
+const AQ_S2_ROWS = [
+  { key: '무연체',        cls: 'aq-row-normal', fmt: 'pct' },
+  { key: '1~30',          cls: '', fmt: 'pct' },
+  { key: '1~10',          cls: 'aq-row-indent', fmt: 'pct' },
+  { key: '11~30',         cls: 'aq-row-indent', fmt: 'pct' },
+  { key: '31~60',         cls: '', fmt: 'pct' },
+  { key: '61~90',         cls: '', fmt: 'pct' },
+  { key: '91~120',        cls: '', fmt: 'pct' },
+  { key: '121~150',       cls: '', fmt: 'pct' },
+  { key: '151~180',       cls: '', fmt: 'pct' },
+  { key: '181~',          cls: '', fmt: 'pct' },
+  { key: '합계(%)',        cls: 'aq-row-sum', fmt: 'pct' },
+  { key: '대손충당금',     cls: '', fmt: 'num' },
+  { key: '30일이상연체율', cls: 'aq-row-rate', fmt: 'pct' },
+  { key: '연체합계',       cls: 'aq-row-overdue', fmt: 'num' },
+  { key: '연체율(%)',      cls: 'aq-row-rate', fmt: 'pct' },
+  { key: '31일이상연체합계', cls: '', fmt: 'num' },
+  { key: '31일이상충당금', cls: '', fmt: 'pct' },
+];
+
+// 섹션3 행 정의
+const AQ_S3_ROWS = [
+  { key: '무연체',   cls: 'aq-row-normal', fmt: 'num' },
+  { key: '1~30',    cls: '', fmt: 'num' },
+  { key: '31~60',   cls: '', fmt: 'num' },
+  { key: '61~90',   cls: '', fmt: 'num' },
+  { key: '91~180',  cls: '', fmt: 'num' },
+  { key: '181~',    cls: '', fmt: 'num' },
+  { key: '연체합계', cls: 'aq-row-overdue', fmt: 'num' },
+  { key: '융잔합계', cls: 'aq-row-sum', fmt: 'num' },
+  { key: '연체율(%)', cls: 'aq-row-rate', fmt: 'pct' },
+];
+
+// 섹션4 행 정의
+const AQ_S4_ROWS = [
+  { key: '무연체',   cls: 'aq-row-normal', fmt: 'num' },
+  { key: '1~30',    cls: '', fmt: 'num' },
+  { key: '31~60',   cls: '', fmt: 'num' },
+  { key: '61~90',   cls: '', fmt: 'num' },
+  { key: '91~120',  cls: '', fmt: 'num' },
+  { key: '121~150', cls: '', fmt: 'num' },
+  { key: '151~180', cls: '', fmt: 'num' },
+  { key: '181~',    cls: '', fmt: 'num' },
+  { key: '융잔합계', cls: 'aq-row-sum', fmt: 'num' },
+];
+
+function aqFmt(v, fmt) {
+  if (v === null || v === undefined) return '-';
+  if (fmt === 'pct') return (v * 100).toFixed(2) + '%';
+  if (fmt === 'num') return Math.round(v).toLocaleString();
+  return v.toLocaleString();
+}
+
+/** 기간 필터 적용 — 최근 N개월 인덱스 반환 */
+function aqFilteredIndices() {
+  if (!aqData) return [];
+  const periods = aqData.periods;
+  const n = document.getElementById('aq-period-filter')?.value || '12';
+  if (n === 'all') return periods.map((_, i) => i);
+  const count = parseInt(n);
+  const start = Math.max(0, periods.length - count);
+  return periods.slice(start).map((_, i) => start + i);
+}
+
+/** thead + tbody 를 시계열 테이블로 채우기 */
+function aqBuildTimeTable(headId, bodyId, rowDefs, sectionData) {
+  const indices = aqFilteredIndices();
+  const periods = aqData.periods;
+
+  // thead
+  const headRow = document.getElementById(headId);
+  // 기존 기간 th 제거 (첫 번째 th는 유지)
+  while (headRow.children.length > 1) headRow.removeChild(headRow.lastChild);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
   });
-  renderAssetQuality();
+
+  // tbody
+  const tbody = document.getElementById(bodyId);
+  tbody.innerHTML = '';
+  rowDefs.forEach(({ key, cls, fmt }) => {
+    const vals = sectionData[key];
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+
+    const labelTd = document.createElement('td');
+    labelTd.className = 'aq-label-col';
+    if (cls === 'aq-row-indent') labelTd.style.paddingLeft = '22px';
+    labelTd.textContent = key;
+    tr.appendChild(labelTd);
+
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      const v = vals ? vals[i] : null;
+      td.textContent = aqFmt(v, fmt || 'num');
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
 }
 
-// ===== 자산건전성 렌더링 =====
-const AQ_BUCKETS = ['무연체','1~10','11~30','31~60','61~90','91~120','121~150','151~180','181~','연체합계','융잔합계'];
-
-function renderAssetQuality() {
-  const d = appData.settlement_asset_quality;
-  if (!d || !d.buckets) return;
-
-  // KPI (전체 데이터 기준)
-  const total = d.total || {};
-  const totalBal = (total['융잔합계'] || {}).balance || 0;
-  const overdueBal = (total['연체합계'] || {}).balance || 0;
-  const normalBal = (total['무연체'] || {}).balance || 0;
-  document.getElementById('kpi-aq-total').textContent = fmtK(totalBal);
-  document.getElementById('kpi-aq-overdue').textContent = fmtK(overdueBal);
-  document.getElementById('kpi-aq-normal').textContent = fmtK(normalBal);
-  document.getElementById('kpi-aq-ratio').textContent =
-    totalBal > 0 ? (overdueBal / totalBal * 100).toFixed(2) + '%' : '-';
-
-  if (aqCurrentTab === 'total') renderAQTotal();
-  else if (aqCurrentTab === 'group') renderAQGroup();
-  else if (aqCurrentTab === 'product') renderAQProduct();
+function switchAQSection(sec) {
+  aqCurrentSection = sec;
+  ['s1','s2','s3','s4'].forEach(s => {
+    const el = document.getElementById(`aq-view-${s}`);
+    if (el) el.style.display = s === sec ? '' : 'none';
+    const btn = document.getElementById(`aq-stab-${s}`);
+    if (btn) btn.classList.toggle('active', s === sec);
+  });
+  renderAQSection();
 }
 
-// 버킷 테이블 HTML 생성 헬퍼
-function buildBucketTableHTML(data) {
-  const rows = AQ_BUCKETS.map(bk => {
-    const v = data[bk] || {count:0, balance:0, rate:0};
-    const isTotalRow = bk === '융잔합계';
-    const isOverdueRow = bk === '연체합계';
-    const rowStyle = isTotalRow ? 'background:#FFF3CD;font-weight:700;'
-      : isOverdueRow ? 'background:#FFE0E0;font-weight:700;color:#cc0000;'
-      : bk === '무연체' ? 'background:#F0FDF4;' : '';
-    const balFmt = v.balance ? v.balance.toLocaleString() : '0';
-    const rateFmt = typeof v.rate === 'number' ? v.rate.toFixed(2) + '%' : '-';
-    return `<tr style="${rowStyle}">
-      <td class="label" style="${isTotalRow||isOverdueRow?'font-weight:700;':''};min-width:110px;">${bk}</td>
-      <td style="text-align:right;">${v.count ? v.count.toLocaleString() : '0'}</td>
-      <td style="text-align:right;">${balFmt}</td>
-      <td style="text-align:right;${isOverdueRow?'color:#cc0000;font-weight:700;':''}">${rateFmt}</td>
-    </tr>`;
-  }).join('');
-  return rows;
+function renderAQSection() {
+  if (!aqData) return;
+  if (aqCurrentSection === 's1') renderAQS1();
+  else if (aqCurrentSection === 's2') renderAQS2();
+  else if (aqCurrentSection === 's3') renderAQS3();
+  else if (aqCurrentSection === 's4') renderAQS4();
 }
 
-function renderAQTotal() {
-  const d = appData.settlement_asset_quality;
-  const tbody = document.getElementById('aq-body-total');
-  if (!tbody) return;
-  tbody.innerHTML = buildBucketTableHTML(d.total || {});
-
-  // 차트: 연체구간별 잔액 막대
-  const displayBuckets = AQ_BUCKETS.filter(b => b !== '연체합계' && b !== '융잔합계');
-  const vals = displayBuckets.map(b => ((d.total[b] || {}).balance || 0) / 1e8);
-  drawBarChart('chart-asset-total', displayBuckets, vals, '억원');
+function renderAQS1() {
+  aqBuildTimeTable('aq-head-s1', 'aq-body-s1', AQ_S1_ROWS, aqData.section1);
 }
 
-function renderAQGroup() {
-  const d = appData.settlement_asset_quality;
-  const groups = d.groups || [];
-  const container = document.getElementById('aq-group-tables');
-  if (!container) return;
+function renderAQS2() {
+  aqBuildTimeTable('aq-head-s2', 'aq-body-s2', AQ_S2_ROWS, aqData.section2);
+}
 
-  // 차트: 그룹별 연체율
-  const rates = groups.map(g => ((d.by_group[g] || {})['연체합계'] || {rate:0}).rate || 0);
-  drawBarChart('chart-asset-group', groups, rates, '%', '#ef4444');
+function renderAQS3() {
+  const container = document.getElementById('aq-s3-tables');
+  container.innerHTML = '';
+  const colors = { '신용': 'blue', '보증': 'green', '담보': 'purple' };
+  const indices = aqFilteredIndices();
+  const periods = aqData.periods;
 
-  // 테이블
-  container.innerHTML = groups.map(g => {
-    const gdata = d.by_group[g] || {};
-    const totalBal = (gdata['융잔합계'] || {}).balance || 0;
-    const overdueRate = ((gdata['연체합계'] || {}).rate || 0).toFixed(2);
-    return `
-    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
-      <div style="padding:12px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">■ ${g}</span>
-        <span style="font-size:12px;color:#64748b;">융잔합계: ${fmtK(totalBal)} &nbsp;|&nbsp; 연체율: <b style="color:${parseFloat(overdueRate)>5?'#dc2626':'#16a34a'}">${overdueRate}%</b></span>
+  ['신용','보증','담보'].forEach(grpName => {
+    const grpData = aqData.section3[grpName];
+    if (!grpData) return;
+
+    const tableId = `aq-s3-table-${grpName}`;
+    const headId  = `aq-s3-head-${grpName}`;
+    const bodyId  = `aq-s3-body-${grpName}`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'card';
+    wrap.style.cssText = 'padding:0;overflow:hidden;margin-bottom:16px;';
+
+    const colorCls = colors[grpName] || 'blue';
+    wrap.innerHTML = `
+      <div class="aq-section-header ${colorCls}">
+        <i class="fas fa-layer-group"></i> * ${grpName}
       </div>
       <div class="table-scroll">
-        <table class="data-table">
-          <thead><tr><th class="label" style="min-width:110px;">연체구간</th><th>건수</th><th>잔액(원)</th><th>비율(%)</th></tr></thead>
-          <tbody>${buildBucketTableHTML(gdata)}</tbody>
+        <table class="data-table aq-time-table" id="${tableId}">
+          <thead><tr id="${headId}"><th class="label aq-label-col">구분</th></tr></thead>
+          <tbody id="${bodyId}"></tbody>
         </table>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`;
+    container.appendChild(wrap);
+
+    // thead
+    const headRow = document.getElementById(headId);
+    indices.forEach(i => {
+      const th = document.createElement('th');
+      th.textContent = periods[i];
+      headRow.appendChild(th);
+    });
+
+    // tbody
+    const tbody = document.getElementById(bodyId);
+    AQ_S3_ROWS.forEach(({ key, cls, fmt }) => {
+      const vals = grpData[key];
+      const tr = document.createElement('tr');
+      if (cls) tr.className = cls;
+      const labelTd = document.createElement('td');
+      labelTd.className = 'aq-label-col';
+      labelTd.textContent = key;
+      tr.appendChild(labelTd);
+      indices.forEach(i => {
+        const td = document.createElement('td');
+        td.textContent = aqFmt(vals ? vals[i] : null, fmt || 'num');
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
 }
 
 function renderAQProduct() {
-  const d = appData.settlement_asset_quality;
-  const products = d.products || [];
   const select = document.getElementById('aq-product-select');
-  const container = document.getElementById('aq-product-tables');
-  if (!container) return;
+  const wrap = document.getElementById('aq-s4-product-wrap');
+  if (!select || !wrap || !aqData) return;
 
-  // 셀렉트 박스 채우기 (최초 1회)
-  if (select && select.options.length <= 1) {
-    select.innerHTML = '<option value="">전체 상품 보기</option>' +
-      products.map(p => `<option value="${p}">${p}</option>`).join('');
+  const productName = select.value;
+  if (!productName) {
+    wrap.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:#94a3b8;">상품을 선택하세요</div>';
+    return;
   }
 
-  const selectedProduct = select ? select.value : '';
-  const targetProducts = selectedProduct ? [selectedProduct] : products;
+  const prodData = aqData.section4[productName];
+  if (!prodData) return;
 
-  container.innerHTML = targetProducts.map(p => {
-    const pdata = d.by_product[p] || {};
-    const totalBal = (pdata['융잔합계'] || {}).balance || 0;
-    const overdueRate = ((pdata['연체합계'] || {}).rate || 0).toFixed(2);
-    return `
-    <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden;">
-      <div style="padding:12px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">■ ${p}</span>
-        <span style="font-size:12px;color:#64748b;">융잔합계: ${fmtK(totalBal)} &nbsp;|&nbsp; 연체율: <b style="color:${parseFloat(overdueRate)>5?'#dc2626':'#16a34a'}">${overdueRate}%</b></span>
+  const indices = aqFilteredIndices();
+  const periods = aqData.periods;
+  const tableId = 'aq-s4-table-prod';
+  const headId  = 'aq-s4-head-prod';
+  const bodyId  = 'aq-s4-body-prod';
+
+  wrap.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="aq-section-header teal">
+        <i class="fas fa-tag"></i> ${productName}
       </div>
       <div class="table-scroll">
-        <table class="data-table">
-          <thead><tr><th class="label" style="min-width:110px;">연체구간</th><th>건수</th><th>잔액(원)</th><th>비율(%)</th></tr></thead>
-          <tbody>${buildBucketTableHTML(pdata)}</tbody>
+        <table class="data-table aq-time-table" id="${tableId}">
+          <thead><tr id="${headId}"><th class="label aq-label-col">구분</th></tr></thead>
+          <tbody id="${bodyId}"></tbody>
         </table>
       </div>
     </div>`;
-  }).join('');
+
+  const headRow = document.getElementById(headId);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
+  });
+
+  const tbody = document.getElementById(bodyId);
+  AQ_S4_ROWS.forEach(({ key, cls, fmt }) => {
+    const vals = prodData[key];
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+    const labelTd = document.createElement('td');
+    labelTd.className = 'aq-label-col';
+    labelTd.textContent = key;
+    tr.appendChild(labelTd);
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      td.textContent = aqFmt(vals ? vals[i] : null, fmt || 'num');
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
 }
 
-// 엑셀 다운로드
-async function exportAssetQuality(view, product) {
-  const d = appData.settlement_asset_quality;
-  if (!d) { showToast('❌ 결산자료를 먼저 업로드하세요.', 'error'); return; }
-  const v = view || aqCurrentTab === 'group' ? 'by_group'
-    : aqCurrentTab === 'product' ? 'by_product' : 'total';
-  const p = product || document.getElementById('aq-product-select')?.value || '';
-  let url = `${API_BASE}/api/export/asset_quality?view=${v}`;
-  if (p) url += `&product=${encodeURIComponent(p)}`;
-  window.open(url, '_blank');
+function aqInitProductSelect() {
+  if (!aqData) return;
+  const select = document.getElementById('aq-product-select');
+  if (!select) return;
+  select.innerHTML = '<option value="">-- 상품 선택 --</option>' +
+    (aqData.products || []).map(p => `<option value="${p}">${p}</option>`).join('');
+}
+
+function aqUpdateKPI() {
+  if (!aqData) return;
+  const periods = aqData.periods;
+  const lastIdx = periods.length - 1;
+  const lastPeriod = periods[lastIdx];
+  const s1 = aqData.section1;
+  const normal  = s1['무연체']?.[lastIdx];
+  const overdue = s1['연체합계']?.[lastIdx];
+  const total   = s1['융잔합계']?.[lastIdx];
+  const ratio   = (overdue != null && total) ? (overdue / total * 100).toFixed(2) + '%' : '-';
+
+  document.getElementById('kpi-aq-normal').textContent  = normal  != null ? Math.round(normal).toLocaleString()  : '-';
+  document.getElementById('kpi-aq-overdue').textContent = overdue != null ? Math.round(overdue).toLocaleString() : '-';
+  document.getElementById('kpi-aq-total').textContent   = total   != null ? Math.round(total).toLocaleString()   : '-';
+  document.getElementById('kpi-aq-ratio').textContent   = ratio;
+  document.getElementById('kpi-aq-period').textContent  = lastPeriod + ' 기준';
+}
+
+async function handleAQUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    showToast('⏳ 자산건전성 파일 업로드 중...', 'info');
+    const res = await axios.post(`${API_BASE}/api/upload/asset-quality`, fd);
+    if (res.data.success) {
+      showToast(`✅ ${res.data.message}`, 'success');
+      await loadAQData();
+    }
+  } catch(e) {
+    showToast('❌ 업로드 실패: ' + (e.response?.data?.detail || e.message), 'error');
+  }
+  event.target.value = '';
+}
+
+async function loadAQData() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/data/asset-quality-detail`);
+    if (res.data && res.data.periods) {
+      aqData = res.data;
+      document.getElementById('aq-no-data').style.display = 'none';
+      document.getElementById('aq-data-badge').textContent =
+        `${aqData.periods[0]} ~ ${aqData.periods[aqData.periods.length-1]} (${aqData.periods.length}개월)`;
+      document.getElementById('aq-data-badge').style.background = '#d1fae5';
+      document.getElementById('aq-data-badge').style.color = '#065f46';
+      aqInitProductSelect();
+      aqUpdateKPI();
+      // 현재 섹션 표시
+      switchAQSection(aqCurrentSection);
+    }
+  } catch(e) {
+    // 데이터 없음 — 무시
+  }
 }
 
 // ===== 영업현황 렌더링 =====
@@ -3095,6 +3323,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAllData();
   loadSettlementData();     // 결산자료 별도 로드
   loadBsisData();           // BS/IS 별도 로드
+  loadAQData();             // 자산건전성 별도 로드
 });
 </script>
 </body>
