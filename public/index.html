@@ -1267,23 +1267,25 @@
       </div>
     </div>
 
-    <!-- 섹션 탭 -->
+    <!-- 섹션 탭 + 기간 필터 (자산건전성과 동일 구성) -->
     <div id="bs-tabs-area" style="display:none;">
-      <div class="aq-tab-row" style="margin-bottom:12px;">
-        <button class="aq-stab active" id="bs-stab-s1" onclick="bsSwitchSection('s1')">
-          <i class="fas fa-table"></i> 전체 영업현황
-        </button>
-        <button class="aq-stab" id="bs-stab-s3" onclick="bsSwitchSection('s3')">
-          <i class="fas fa-shield-alt"></i> 담보구분별
-          <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/담보)</span>
-        </button>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+        <div class="tab-bar" id="bs-section-tabs" style="margin-bottom:0;">
+          <button class="tab-btn active" id="bs-stab-s1" onclick="bsSwitchSection('s1')">■ 금액</button>
+          <button class="tab-btn" id="bs-stab-s2" onclick="bsSwitchSection('s2')">구분(%)</button>
+          <button class="tab-btn" id="bs-stab-s3" onclick="bsSwitchSection('s3')">
+            <i class="fas fa-shield-alt" style="font-size:11px;"></i> 담보구분별
+            <span style="font-size:10px;opacity:.7;margin-left:2px;">(신용/담보)</span>
+          </button>
+          <button class="tab-btn" id="bs-stab-s4" onclick="bsSwitchSection('s4')">상품별</button>
+        </div>
       </div>
 
-      <!-- ── 섹션1: 전체 영업현황 ── -->
+      <!-- ── 섹션1: 금액 (전체 영업현황) ── -->
       <div id="bs-view-s1">
         <div class="card" style="padding:0;overflow:hidden;">
           <div class="bs-section-header blue">
-            <i class="fas fa-table"></i> 전체 영업현황
+            <i class="fas fa-table"></i> ■ 전체 영업현황
             <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>
           </div>
           <div class="table-scroll" style="max-height:520px;overflow:auto;">
@@ -1295,6 +1297,27 @@
                 </tr>
               </thead>
               <tbody id="bs-body-s1"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 섹션2: 구분(%) ── -->
+      <div id="bs-view-s2" style="display:none;">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="bs-section-header" style="background:#0f5132;">
+            <i class="fas fa-percent"></i> 구분 (%)
+            <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">취급액 대비 비율</span>
+          </div>
+          <div class="table-scroll" style="max-height:520px;overflow:auto;">
+            <table class="data-table bs-time-table" style="width:max-content;min-width:100%;">
+              <thead>
+                <tr id="bs-head-s2">
+                  <th class="bs-group-col" style="min-width:80px;">구분</th>
+                  <th class="bs-sub-col" style="min-width:110px;">소분류</th>
+                </tr>
+              </thead>
+              <tbody id="bs-body-s2"></tbody>
             </table>
           </div>
         </div>
@@ -1319,6 +1342,19 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- ── 섹션4: 상품별 ── -->
+      <div id="bs-view-s4" style="display:none;">
+        <div class="card" style="padding:14px 16px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;font-weight:600;color:#374151;">상품 선택:</label>
+            <select id="bs-product-select" onchange="bsBuildTableS4()" style="border:1px solid #e2e8f0;border-radius:6px;padding:7px 12px;font-size:13px;min-width:180px;">
+              <option value="">-- 상품 선택 --</option>
+            </select>
+          </div>
+        </div>
+        <div id="bs-s4-product-wrap"></div>
       </div>
     </div>
   </section>
@@ -4185,7 +4221,7 @@ function bsBuildTable(headId, bodyId, rowDefs, sectionData) {
 
 function bsSwitchSection(sec) {
   bsCurrentSection = sec;
-  ['s1','s3'].forEach(s => {
+  ['s1','s2','s3','s4'].forEach(s => {
     const el = document.getElementById(`bs-view-${s}`);
     if (el) el.style.display = s === sec ? '' : 'none';
     const btn = document.getElementById(`bs-stab-${s}`);
@@ -4414,9 +4450,15 @@ function bsRenderSection() {
   if (bsCurrentSection === 's1') {
     // S1: 기말자산/원금회수/충당금은 bsData, 신규/추가/재대출/취급액은 contractData 우선
     bsBuildTableS1();
+  } else if (bsCurrentSection === 's2') {
+    // S2: 취급액 대비 비율(%)
+    bsBuildTableS2();
   } else if (bsCurrentSection === 's3') {
-    // S3: 계약리스트 기반 (상품구성 그룹별 신규/추가/재대출)
+    // S3: 계약리스트 기반 (담보구분별 신용/담보)
     bsBuildTableS3();
+  } else if (bsCurrentSection === 's4') {
+    // S4: 상품별
+    bsBuildTableS4();
   }
 }
 
@@ -4685,6 +4727,194 @@ function bsBuildTableS3() {
       tbody.appendChild(sep);
     }
   });
+}
+
+// ── 섹션2 빌드: 취급액 대비 비율(%) ─────────────────────────────
+function bsBuildTableS2() {
+  // S1 데이터를 기반으로 취급액(대출) 대비 비율을 계산
+  if (!bsData && !contractData && !paymentData && !writeoffData && !saleData) return;
+
+  const useBsBase = !!bsData;
+  const periods = useBsBase
+    ? bsData.periods
+    : (contractData?.periods || paymentData?.periods || writeoffData?.periods || saleData?.periods || []);
+  if (!periods.length) return;
+
+  let indices;
+  if (useBsBase) {
+    indices = bsFilteredIndices();
+  } else {
+    const n = document.getElementById('bs-period-filter')?.value || '12';
+    if (n === 'all') { indices = periods.map((_, i) => i); }
+    else {
+      const count = parseInt(n);
+      const start = Math.max(0, periods.length - count);
+      indices = Array.from({length: periods.length - start}, (_, i) => start + i);
+    }
+  }
+
+  // thead
+  const headRow = document.getElementById('bs-head-s2');
+  while (headRow.children.length > 2) headRow.removeChild(headRow.lastChild);
+  indices.forEach(i => {
+    const th = document.createElement('th');
+    th.textContent = periods[i];
+    headRow.appendChild(th);
+  });
+
+  const tbody = document.getElementById('bs-body-s2');
+  tbody.innerHTML = '';
+
+  // 취급액(대출) 시리즈 — 분모
+  const dealSeries = contractData?.section1?.['취급액(대출)'] || bsData?.section1?.['대출_취급액(대출)'] || {};
+
+  // S1 행 정의를 재사용해서 % 계산
+  const contractKeyMap = { '대출_신규': '신규', '대출_추가': '추가대출', '대출_재대출': '재대출', '대출_취급액(대출)': '취급액(대출)' };
+  const paymentKeyMap  = { '원금회수액': '원금회수액', '이자회수액': '이자회수액' };
+  const writeoffKeyMap = { '실상각액_월중상각액': '실상각액_월중상각액' };
+  const saleKeyMap     = { '실상각액_월중매각액': '실상각액_월중매각액' };
+
+  BS_S1_ROWS.forEach(({ key, group, sub, mergeSub, rowspan, cls }) => {
+    const contractKey = contractKeyMap[key];
+    const paymentKey  = paymentKeyMap[key];
+    const writeoffKey = writeoffKeyMap[key];
+    const saleKey     = saleKeyMap[key];
+
+    // 값 배열 결정 (S1과 동일 로직)
+    let vals = null;
+    if (key === '기초대출자산' && useBsBase) {
+      vals = bsData.section1['기초대출자산'] || null;
+    } else if (saleKey && saleData) {
+      const sl = saleData.section1[saleKey]; if (sl) vals = periods.map(ym => sl[ym] ?? null);
+    } else if (writeoffKey && writeoffData) {
+      const wd = writeoffData.section1[writeoffKey]; if (wd) vals = periods.map(ym => wd[ym] ?? null);
+    } else if (paymentKey && paymentData) {
+      const pd = paymentData.section1[paymentKey]; if (pd) vals = periods.map(ym => pd[ym] ?? null);
+    } else if (contractKey && contractData) {
+      const cd = contractData.section1[contractKey]; if (cd) vals = periods.map(ym => cd[ym] ?? null);
+    }
+    if (!vals && useBsBase) vals = bsData.section1[key] || null;
+
+    const tr = document.createElement('tr');
+    if (cls) tr.className = cls;
+
+    if (rowspan > 0) {
+      const g = document.createElement('td'); g.className = 'bs-group-col'; g.textContent = group || '';
+      if (rowspan > 1) g.rowSpan = rowspan;
+      if (mergeSub) { g.colSpan = 2; g.style.textAlign = 'left'; g.style.paddingLeft = '12px'; }
+      tr.appendChild(g);
+    }
+    if (!mergeSub) {
+      const s = document.createElement('td'); s.className = 'bs-sub-col'; s.textContent = sub || '';
+      tr.appendChild(s);
+    }
+
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      const v = vals ? vals[i] : null;
+      if (v != null) {
+        const deal = dealSeries[periods[i]];
+        if (deal && deal !== 0) {
+          const pct = (v / deal * 100).toFixed(1);
+          td.textContent = pct + '%';
+          td.style.color = v < 0 ? '#dc2626' : '';
+        } else {
+          td.textContent = bsFmt(v); // 분모 없으면 원값 표시
+        }
+      } else {
+        td.textContent = '-';
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 섹션4 빌드: 상품별 ───────────────────────────────────────────
+function bsBuildTableS4() {
+  const source = contractData || bsData;
+  if (!source) {
+    document.getElementById('bs-s4-product-wrap').innerHTML =
+      '<div class="card" style="padding:24px;text-align:center;color:#94a3b8;">계약리스트 또는 영업현황 데이터를 업로드하세요.</div>';
+    return;
+  }
+
+  const section3 = contractData ? contractData.section3 : (bsData?.section3 || {});
+  const periods  = contractData ? contractData.periods : (bsData?.periods || []);
+  const groupNames = Object.keys(section3);
+
+  // 상품 셀렉트 초기화
+  const sel = document.getElementById('bs-product-select');
+  if (sel.options.length <= 1) {
+    groupNames.forEach(g => {
+      const opt = document.createElement('option'); opt.value = g; opt.textContent = g;
+      sel.appendChild(opt);
+    });
+  }
+
+  const selectedGroup = sel.value;
+  const wrap = document.getElementById('bs-s4-product-wrap');
+
+  if (!selectedGroup) {
+    wrap.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:#94a3b8;">상품을 선택하세요.</div>';
+    return;
+  }
+
+  const gdata = section3[selectedGroup] || {};
+
+  // 기간 필터
+  const nStr = document.getElementById('bs-period-filter')?.value || '12';
+  let indices;
+  if (nStr === 'all') { indices = periods.map((_, i) => i); }
+  else {
+    const count = parseInt(nStr);
+    const start = Math.max(0, periods.length - count);
+    indices = Array.from({length: periods.length - start}, (_, i) => start + i);
+  }
+
+  const SUB_DEFS = [
+    { key: '신규',         sub: '신규',         cls: 'bs-row-sub'  },
+    { key: '추가대출',     sub: '추가대출',      cls: 'bs-row-sub'  },
+    { key: '재대출',       sub: '재대출',        cls: 'bs-row-sub'  },
+    { key: '취급액(대출)', sub: '취급액(대출)',   cls: 'bs-row-deal' },
+  ];
+
+  wrap.innerHTML = '';
+  const card = document.createElement('div'); card.className = 'card'; card.style.cssText = 'padding:0;overflow:hidden;';
+  const header = document.createElement('div');
+  header.className = 'bs-section-header blue';
+  header.innerHTML = `<i class="fas fa-tag"></i> ${selectedGroup} <span style="font-size:11px;font-weight:400;opacity:.8;margin-left:8px;">(단위: 백만원)</span>`;
+  card.appendChild(header);
+
+  const scroll = document.createElement('div'); scroll.className = 'table-scroll'; scroll.style.maxHeight = '400px';
+  const tbl = document.createElement('table'); tbl.className = 'data-table bs-time-table'; tbl.style.cssText = 'width:max-content;min-width:100%;';
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['구분','소분류'].forEach(t => { const th = document.createElement('th'); th.className = t === '구분' ? 'bs-group-col' : 'bs-sub-col'; th.textContent = t; headRow.appendChild(th); });
+  indices.forEach(i => { const th = document.createElement('th'); th.textContent = periods[i]; headRow.appendChild(th); });
+  thead.appendChild(headRow); tbl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  SUB_DEFS.forEach(({ key, sub, cls }, si) => {
+    const vals = gdata[key] || {};
+    const tr = document.createElement('tr'); tr.className = cls;
+    if (si === 0) {
+      const g = document.createElement('td'); g.className = 'bs-group-col'; g.textContent = selectedGroup;
+      g.rowSpan = SUB_DEFS.length; tr.appendChild(g);
+    }
+    const s = document.createElement('td'); s.className = 'bs-sub-col'; s.textContent = sub;
+    if (cls === 'bs-row-deal') { s.style.borderLeft = '3px solid #b45309'; s.title = '계약리스트 기준'; }
+    tr.appendChild(s);
+    indices.forEach(i => {
+      const td = document.createElement('td');
+      const v = vals[periods[i]] ?? null;
+      td.textContent = bsFmt(v);
+      if (v !== null && v < 0) td.style.color = '#dc2626';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody); scroll.appendChild(tbl); card.appendChild(scroll); wrap.appendChild(card);
 }
 
 // ===== 대출자산속성 렌더링 =====
