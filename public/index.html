@@ -4844,34 +4844,68 @@ function pcgSwitchSub(sub) {
       btn.style.fontWeight        = s === sub ? '700' : '600';
     }
   });
+  // 탭 전환 시 해당 sub 재렌더링 (이벤트 재바인딩 보장)
+  pcgRenderGroupList(sub);
+  pcgRenderEditor(sub);
 }
 
 function pcgRenderGroupList(sub) {
-  const list = document.getElementById(`pcg-${sub}-group-list`);
-  const cnt  = document.getElementById(`pcg-${sub}-group-count`);
+  const list = document.getElementById('pcg-' + sub + '-group-list');
+  const cnt  = document.getElementById('pcg-' + sub + '-group-count');
   if (!list) return;
-  cnt.textContent = `${pcgGroups[sub].length}개`;
+  cnt.textContent = pcgGroups[sub].length + '개';
+  list.innerHTML  = '';
+
   if (pcgGroups[sub].length === 0) {
-    list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:20px;text-align:center;color:#94a3b8;font-size:13px;';
+    empty.textContent = '아직 그룹이 없습니다';
+    list.appendChild(empty);
     return;
   }
-  list.innerHTML = '';
+
   pcgGroups[sub].forEach((g, idx) => {
-    const div = document.createElement('div');
-    div.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;
-      background:${idx === pcgSelIdx[sub] ? '#e0f2fe' : '#fff'};`;
-    div.innerHTML = `<span style="font-size:13px;font-weight:600;color:#1e293b;">${g.name}
-        <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:6px;">${g.items.length}개</span></span>
-      <button title="삭제" onclick="pcgDeleteGroup('${sub}',${idx})" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;">✕</button>`;
-    div.querySelector('span:first-child').addEventListener('click', () => pcgSelectGroup(sub, idx));
-    list.appendChild(div);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
+      + 'cursor:pointer;border-bottom:1px solid #f1f5f9;'
+      + 'background:' + (idx === pcgSelIdx[sub] ? '#e0f2fe' : '#fff') + ';';
+
+    // 그룹명 + 항목 수 (클릭 영역)
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#1e293b;flex:1;pointer-events:none;';
+    nameSpan.textContent = g.name;
+    const cntSpan = document.createElement('span');
+    cntSpan.style.cssText = 'font-size:11px;font-weight:400;color:#64748b;margin-left:6px;';
+    cntSpan.textContent = g.items.length + '개';
+    nameSpan.appendChild(cntSpan);
+    // 클릭 → 그룹 선택 (row에만 이벤트, nameSpan은 pointer-events:none)
+    row.addEventListener('click', (function(capturedSub, i){ return function(e){
+      // 삭제버튼 클릭 시 제외
+      if (e.target.classList.contains('pcg-del-btn')) return;
+      pcgSelectGroup(capturedSub, i);
+    }; })(sub, idx));
+
+    // 삭제 버튼
+    const delBtn = document.createElement('button');
+    delBtn.className = 'pcg-del-btn';
+    delBtn.title = '삭제';
+    delBtn.style.cssText = 'border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;flex-shrink:0;';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', (function(i){ return function(e){
+      e.stopPropagation();
+      pcgDeleteGroup(sub, i);
+    }; })(idx));
+
+    row.appendChild(nameSpan);
+    row.appendChild(delBtn);
+    list.appendChild(row);
   });
 }
 
 function pcgSelectGroup(sub, idx) {
   pcgSelIdx[sub] = idx;
-  pcgRenderGroupList(sub);
-  pcgRenderEditor(sub);
+  pcgRenderEditor(sub);      // 편집기 먼저 렌더링
+  pcgRenderGroupList(sub);   // 그룹 목록 배경색 업데이트
 }
 
 function pcgRenderEditor(sub) {
