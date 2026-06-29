@@ -198,6 +198,7 @@ async def lifespan(app_):
                                 age_r    = result.get("age_band", {})
                                 job_r    = result.get("job_raw", {})
                                 region_r = result.get("region", {})
+                                cb_raw_r = result.get("cb_raw", {})
                                 if gender_r:
                                     saq_store[pkey]["gender"]   = gender_r
                                 if age_r:
@@ -206,6 +207,8 @@ async def lifespan(app_):
                                     saq_store[pkey]["job_raw"]  = job_r
                                 if region_r:
                                     saq_store[pkey]["region"]   = region_r
+                                if cb_raw_r:
+                                    saq_store[pkey]["cb_raw"]   = {str(k): v for k, v in cb_raw_r.items()}
 
                             print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
@@ -774,6 +777,14 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             saq_store[pkey]["region"] = region_data
             uploaded_data["settlement_aq"] = saq_store
 
+        # ── CB등급(NICE스코어) → saq_store 저장 ──────────────────────
+        # cb_raw: {점수(int): 백만원} 형태 → JSON 직렬화 위해 str 키로 저장
+        cb_raw_data = data.get("cb_raw", {})
+        if cb_raw_data and pkey in saq_store:
+            # 점수 키를 문자열로 변환하여 저장
+            saq_store[pkey]["cb_raw"] = {str(k): v for k, v in cb_raw_data.items()}
+            uploaded_data["settlement_aq"] = saq_store
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -789,6 +800,7 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "age_band_updated2": bool(age_band_data and pkey and pkey != "unknown"),
             "job_updated":       bool(job_raw_data and pkey and pkey != "unknown"),
             "region_updated":    bool(region_data  and pkey and pkey != "unknown"),
+            "cb_raw_updated":    bool(cb_raw_data  and pkey and pkey != "unknown"),
         })
     except Exception as e:
         import traceback
@@ -980,6 +992,52 @@ async def get_all_jobs():
             if k != "전체융잔 합계":
                 all_jobs.add(k)
     return JSONResponse(sorted(all_jobs))
+
+
+@app.get("/api/cb-grade-config")
+async def get_cb_grade_config():
+    """CB등급별 NICE스코어 구간 설정 반환 (1~10등급 고정 그룹)"""
+    cfg = uploaded_data.get("cb_grade_config")
+    if not cfg:
+        _path = os.path.join(os.path.dirname(__file__), "data", "cb_grade_config.json")
+        if os.path.exists(_path):
+            with open(_path, encoding="utf-8") as f:
+                cfg = json.load(f)
+            uploaded_data["cb_grade_config"] = cfg
+        else:
+            # 기본값: 1~10등급 NICE 점수 구간
+            cfg = [
+                {"grade": "1등급", "lo": 900, "hi": 1000},
+                {"grade": "2등급", "lo": 870, "hi": 899},
+                {"grade": "3등급", "lo": 840, "hi": 869},
+                {"grade": "4등급", "lo": 805, "hi": 839},
+                {"grade": "5등급", "lo": 750, "hi": 804},
+                {"grade": "6등급", "lo": 665, "hi": 749},
+                {"grade": "7등급", "lo": 600, "hi": 664},
+                {"grade": "8등급", "lo": 515, "hi": 599},
+                {"grade": "9등급", "lo": 445, "hi": 514},
+                {"grade": "10등급", "lo": 0,   "hi": 444},
+            ]
+            uploaded_data["cb_grade_config"] = cfg
+    return JSONResponse(cfg)
+
+
+@app.post("/api/cb-grade-config")
+async def save_cb_grade_config(request: Request):
+    """CB등급별 NICE스코어 구간 설정 저장 (1~10등급 고정)"""
+    body = await request.json()
+    if not isinstance(body, list):
+        raise HTTPException(status_code=400, detail="배열 형태로 전송하세요")
+    # 필수 필드 검증
+    for item in body:
+        if not all(k in item for k in ("grade", "lo", "hi")):
+            raise HTTPException(status_code=400, detail="grade, lo, hi 필드가 필요합니다")
+    uploaded_data["cb_grade_config"] = body
+    _path = os.path.join(os.path.dirname(__file__), "data", "cb_grade_config.json")
+    os.makedirs(os.path.dirname(_path), exist_ok=True)
+    with open(_path, "w", encoding="utf-8") as f:
+        json.dump(body, f, ensure_ascii=False, indent=2)
+    return JSONResponse({"success": True})
 
 
 @app.get("/api/channel-groups/all-channels")
@@ -1841,12 +1899,13 @@ async def get_asset_data():
             sections["상품구분화해채권_상품별"] = hwahae_prod
             result["sections"] = sections
 
-        # ── settlement_aq gender/age_band/job_raw → sections['성별'/'연령별'/'직업별'] 동적 구성 ──
+        # ── settlement_aq gender/age_band/job_raw/region/cb_raw → 동적 섹션 구성 ──
         # 구조: sections['성별']['남성'][ym] = 원단위
         gender_sec_out: dict[str, dict[str, float]] = {}
         age_sec_out:    dict[str, dict[str, float]] = {}
         job_sec_out:    dict[str, dict[str, float]] = {}
         region_sec_out: dict[str, dict[str, float]] = {}
+        cb_sec_out:     dict[str, dict[str, float]] = {}   # CB등급별
 
         for pkey, pdata in saq.items():
             ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
@@ -1889,6 +1948,47 @@ async def get_asset_data():
                     region_sec_out[row_key] = {}
                 region_sec_out[row_key][ym] = float(val) * 1_000_000
 
+            # CB등급: cb_raw {score_str: 백만원} → cb_grade_config 구간 기반 등급별 집계
+            cb_raw_pdata = pdata.get("cb_raw") or {}
+            if cb_raw_pdata:
+                # CB등급 설정 로드
+                cb_cfg = uploaded_data.get("cb_grade_config")
+                if not cb_cfg:
+                    _cfg_path = os.path.join(os.path.dirname(__file__), "data", "cb_grade_config.json")
+                    if os.path.exists(_cfg_path):
+                        with open(_cfg_path, encoding="utf-8") as _f:
+                            cb_cfg = json.load(_f)
+                        uploaded_data["cb_grade_config"] = cb_cfg
+                if cb_cfg:
+                    # 등급별 집계 버킷 초기화
+                    grade_bucket: dict[str, float] = {}
+                    total_cb = 0.0
+                    for score_str, bal_m in cb_raw_pdata.items():
+                        try:
+                            score = int(score_str)
+                        except (ValueError, TypeError):
+                            continue
+                        bal_won = float(bal_m) * 1_000_000
+                        total_cb += bal_won
+                        # 해당 등급 찾기
+                        for cfg_item in cb_cfg:
+                            lo = cfg_item.get("lo", 0)
+                            hi = cfg_item.get("hi", 9999)
+                            grade = cfg_item.get("grade", "")
+                            if lo <= score <= hi:
+                                grade_bucket[grade] = grade_bucket.get(grade, 0.0) + bal_won
+                                break
+                    # 섹션 삽입
+                    for grade_key, bal_won in grade_bucket.items():
+                        if grade_key not in cb_sec_out:
+                            cb_sec_out[grade_key] = {}
+                        cb_sec_out[grade_key][ym] = cb_sec_out[grade_key].get(ym, 0.0) + bal_won
+                    # 전체융잔 합계
+                    if total_cb > 0:
+                        if "전체융잔 합계" not in cb_sec_out:
+                            cb_sec_out["전체융잔 합계"] = {}
+                        cb_sec_out["전체융잔 합계"][ym] = cb_sec_out["전체융잔 합계"].get(ym, 0.0) + total_cb
+
         sections = result.get("sections", {})
         if gender_sec_out:
             sections["성별"] = gender_sec_out
@@ -1898,6 +1998,8 @@ async def get_asset_data():
             sections["직업별"] = job_sec_out
         if region_sec_out:
             sections["지역별"] = region_sec_out
+        if cb_sec_out:
+            sections["CB등급"] = cb_sec_out
         result["sections"] = sections
 
     return JSONResponse(result)

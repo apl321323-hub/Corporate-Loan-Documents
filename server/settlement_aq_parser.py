@@ -12,6 +12,7 @@
   X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
   AK열 (index 36): 자택주소  (시/도 약칭 예: '서울', '경기' 등)
   AC열 (index 28): 직업분류
+  AW열 (index 48): NICE스코어 (숫자 또는 문자열)
   CN열 (index 91): 만나이    (숫자)
 
 연체 구간 (자산건전성 기존 테이블 기준):
@@ -319,6 +320,11 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # region_sec: {시도명: float}  (원 단위, 고유값 동적 수집)
     region_sec: dict[str, float] = {}
 
+    # ── CB등급(NICE스코어) 집계 버킷 (AW열, index 48) ─────────────────
+    # cb_score_sec: {점수(int): float}  (원 단위, 점수별 잔액 합산)
+    # → main.py에서 등급 구간 설정 기반으로 등급별 집계
+    cb_score_sec: dict[int, float] = {}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -335,6 +341,13 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         age_raw      = int(float(row[91])) if len(row) > 91 and row[91] is not None else None  # CN열: 만나이 (index 91, float→int)
         bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
         bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX열: 신복상태
+        # AW열(NICE스코어): index 48, 문자열→int 변환
+        nice_score: Optional[int] = None
+        if len(row) > 48 and row[48] is not None:
+            try:
+                nice_score = int(float(str(row[48]).strip()))
+            except (ValueError, TypeError):
+                nice_score = None
 
         if product is None or days is None or balance is None:
             continue
@@ -451,6 +464,12 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 region_sec[region_raw] = 0.0
             region_sec[region_raw] += balance
 
+        # ── CB등급(NICE스코어): AW열 점수별 집계 ────────────────────────
+        if nice_score is not None and balance is not None:
+            if nice_score not in cb_score_sec:
+                cb_score_sec[nice_score] = 0.0
+            cb_score_sec[nice_score] += balance
+
     wb.close()
 
     # ── 섹션3 연체율(%) 계산 ────────────────────────────────────────
@@ -554,6 +573,10 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     region_m: dict[str, int] = {k: _m(v) for k, v in region_sec.items()}
     region_m['전체융잔 합계'] = _m(sum(region_sec.values()))
 
+    # ── CB등급(NICE스코어) 점수별 섹션 (백만원 단위) ─────────────────────
+    # {점수(int): 백만원} 형태로 반환, main.py에서 등급 구간 적용
+    cb_raw_m: dict[int, int] = {score: _m(bal) for score, bal in cb_score_sec.items()}
+
     return {
         "period"      : period,
         "section1"    : s1_m,
@@ -572,6 +595,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "age_band"    : age_band_m,  # 연령대별 융잔 합계 (백만원)
         "job_raw"     : job_m,       # 직업분류별 융잔 합계 (백만원, raw 키)
         "region"      : region_m,    # 지역별 융잔 합계 (백만원)
+        "cb_raw"      : cb_raw_m,     # NICE스코어별 융잔 합계 (백만원, 점수→금액)
         "products"    : products_list,
     }
 
