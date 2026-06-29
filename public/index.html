@@ -5950,6 +5950,9 @@ async function loadAndMergeAmountBandToAsset(period) {
 
 // ── 데이터 로드 ────────────────────────────────────────────────
 async function loadAssetData() {
+  try {
+    const res = await fetch('/api/data/asset');
+    if (!res.ok) return;
     assetData = await res.json();
     // 상태 도트
     const dot = document.getElementById('dot-asset');
