@@ -4920,9 +4920,11 @@ function pcgRenderEditor(sub) {
   const g   = pcgGroups[sub];
   const cur = g[idx];
 
-  // 이미 다른 그룹에서 사용 중인 항목
+  // 이미 다른 그룹에서 사용 중인 항목 (sub='c' 화해채권은 중복 허용)
   const usedElsewhere = new Set();
-  g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
+  if (sub !== 'c') {
+    g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
+  }
 
   // ── 전체 항목 목록 결정 ────────────────────────────────────────────
   // sub='c'(화해채권): BW/BX 고유값 → [회생]xxx / [신복]xxx
@@ -5045,11 +5047,13 @@ async function pcgSaveGroup(sub) {
   const idx = pcgSelIdx[sub];
   if (idx < 0) return;
   const checked = [...document.querySelectorAll(`#pcg-${sub}-item-list input:checked:not(:disabled)`)].map(cb => cb.value);
-  // 중복 검증
-  const usedElsewhere = new Map();
-  pcgGroups[sub].forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.set(it, og.name)); });
-  const conflicts = checked.filter(it => usedElsewhere.has(it));
-  if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
+  // 중복 검증 (sub='c' 화해채권은 중복 허용이므로 건너뜀)
+  if (sub !== 'c') {
+    const usedElsewhere = new Map();
+    pcgGroups[sub].forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.set(it, og.name)); });
+    const conflicts = checked.filter(it => usedElsewhere.has(it));
+    if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
+  }
   pcgGroups[sub][idx].items = checked;
   pcgRenderGroupList(sub);
   pcgRenderEditor(sub);
