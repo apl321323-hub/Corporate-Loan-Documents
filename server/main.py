@@ -1581,6 +1581,12 @@ async def get_asset_data():
     # 덮어쓰기: settlement_aq에 해당 기간이 있으면 그 기간만 결산자료 값으로 교체
     saq = uploaded_data.get("settlement_aq") or {}
     if saq:
+        # ── 상품명 정규화 매핑 (오타/동의어 통합) ──────────────────────
+        # 결산자료 상품명 → asset_data 표준 상품명
+        PROD_ALIAS: dict[str, str] = {
+            "토마토토탈론": "토마토토탈",  # 오타 통합
+        }
+
         sections = result.get("sections", {})
         # asset_data 기존 상품별 섹션을 기본으로 복사
         prod_sec: dict[str, dict[str, float]] = {
@@ -1596,21 +1602,22 @@ async def get_asset_data():
             if not s4:
                 continue
 
-            # 해당 기간에 settlement_aq에 없는 상품은 0 처리
-            # (기존 prod_sec에 있던 상품의 해당 ym을 결산자료 값으로 교체)
             # 먼저 해당 ym의 기존 값을 모두 제거
             for prod in list(prod_sec.keys()):
-                if prod in prod_sec and ym in prod_sec[prod]:
+                if ym in prod_sec[prod]:
                     prod_sec[prod].pop(ym, None)
 
             # settlement_aq section4 값으로 채움 (백만원 → 원 단위 복원)
-            for prod, buckets in s4.items():
+            # 상품명 정규화 적용: 오타는 표준명으로 합산
+            for prod_raw, buckets in s4.items():
                 val = buckets.get("융잔합계")
                 if val is None:
                     continue
+                prod = PROD_ALIAS.get(prod_raw, prod_raw)  # 정규화
                 if prod not in prod_sec:
                     prod_sec[prod] = {}
-                prod_sec[prod][ym] = float(val) * 1_000_000
+                # 같은 표준명으로 합산될 수 있으므로 += 처리
+                prod_sec[prod][ym] = prod_sec[prod].get(ym, 0.0) + float(val) * 1_000_000
 
             # 해당 기간 전체융잔 합계 재계산
             total_ym = sum(
