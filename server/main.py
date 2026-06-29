@@ -1572,7 +1572,43 @@ async def get_asset_data():
     d = uploaded_data.get("asset_data")
     if not d:
         return JSONResponse({"error": "데이터 없음"}, status_code=404)
-    return JSONResponse(d)
+
+    import copy
+    result = copy.deepcopy(d)
+
+    # ── settlement_aq section4 → sections['상품별'] 동적 구성 ──────────
+    # H열(현재상품)별 L열(잔액) 합산값을 기간별로 집계하여 상품별 섹션을 대체
+    saq = uploaded_data.get("settlement_aq") or {}
+    if saq:
+        prod_sec: dict[str, dict[str, float]] = {}
+        for pkey, pdata in saq.items():
+            # pkey 형식: "2025-06" 또는 "2025-06_suffix"
+            ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
+            if not ym:
+                continue
+            s4 = pdata.get("section4") or {}
+            for prod, buckets in s4.items():
+                # 융잔합계 키 (백만원 단위로 이미 변환됨)
+                val = buckets.get("융잔합계")
+                if val is None:
+                    continue
+                if prod not in prod_sec:
+                    prod_sec[prod] = {}
+                prod_sec[prod][ym] = float(val) * 1_000_000  # 원 단위로 복원
+
+        if prod_sec:
+            # 전체융잔 합계: 기간별 모든 상품 합산
+            total_by_ym: dict[str, float] = {}
+            for prod, ymap in prod_sec.items():
+                for ym, val in ymap.items():
+                    total_by_ym[ym] = total_by_ym.get(ym, 0.0) + val
+            prod_sec["전체융잔 합계"] = total_by_ym
+
+            sections = result.get("sections", {})
+            sections["상품별"] = prod_sec
+            result["sections"] = sections
+
+    return JSONResponse(result)
 
 
 @app.post("/api/upload/loan-count")
