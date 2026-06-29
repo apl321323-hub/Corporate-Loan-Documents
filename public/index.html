@@ -2376,24 +2376,22 @@ async function uploadFile(sector) {
 
     if (sector === 'settle') {
       await loadSettlementAQData();
-      // 대출만기 섹션 갱신: 결산자료 maturity → assetData 반영
-      if (res.data.maturity_updated) {
+      // 대출만기/평균이자율/상환방식 섹션 갱신: 서버에서 asset_data 갱신됐으면 통째로 재로드
+      const anyUpdated = res.data.maturity_updated || res.data.avg_rate_updated || res.data.repayment_updated;
+      if (anyUpdated) {
         await loadAssetData();
       } else if (assetData && res.data.period) {
-        // asset_data가 메모리에만 있는 경우도 대비: settlement-aq 데이터로 직접 갱신
+        // asset_data가 메모리에만 있는 경우도 대비: settlement-aq 데이터로 직접 병합
         await loadAndMergeMaturityToAsset(res.data.period);
-      }
-      // 평균이자율 섹션 갱신: 결산자료 avg_rate → assetData 반영
-      if (res.data.avg_rate_updated) {
-        await loadAssetData();
-      } else if (assetData && res.data.period) {
         await loadAndMergeAvgRateToAsset(res.data.period);
+        await loadAndMergeRepaymentToAsset(res.data.period);
       }
       const p = res.data.period ? ` [${res.data.period}]` : '';
       const total = res.data.section1_total ? ` · 융잔합계 ${res.data.section1_total.toLocaleString()}백만원` : '';
-      const matMsg = res.data.maturity_updated ? ' / 대출만기 갱신' : '';
-      const rateMsg = res.data.avg_rate_updated ? ' / 평균이자율 갱신' : '';
-      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total}${matMsg}${rateMsg})`, 'success');
+      const matMsg  = res.data.maturity_updated   ? ' / 대출만기 갱신' : '';
+      const rateMsg = res.data.avg_rate_updated   ? ' / 평균이자율 갱신' : '';
+      const repMsg  = res.data.repayment_updated  ? ' / 상환방식 갱신' : '';
+      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total}${matMsg}${rateMsg}${repMsg})`, 'success');
     } else if (sector === 'company') {
       const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
       appData.company_info = ciRes.data;
@@ -5767,6 +5765,48 @@ async function loadAndMergeAvgRateDealToAsset() {
     if (laCurSection === '05') laRenderSection('05');
   } catch(e) {
     console.warn('avg_rate_deal 병합 실패:', e.message);
+  }
+}
+
+/**
+ * 결산자료(settlement-aq)의 repayment → assetData.sections['상환방식'] 실시간 병합
+ * repayment 구조: {"신용 _원리금균등상환": int(백만원), "자유상환": int, ...}
+ * asset_data는 원 단위이므로 ×1_000_000 변환 후 저장
+ */
+async function loadAndMergeRepaymentToAsset(period) {
+  try {
+    if (!assetData) return;
+    const res = await fetch(`/api/data/settlement-aq`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || d.error || !d.repayment) return;
+
+    const pkey = d.period || period;
+    if (!pkey) return;
+
+    if (!assetData.sections) assetData.sections = {};
+    if (!assetData.sections['상환방식']) assetData.sections['상환방식'] = {};
+    const sec = assetData.sections['상환방식'];
+
+    // repayment는 백만원 단위 → asset_data와 단위 통일 위해 ×1_000_000
+    Object.entries(d.repayment).forEach(([rowKey, val]) => {
+      if (val != null) {
+        if (!sec[rowKey]) sec[rowKey] = {};
+        sec[rowKey][pkey] = val * 1_000_000;
+      }
+    });
+
+    // 기간 목록에 추가
+    if (!assetData.periods) assetData.periods = [];
+    if (!assetData.periods.includes(pkey)) {
+      assetData.periods.push(pkey);
+      assetData.periods.sort();
+    }
+
+    // 현재 상환방식 탭(06)이 열려 있으면 즉시 재렌더
+    if (laCurSection === '06') laRenderSection('06');
+  } catch(e) {
+    console.warn('repayment 병합 실패:', e.message);
   }
 }
 

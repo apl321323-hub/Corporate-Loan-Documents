@@ -66,6 +66,7 @@ async def lifespan(app_):
             needs_rebuild = any(
                 not pdata.get("maturity") or not any(v > 0 for v in pdata["maturity"].values())
                 or not pdata.get("avg_rate")
+                or not pdata.get("repayment")
                 for pdata in saq_store.values()
             )
             if needs_rebuild:
@@ -140,7 +141,22 @@ async def lifespan(app_):
                                 sections["평균이자율2"] = sec_rate2
                                 asset_data["sections"] = sections
 
-                            print(f"[startup] settlement_aq maturity/avg_rate 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}")
+                            # ── 상환방식 섹션 업데이트 ───────────────────────
+                            repayment = result.get("repayment", {})
+                            if repayment:
+                                if pkey in saq_store:
+                                    saq_store[pkey]["repayment"] = repayment
+                                sections = asset_data.get("sections", {})
+                                sec_rep = sections.get("상환방식", {})
+                                for row_key, val in repayment.items():
+                                    if val is not None:
+                                        if row_key not in sec_rep:
+                                            sec_rep[row_key] = {}
+                                        sec_rep[row_key][pkey] = float(val) * 1_000_000
+                                sections["상환방식"] = sec_rep
+                                asset_data["sections"] = sections
+
+                            print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}")
                         except Exception as ex:
                             print(f"[startup] {sf} 재처리 실패: {ex}")
 
@@ -646,6 +662,25 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
                 asset_data["sections"] = sections
                 uploaded_data["asset_data"] = asset_data
 
+        # ── 상환방식 → asset_data.sections['상환방식'] 병합 ──────────
+        # repayment 구조: {"신용 _원리금균등상환": int(백만원), ..., "전체융잔 합계": int}
+        # asset_data의 상환방식 섹션은 {행키: {기간: 원값}} 형태
+        # 단위 통일: repayment는 백만원 → 원 단위(×1_000_000)로 변환 후 저장
+        repayment = data.get("repayment", {})
+        if repayment and pkey and pkey != "unknown":
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec_rep = sections.get("상환방식", {})
+                for row_key, val in repayment.items():
+                    if val is not None:
+                        if row_key not in sec_rep:
+                            sec_rep[row_key] = {}
+                        sec_rep[row_key][pkey] = float(val) * 1_000_000
+                sections["상환방식"] = sec_rep
+                asset_data["sections"] = sections
+                uploaded_data["asset_data"] = asset_data
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -653,8 +688,9 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "products": len(data.get("products", [])),
             "section1_total": data["section1"].get("융잔합계", 0),
             "upload_period": period or "(미지정)",
-            "maturity_updated": bool(maturity and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
-            "avg_rate_updated": bool(avg_rate and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "maturity_updated":  bool(maturity   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "avg_rate_updated":  bool(avg_rate   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "repayment_updated": bool(repayment  and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
         })
     except Exception as e:
         import traceback
@@ -1568,8 +1604,21 @@ async def rebuild_maturity():
             sections["평균이자율2"] = sec_rate2
             asset_data["sections"] = sections
 
+        # ── 상환방식 섹션도 함께 재적용 ──────────────────────────
+        repayment = pdata.get("repayment", {})
+        if repayment:
+            sections = asset_data.get("sections", {})
+            sec_rep = sections.get("상환방식", {})
+            for row_key, val in repayment.items():
+                if val is not None:
+                    if row_key not in sec_rep:
+                        sec_rep[row_key] = {}
+                    sec_rep[row_key][pkey] = float(val) * 1_000_000
+            sections["상환방식"] = sec_rep
+            asset_data["sections"] = sections
+
         uploaded_data["asset_data"] = asset_data
-        results.append({"period": pkey, "status": "merged", "maturity": maturity, "avg_rate": avg_rate})
+        results.append({"period": pkey, "status": "merged", "maturity": maturity, "avg_rate": avg_rate, "repayment": repayment})
 
     return JSONResponse({"success": True, "results": results})
 

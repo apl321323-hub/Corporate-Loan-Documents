@@ -6,6 +6,8 @@
   H열 (index 7)  : 현재상품
   J열 (index 9)  : 연체일수  (문자열로 저장됨)
   L열 (index 11) : 잔액      (숫자)
+  O열 (index 14) : 정상이율  (%)
+  U열 (index 20) : 상환방식  ('원리균등' | '자유상환')
   X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
 
 연체 구간 (자산건전성 기존 테이블 기준):
@@ -28,6 +30,19 @@
   24~36개월 미만: +24개월 이상 ~ +36개월 미만
   36개월 이상   : +36개월 이상
   전체융잔 합계 : 전체
+
+상환방식 집계:
+  행 레이블                  | 조건
+  ────────────────────────────────────────────────────────
+  신용 _원리금균등상환        | 그룹='신용', 상환방식='원리균등'
+  신용 _자유상환              | 그룹='신용', 상환방식='자유상환'
+  신용 _전체융잔 합계         | 그룹='신용', 전체
+  담보 _원리금균등상환        | 그룹='담보', 상환방식='원리균등'
+  담보 _자유상환              | 그룹='담보', 상환방식='자유상환'
+  담보 _체융잔 합계           | 그룹='담보', 전체  (기존 키 이름 유지)
+  원리금균등상환              | 전체, 상환방식='원리균등'
+  자유상환                   | 전체, 상환방식='자유상환'
+  전체융잔 합계              | 전체
 
 섹션3 담보구분별:
   product_groups.json 의 그룹 이름으로 분류
@@ -226,6 +241,20 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     rate_sum_group: dict[str, float] = {g: 0.0 for g in group_names}
     bal_sum_group:  dict[str, float] = {g: 0.0 for g in group_names}
 
+    # ── 상환방식 집계 버킷 (원 단위) ────────────────────────────
+    # U열 값 → 표시 레이블 정규화
+    REPAY_LABEL: dict[str, str] = {
+        '원리균등': '원리금균등상환',
+        '자유상환': '자유상환',
+    }
+    # 그룹별: {그룹명: {"원리금균등상환": float, "자유상환": float, "합계": float}}
+    repay_group: dict[str, dict[str, float]] = {
+        g: {"원리금균등상환": 0.0, "자유상환": 0.0, "합계": 0.0}
+        for g in group_names
+    }
+    # 전체 집계
+    repay_total: dict[str, float] = {"원리금균등상환": 0.0, "자유상환": 0.0, "합계": 0.0}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -233,6 +262,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         days         = _to_int(row[9])                                       # J열
         balance      = _to_float(row[11])                                    # L열
         rate         = _to_float(row[14]) if len(row) > 14 else None         # O열: 정상이율(%)
+        repay_raw    = str(row[20]).strip() if len(row) > 20 and row[20] is not None else None  # U열: 상환방식
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
 
         if product is None or days is None or balance is None:
@@ -278,6 +308,18 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 rate_sum_group[gname] += weighted
                 bal_sum_group[gname]  += balance
 
+        # ── 상환방식: U열 집계 ───────────────────────────────────────
+        # 전체 집계 (그룹 무관)
+        repay_label = REPAY_LABEL.get(repay_raw) if repay_raw else None
+        repay_total["합계"] += balance
+        if repay_label and repay_label in repay_total:
+            repay_total[repay_label] += balance
+        # 그룹별 집계
+        if gname and gname in repay_group:
+            repay_group[gname]["합계"] += balance
+            if repay_label and repay_label in repay_group[gname]:
+                repay_group[gname][repay_label] += balance
+
     wb.close()
 
     # ── 섹션3 연체율(%) 계산 ────────────────────────────────────────
@@ -316,16 +358,43 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         **{gname: _wavg(rate_sum_group[gname], bal_sum_group[gname]) for gname in group_names},
     }
 
+    # ── 상환방식 섹션 구성 (백만원 단위) ────────────────────────────
+    # 행 레이블은 기존 asset_data.sections['상환방식'] 키와 일치시킴:
+    #   신용 _원리금균등상환, 신용 _자유상환, 신용 _전체융잔 합계
+    #   담보 _원리금균등상환, 담보 _자유상환, 담보 _체융잔 합계
+    #   원리금균등상환, 자유상환, 전체융잔 합계
+    def _m(v: float) -> int:
+        return round(v / 1_000_000)
+
+    repayment: dict[str, int] = {}
+    # 신용 그룹 (group_names에 '신용'이 있으면)
+    if "신용" in repay_group:
+        g = repay_group["신용"]
+        repayment["신용 _원리금균등상환"] = _m(g["원리금균등상환"])
+        repayment["신용 _자유상환"]       = _m(g["자유상환"])
+        repayment["신용 _전체융잔 합계"]  = _m(g["합계"])
+    # 담보 그룹
+    if "담보" in repay_group:
+        g = repay_group["담보"]
+        repayment["담보 _원리금균등상환"] = _m(g["원리금균등상환"])
+        repayment["담보 _자유상환"]       = _m(g["자유상환"])
+        repayment["담보 _체융잔 합계"]    = _m(g["합계"])   # 기존 키 이름 유지
+    # 전체 합계
+    repayment["원리금균등상환"] = _m(repay_total["원리금균등상환"])
+    repayment["자유상환"]      = _m(repay_total["자유상환"])
+    repayment["전체융잔 합계"] = _m(repay_total["합계"])
+
     products_list = sorted(s4_m.keys())
 
     return {
-        "period"   : period,
-        "section1" : s1_m,
-        "section3" : s3_m,
-        "section4" : s4_m,
-        "maturity" : maturity_m,
-        "avg_rate" : avg_rate,   # 평균이율 집계 결과
-        "products" : products_list,
+        "period"    : period,
+        "section1"  : s1_m,
+        "section3"  : s3_m,
+        "section4"  : s4_m,
+        "maturity"  : maturity_m,
+        "avg_rate"  : avg_rate,    # 평균이율 집계 결과
+        "repayment" : repayment,   # 상환방식 집계 결과 (백만원)
+        "products"  : products_list,
     }
 
 
