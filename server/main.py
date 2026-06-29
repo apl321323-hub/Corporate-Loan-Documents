@@ -1584,7 +1584,7 @@ async def get_asset_data():
         # ── 상품명 정규화 매핑 (오타/동의어 통합) ──────────────────────
         # 결산자료 상품명 → asset_data 표준 상품명
         PROD_ALIAS: dict[str, str] = {
-            "토마토토탈론": "토마토토탈",  # 오타 통합
+            # 토마토토탈론이 표준명 (asset_data 및 결산자료 모두 동일)
         }
 
         sections = result.get("sections", {})
