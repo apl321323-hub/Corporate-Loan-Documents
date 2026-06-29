@@ -4331,6 +4331,7 @@ async function pgSaveGroup() {
 
   pgGroups[pgSelectedGroupIdx].products = checked;
   pgRenderGroupList();
+  pgRenderEditor();   // 저장 후 다른 그룹 잠금 즉시 반영
   pgRenderSummary();
   await pgPersist();
   showToast(`✅ "${pgGroups[pgSelectedGroupIdx].name}" 그룹 저장 완료 (${checked.length}개 상품)`, 'success');
@@ -4579,6 +4580,7 @@ async function crSaveGroup() {
 
   crGroups[crSelectedGroupIdx].channels = checked;
   crRenderGroupList();
+  crRenderEditor();   // 저장 후 다른 그룹 잠금 즉시 반영
   crRenderSummary();
   await crPersist();
   showToast(`✅ "${crGroups[crSelectedGroupIdx].name}" 그룹 저장 완료 (${checked.length}개 항목)`, 'success');
