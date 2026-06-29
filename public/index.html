@@ -6625,6 +6625,8 @@ async function laRenderCategorySection(periods) {
     // tbody
     const tbody = tbl.querySelector('tbody');
     tbody.innerHTML = '';
+    // 각 그룹 행의 ym별 값을 저장해 합계 계산에 활용
+    const groupSums = []; // [{ym: value, ...}, ...]
     groups.forEach(g => {
       const tr  = document.createElement('tr');
       const td0 = document.createElement('td');
@@ -6632,20 +6634,30 @@ async function laRenderCategorySection(periods) {
       td0.className   = 'bs-sub-col';
       td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;white-space:nowrap;';
       tr.appendChild(td0);
+      const ymVals = {};
       periods.forEach(ym => {
         const td = document.createElement('td');
         let sum = null;
+        // ① items 배열 합산 시도
         (g.items || []).forEach(it => {
           const v = (secData[it] || {})[ym];
           if (v != null) sum = (sum ?? 0) + v;
         });
+        // ② 합산값 없으면 그룹명 자체를 섹션 키로 직접 조회
+        //    (상품구분 섹션은 '신용'/'담보' 등 그룹명이 곧 키)
+        if (sum === null) {
+          const v = (secData[g.name] || {})[ym];
+          if (v != null && v !== 0) sum = v;
+        }
+        ymVals[ym] = sum;
         td.textContent = laFmt(sum, secKey, g.name);
         td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
         tr.appendChild(td);
       });
+      groupSums.push(ymVals);
       tbody.appendChild(tr);
     });
-    // 합계 행
+    // 합계 행 — 그룹 행들의 합산 (null인 그룹은 0으로 처리)
     const trT  = document.createElement('tr');
     trT.style.cssText = 'background:#f8fafc;font-weight:700;';
     const tdT0 = document.createElement('td');
@@ -6655,8 +6667,16 @@ async function laRenderCategorySection(periods) {
     trT.appendChild(tdT0);
     periods.forEach(ym => {
       const td = document.createElement('td');
-      const v  = (secData[totalKey] || {})[ym] ?? null;
-      td.textContent = laFmt(v, secKey, totalKey);
+      // 그룹 합산이 하나라도 있으면 그것을 사용, 없으면 secData[totalKey] 조회
+      let total = null;
+      const hasAnyGroup = groupSums.some(gs => gs[ym] != null);
+      if (hasAnyGroup) {
+        total = groupSums.reduce((acc, gs) => acc + (gs[ym] ?? 0), 0);
+      } else {
+        const v = (secData[totalKey] || {})[ym];
+        if (v != null) total = v;
+      }
+      td.textContent = laFmt(total, secKey, totalKey);
       td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
       trT.appendChild(td);
     });
@@ -6711,6 +6731,7 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
   const tbody = tbl.querySelector('tbody');
   tbody.innerHTML = '';
 
+  const hwGroupSums = []; // 그룹별 ym→value 저장 (합계 행 계산용)
   validGroups.forEach(g => {
     const tr  = document.createElement('tr');
     const td0 = document.createElement('td');
@@ -6718,6 +6739,7 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
     td0.className   = 'bs-sub-col';
     td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;white-space:nowrap;';
     tr.appendChild(td0);
+    const ymVals = {};
     periods.forEach(ym => {
       const td = document.createElement('td');
       let sum = null;
@@ -6728,14 +6750,16 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
           if (v != null) sum = (sum ?? 0) + v;
         });
       });
+      ymVals[ym] = sum;
       td.textContent = laFmt(sum, secKey, g.name);
       td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
       tr.appendChild(td);
     });
+    hwGroupSums.push(ymVals);
     tbody.appendChild(tr);
   });
 
-  // 전체화해 합계 행
+  // 전체화해 합계 행 — 위 그룹 행들의 합산
   const trT  = document.createElement('tr');
   trT.style.cssText = 'background:#f8fafc;font-weight:700;';
   const tdT0 = document.createElement('td');
@@ -6745,8 +6769,15 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
   trT.appendChild(tdT0);
   periods.forEach(ym => {
     const td = document.createElement('td');
-    const v  = (secData[totalKey] || {})[ym] ?? null;
-    td.textContent = laFmt(v, secKey, totalKey);
+    const hasAny = hwGroupSums.some(gs => gs[ym] != null);
+    let total = null;
+    if (hasAny) {
+      total = hwGroupSums.reduce((acc, gs) => acc + (gs[ym] ?? 0), 0);
+    } else {
+      const v = (secData[totalKey] || {})[ym];
+      if (v != null) total = v;
+    }
+    td.textContent = laFmt(total, secKey, totalKey);
     td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
     trT.appendChild(td);
   });
