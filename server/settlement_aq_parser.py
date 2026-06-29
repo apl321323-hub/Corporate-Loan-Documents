@@ -284,6 +284,9 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # AMOUNT_BANDS의 각 구간 + 전체융잔 합계
     amount_raw: dict[str, float] = {k: 0.0 for k in AMOUNT_KEYS}
 
+    # ── 광고매체(접수경로) 고유값 수집 ──────────────────────────────
+    channel_set: set[str] = set()
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -293,6 +296,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         rate         = _to_float(row[14]) if len(row) > 14 else None         # O열: 정상이율(%)
         repay_raw    = str(row[20]).strip() if len(row) > 20 and row[20] is not None else None  # U열: 상환방식
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
+        channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
 
         if product is None or days is None or balance is None:
             continue
@@ -355,6 +359,10 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
             amount_raw["전체융잔 합계"] += balance
             for band_key in _classify_amount(balance):
                 amount_raw[band_key] += balance
+
+        # ── 광고매체(접수경로): Q열 고유값 수집 ─────────────────────
+        if channel_raw:
+            channel_set.add(channel_raw)
 
     wb.close()
 
@@ -426,6 +434,9 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # 행 키는 기존 asset_data.sections['금액별'] 키와 일치시킴
     amount_band: dict[str, int] = {k: _m(v) for k, v in amount_raw.items()}
 
+    # ── 광고매체(접수경로) 정렬된 목록 ──────────────────────────────
+    channels_list = sorted(channel_set)
+
     return {
         "period"      : period,
         "section1"    : s1_m,
@@ -434,7 +445,8 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "maturity"    : maturity_m,
         "avg_rate"    : avg_rate,    # 평균이율 집계 결과
         "repayment"   : repayment,   # 상환방식 집계 결과 (백만원)
-        "amount_band" : amount_band, # 금액별 집계 결과 (백만원)  ← 신규 추가
+        "amount_band" : amount_band, # 금액별 집계 결과 (백만원)
+        "channels"    : channels_list,  # 광고매체(접수경로) 고유값 목록  ← 신규 추가
         "products"    : products_list,
     }
 

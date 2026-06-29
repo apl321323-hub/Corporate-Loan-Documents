@@ -68,6 +68,7 @@ async def lifespan(app_):
                 or not pdata.get("avg_rate")
                 or not pdata.get("repayment")
                 or not pdata.get("amount_band")
+                or not pdata.get("channels")
                 for pdata in saq_store.values()
             )
             if needs_rebuild:
@@ -171,6 +172,11 @@ async def lifespan(app_):
                                         sec_amt[row_key][pkey] = float(val) * 1_000_000
                                 sections["금액별"] = sec_amt
                                 asset_data["sections"] = sections
+
+                            # ── channels(광고매체) 업데이트 ──────────────────
+                            channels = result.get("channels", [])
+                            if channels and pkey in saq_store:
+                                saq_store[pkey]["channels"] = channels
 
                             print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
@@ -822,16 +828,32 @@ async def save_channel_groups(request: Request):
 
 @app.get("/api/channel-groups/all-channels")
 async def get_all_channels():
-    """접수경로 전체 항목 반환 (LA_ROW_DEFS['접수경로'] 기준)"""
-    # 대출자산속성 asset_data에서 접수경로 섹션 키를 읽어 반환
-    # 없으면 기본값 반환
+    """접수경로 전체 항목 반환
+    우선순위: 결산자료 Q열(광고매체) 고유값 → asset_data 접수경로 섹션 키 → 기본값
+    """
+    # 1순위: 결산자료 파싱 결과의 channels 목록 (Q열 광고매체 고유값)
+    saq = uploaded_data.get("settlement_aq") or {}
+    if not saq:
+        _saq_file = os.path.join(os.path.dirname(__file__), "data", "settlement_aq.json")
+        if os.path.exists(_saq_file):
+            with open(_saq_file, encoding="utf-8") as f:
+                saq = json.load(f)
+    if saq:
+        # settlement_aq는 {pkey: {channels:[...], ...}} 구조
+        for pkey, pdata in saq.items():
+            channels = pdata.get("channels", [])
+            if channels:
+                return JSONResponse(sorted(channels))
+
+    # 2순위: asset_data 접수경로 섹션 키
     asset_data = uploaded_data.get("asset_data")
     if asset_data:
         sec = asset_data.get("sections", {}).get("접수경로", {})
         channels = [k for k in sec.keys() if k != "전체융잔 합계"]
         if channels:
             return JSONResponse(channels)
-    # 기본 접수경로 목록 (fallback)
+
+    # 3순위: 기본값 (fallback)
     default_channels = ["에이전트", "직접대출", "홈페이지", "온라인플랫폼", "기타(고객추천)"]
     return JSONResponse(default_channels)
 
@@ -1685,6 +1707,7 @@ async def rebuild_maturity():
                 pdata["amount_band"] = _reparsed.get("amount_band", {})
                 pdata["repayment"]   = _reparsed.get("repayment", pdata.get("repayment", {}))
                 pdata["maturity"]    = _reparsed.get("maturity", maturity)
+                pdata["channels"]    = _reparsed.get("channels", pdata.get("channels", []))
                 maturity = pdata["maturity"]
                 saq_store[pkey] = pdata
                 # saq_store 파일에도 저장
