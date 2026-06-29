@@ -4824,6 +4824,7 @@ async function pcgInit() {
     pcgGroups.a = data.a || [];
     pcgGroups.b = data.b || [];
     pcgGroups.c = data.c || [];
+    _pcgSyncCfromB(); // b 기준으로 c 동기화 (items 최신화, bwbx 보존)
   } catch(e) { pcgGroups = { a:[], b:[], c:[] }; }
   // BW/BX 화해채권 항목 목록 로드
   try {
@@ -4876,10 +4877,13 @@ function pcgRenderGroupList(sub) {
     nameSpan.textContent = g.name;
     const cntSpan = document.createElement('span');
     cntSpan.style.cssText = 'font-size:11px;font-weight:400;color:#64748b;margin-left:6px;';
-    cntSpan.textContent = (sub === 'c'
-      ? (Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object'
-          ? g.items.length + '개' : '0개')
-      : g.items.length + '개');
+    // sub='c': bwbx 개수 표시
+    if (sub === 'c') {
+      const bwbxCnt = Array.isArray(g.bwbx) ? g.bwbx.length : 0;
+      cntSpan.textContent = bwbxCnt + '개';
+    } else {
+      cntSpan.textContent = g.items.length + '개';
+    }
     nameSpan.appendChild(cntSpan);
     // 클릭 → 그룹 선택 (row에만 이벤트, nameSpan은 pointer-events:none)
     row.addEventListener('click', (function(capturedSub, i){ return function(e){
@@ -5040,18 +5044,11 @@ function pcgRenderEditor(sub) {
  */
 function _pcgRenderHwahaeEditor(wrap, idx) {
   const cur = pcgGroups['c'][idx];
-  // cur.items: [{prod, bwbx:[]}] 또는 구버전 string[] → 마이그레이션
-  if (!Array.isArray(cur.items) || (cur.items.length > 0 && typeof cur.items[0] === 'string')) {
-    cur.items = []; // 구버전 포맷 초기화
-  }
-  // 현재 저장된 items를 prod 키 맵으로 변환
-  const savedMap = {}; // {prod: [bwbx, ...]}
-  (cur.items || []).forEach(it => { savedMap[it.prod] = it.bwbx || []; });
-
-  // 전체 상품 목록 (H열)
-  const allProds = assetData
-    ? Object.keys(assetData.sections['상품별'] || {}).filter(k => k.indexOf('합계') < 0).sort()
-    : [];
+  // bwbx: 이 그룹에 적용할 회생/신복 상태값 목록
+  const savedBwBx = Array.isArray(cur.bwbx) ? cur.bwbx : [];
+  // items: b 그룹에서 상속된 상품 목록 (string[])
+  const prodList  = Array.isArray(cur.items) && cur.items.length > 0 && typeof cur.items[0] === 'string'
+    ? cur.items : [];
 
   // 전체 BW/BX 목록
   const hwi = window._hwahaeItems || {bw:[], bx:[]};
@@ -5069,125 +5066,106 @@ function _pcgRenderHwahaeEditor(wrap, idx) {
   // 헤더
   const hdr = document.createElement('div');
   hdr.style.cssText = 'padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;';
-  hdr.innerHTML = '<i class="fas fa-edit"></i> "' + cur.name + '" 항목 편집 (화해채권)';
+  hdr.innerHTML = '<i class="fas fa-edit"></i> "' + cur.name + '" 그룹 설정';
   card.appendChild(hdr);
 
-  // 안내문
-  const guide = document.createElement('div');
-  guide.style.cssText = 'padding:8px 16px;background:#f0f9ff;border-bottom:1px solid #bae6fd;font-size:12px;color:#0369a1;';
-  guide.textContent = '상품을 선택하고, 각 상품에 해당하는 회생/신복 상태값을 설정하세요.';
-  card.appendChild(guide);
-
-  // 상품별 설정 목록
-  const listDiv = document.createElement('div');
-  listDiv.id = 'pcg-c-item-list';
-  listDiv.style.cssText = 'padding:8px 16px;max-height:420px;overflow-y:auto;';
-
-  if (allProds.length === 0) {
-    const msg = document.createElement('div');
-    msg.textContent = '항목 없음 (결산자료를 먼저 업로드하세요)';
-    msg.style.cssText = 'color:#94a3b8;font-size:13px;padding:16px 0;';
-    listDiv.appendChild(msg);
+  // 상품 목록 표시 (읽기 전용 — b 그룹에서 상속)
+  const prodInfo = document.createElement('div');
+  prodInfo.style.cssText = 'padding:8px 16px 6px;background:#f8fafc;border-bottom:1px solid #e2e8f0;';
+  const prodTitle = document.createElement('div');
+  prodTitle.style.cssText = 'font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;';
+  prodTitle.textContent = '포함 상품 (' + prodList.length + '개) — 상품구분(상세) 그룹에서 자동 적용';
+  prodInfo.appendChild(prodTitle);
+  const prodTags = document.createElement('div');
+  prodTags.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;';
+  if (prodList.length === 0) {
+    const none = document.createElement('span');
+    none.textContent = '상품구분(상세) 탭에서 그룹을 먼저 설정하세요';
+    none.style.cssText = 'font-size:12px;color:#94a3b8;';
+    prodTags.appendChild(none);
   } else {
-    allProds.forEach(prod => {
-      const isSelected = prod in savedMap;
-      const selectedBwBx = savedMap[prod] || [];
-
-      // 상품 행 컨테이너
-      const row = document.createElement('div');
-      row.style.cssText = 'border:1px solid ' + (isSelected ? '#bae6fd' : '#e2e8f0') + ';'
-        + 'border-radius:8px;margin-bottom:8px;overflow:hidden;'
-        + 'background:' + (isSelected ? '#f0f9ff' : '#fff') + ';';
-
-      // 상품명 헤더 행 (체크박스 + 이름)
-      const prodHdr = document.createElement('div');
-      prodHdr.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;';
-
-      const prodCb = document.createElement('input');
-      prodCb.type = 'checkbox';
-      prodCb.dataset.prod = prod;
-      prodCb.checked = isSelected;
-      prodCb.style.cssText = 'accent-color:#0369a1;width:15px;height:15px;flex-shrink:0;cursor:pointer;';
-
-      const prodLabel = document.createElement('span');
-      prodLabel.textContent = prod;
-      prodLabel.style.cssText = 'font-size:13px;font-weight:600;color:' + (isSelected ? '#0369a1' : '#1e293b') + ';flex:1;';
-
-      const cntBadge = document.createElement('span');
-      cntBadge.style.cssText = 'font-size:11px;color:#64748b;';
-      cntBadge.textContent = isSelected ? selectedBwBx.length + '개 선택' : '';
-
-      prodHdr.appendChild(prodCb);
-      prodHdr.appendChild(prodLabel);
-      prodHdr.appendChild(cntBadge);
-
-      // BW/BX 항목 패널 (상품 선택 시 표시)
-      const bwbxPanel = document.createElement('div');
-      bwbxPanel.style.cssText = 'padding:8px 12px 10px 36px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;gap:6px;'
-        + (isSelected ? '' : 'display:none;');
-
-      if (allBwBx.length === 0) {
-        const noData = document.createElement('span');
-        noData.textContent = '회생/신복 데이터 없음';
-        noData.style.cssText = 'color:#94a3b8;font-size:12px;';
-        bwbxPanel.appendChild(noData);
-      } else {
-        allBwBx.forEach(bwbxVal => {
-          const isChecked = selectedBwBx.indexOf(bwbxVal) >= 0;
-          const lbl = document.createElement('label');
-          lbl.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;font-size:12px;cursor:pointer;'
-            + 'border:1.5px solid ' + (isChecked ? '#0369a1' : '#cbd5e1') + ';'
-            + 'background:' + (isChecked ? '#e0f2fe' : '#fff') + ';'
-            + 'color:' + (isChecked ? '#0369a1' : '#475569') + ';';
-          const cb2 = document.createElement('input');
-          cb2.type = 'checkbox';
-          cb2.dataset.bwbx = bwbxVal;
-          cb2.checked = isChecked;
-          cb2.style.accentColor = '#0369a1';
-          cb2.addEventListener('change', () => {
-            const on = cb2.checked;
-            lbl.style.borderColor = on ? '#0369a1' : '#cbd5e1';
-            lbl.style.background  = on ? '#e0f2fe' : '#fff';
-            lbl.style.color       = on ? '#0369a1' : '#475569';
-            // 배지 업데이트
-            const checked2 = [...bwbxPanel.querySelectorAll('input[data-bwbx]:checked')];
-            cntBadge.textContent = checked2.length > 0 ? checked2.length + '개 선택' : '';
-          });
-          lbl.appendChild(cb2);
-          lbl.appendChild(document.createTextNode(' ' + bwbxVal));
-          bwbxPanel.appendChild(lbl);
-        });
-      }
-
-      // 상품 체크박스 change: 패널 토글
-      prodCb.addEventListener('change', () => {
-        const on = prodCb.checked;
-        bwbxPanel.style.display = on ? 'flex' : 'none';
-        row.style.border   = '1px solid ' + (on ? '#bae6fd' : '#e2e8f0');
-        row.style.background = on ? '#f0f9ff' : '#fff';
-        prodLabel.style.color = on ? '#0369a1' : '#1e293b';
-        if (!on) {
-          bwbxPanel.querySelectorAll('input[data-bwbx]').forEach(cb2 => { cb2.checked = false; });
-          cntBadge.textContent = '';
-        }
-      });
-      // 헤더 행 클릭(체크박스 제외)으로도 토글
-      prodHdr.addEventListener('click', e => {
-        if (e.target === prodCb) return;
-        prodCb.checked = !prodCb.checked;
-        prodCb.dispatchEvent(new Event('change'));
-      });
-
-      row.appendChild(prodHdr);
-      row.appendChild(bwbxPanel);
-      listDiv.appendChild(row);
+    prodList.forEach(p => {
+      const tag = document.createElement('span');
+      tag.textContent = p;
+      tag.style.cssText = 'font-size:11px;padding:2px 7px;border-radius:10px;background:#e2e8f0;color:#475569;';
+      prodTags.appendChild(tag);
     });
   }
-  card.appendChild(listDiv);
+  prodInfo.appendChild(prodTags);
+  card.appendChild(prodInfo);
+
+  // BW/BX 선택 영역
+  const bwbxWrap = document.createElement('div');
+  bwbxWrap.style.cssText = 'padding:12px 16px;';
+
+  const bwbxTitle = document.createElement('div');
+  bwbxTitle.style.cssText = 'font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px;';
+  bwbxTitle.innerHTML = '<i class="fas fa-filter"></i> 적용할 회생/신복 상태값 선택';
+  bwbxWrap.appendChild(bwbxTitle);
+
+  // 전체선택/해제 버튼
+  const btnRow2 = document.createElement('div');
+  btnRow2.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
+  const btnAll2 = document.createElement('button');
+  btnAll2.textContent = '전체선택';
+  btnAll2.style.cssText = 'font-size:11px;padding:3px 8px;border:1px solid #0369a1;color:#0369a1;background:#fff;border-radius:4px;cursor:pointer;';
+  btnAll2.onclick = () => {
+    bwbxWrap.querySelectorAll('input[data-bwbx]').forEach(cb => {
+      if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+    });
+  };
+  const btnNone2 = document.createElement('button');
+  btnNone2.textContent = '전체해제';
+  btnNone2.style.cssText = 'font-size:11px;padding:3px 8px;border:1px solid #94a3b8;color:#64748b;background:#fff;border-radius:4px;cursor:pointer;';
+  btnNone2.onclick = () => {
+    bwbxWrap.querySelectorAll('input[data-bwbx]').forEach(cb => {
+      if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event('change')); }
+    });
+  };
+  btnRow2.appendChild(btnAll2);
+  btnRow2.appendChild(btnNone2);
+  bwbxWrap.appendChild(btnRow2);
+
+  const listDiv = document.createElement('div');
+  listDiv.id = 'pcg-c-item-list';
+  listDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;';
+
+  if (allBwBx.length === 0) {
+    const msg = document.createElement('span');
+    msg.textContent = '결산자료를 먼저 업로드하세요';
+    msg.style.cssText = 'color:#94a3b8;font-size:13px;';
+    listDiv.appendChild(msg);
+  } else {
+    allBwBx.forEach(bwbxVal => {
+      const isChecked = savedBwBx.indexOf(bwbxVal) >= 0;
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:5px 10px;'
+        + 'border-radius:16px;font-size:12px;cursor:pointer;'
+        + 'border:1.5px solid ' + (isChecked ? '#0369a1' : '#cbd5e1') + ';'
+        + 'background:' + (isChecked ? '#e0f2fe' : '#fff') + ';'
+        + 'color:' + (isChecked ? '#0369a1' : '#475569') + ';';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.dataset.bwbx = bwbxVal;
+      cb.checked = isChecked;
+      cb.style.accentColor = '#0369a1';
+      cb.addEventListener('change', () => {
+        const on = cb.checked;
+        lbl.style.borderColor = on ? '#0369a1' : '#cbd5e1';
+        lbl.style.background  = on ? '#e0f2fe' : '#fff';
+        lbl.style.color       = on ? '#0369a1' : '#475569';
+      });
+      lbl.appendChild(cb);
+      lbl.appendChild(document.createTextNode(' ' + bwbxVal));
+      listDiv.appendChild(lbl);
+    });
+  }
+  bwbxWrap.appendChild(listDiv);
+  card.appendChild(bwbxWrap);
 
   // 저장 버튼
   const foot = document.createElement('div');
-  foot.style.cssText = 'padding:12px 16px;border-top:1px solid #e2e8f0;text-align:right;';
+  foot.style.cssText = 'padding:10px 16px;border-top:1px solid #e2e8f0;text-align:right;';
   const btnSave = document.createElement('button');
   btnSave.style.cssText = 'background:#0369a1;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;';
   btnSave.innerHTML = '<i class="fas fa-save"></i> 저장';
@@ -5207,23 +5185,17 @@ async function pcgSaveGroup(sub) {
   const idx = pcgSelIdx[sub];
   if (idx < 0) return;
 
-  // ── sub='c': {prod, bwbx[]} 포맷으로 저장 ───────────────────────
+  // ── sub='c': bwbx[] 만 저장 (items는 b 그룹에서 상속) ──────────
   if (sub === 'c') {
     const listDiv = document.getElementById('pcg-c-item-list');
     if (!listDiv) return;
-    const newItems = [];
-    listDiv.querySelectorAll('input[data-prod]:checked').forEach(prodCb => {
-      const prod = prodCb.dataset.prod;
-      const row  = prodCb.closest('div[style]');
-      const bwbx = [...(row ? row.querySelectorAll('input[data-bwbx]:checked') : [])].map(cb2 => cb2.dataset.bwbx);
-      newItems.push({ prod, bwbx });
-    });
-    pcgGroups['c'][idx].items = newItems;
+    const bwbx = [...listDiv.querySelectorAll('input[data-bwbx]:checked')].map(cb => cb.dataset.bwbx);
+    pcgGroups['c'][idx].bwbx = bwbx;
     pcgRenderGroupList('c');
     pcgRenderEditor('c');
     pcgRenderSummary('c');
     await pcgPersist();
-    showToast(`✅ "${pcgGroups['c'][idx].name}" 그룹 저장 완료 (${newItems.length}개 상품)`, 'success');
+    showToast(`✅ "${pcgGroups['c'][idx].name}" 저장 완료 (${bwbx.length}개 상태값)`, 'success');
     if (laCurSection === '10') laRenderSection('10');
     return;
   }
@@ -5235,6 +5207,8 @@ async function pcgSaveGroup(sub) {
   const conflicts = checked.filter(it => usedElsewhere.has(it));
   if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
   pcgGroups[sub][idx].items = checked;
+  // b 그룹 변경 시 c 그룹 items도 동기화
+  if (sub === 'b') _pcgSyncCfromB();
   pcgRenderGroupList(sub);
   pcgRenderEditor(sub);
   pcgRenderSummary(sub);
@@ -5249,6 +5223,7 @@ async function pcgAddGroup(sub) {
   if (!name) { showToast('❌ 그룹명을 입력하세요', 'error'); return; }
   if (pcgGroups[sub].find(g => g.name === name)) { showToast('❌ 이미 같은 이름의 그룹이 있습니다', 'error'); return; }
   pcgGroups[sub].push({ name, items: [] });
+  if (sub === 'b') _pcgSyncCfromB(); // b에 그룹 추가 시 c도 자동 동기화
   inp.value = '';
   pcgRenderGroupList(sub);
   pcgRenderSummary(sub);
@@ -5262,6 +5237,7 @@ async function pcgDeleteGroup(sub, idx) {
   const name = pcgGroups[sub][idx].name;
   if (!confirm(`"${name}" 그룹을 삭제하시겠습니까?`)) return;
   pcgGroups[sub].splice(idx, 1);
+  if (sub === 'b') _pcgSyncCfromB(); // b에서 그룹 삭제 시 c도 자동 동기화
   if (pcgSelIdx[sub] === idx) pcgSelIdx[sub] = -1;
   else if (pcgSelIdx[sub] > idx) pcgSelIdx[sub]--;
   pcgRenderGroupList(sub);
@@ -5284,9 +5260,9 @@ function pcgRenderSummary(sub) {
     // sub='c': items = [{prod, bwbx:[]}]
     let cntTxt, detailTxt;
     if (sub === 'c') {
-      const validItems = Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object' ? g.items : [];
-      cntTxt    = validItems.length + '개 상품';
-      detailTxt = validItems.slice(0,3).map(it => it.prod).join(', ') + (validItems.length > 3 ? ` 외 ${validItems.length-3}개` : '');
+      const bwbx = Array.isArray(g.bwbx) ? g.bwbx : [];
+      cntTxt    = g.items.length + '개 상품 / ' + bwbx.length + '개 상태값';
+      detailTxt = bwbx.slice(0,3).join(', ') + (bwbx.length > 3 ? ` 외 ${bwbx.length-3}개` : '') || '(상태값 미설정)';
     } else {
       cntTxt    = g.items.length + '개';
       detailTxt = g.items.slice(0,4).join(', ') + (g.items.length > 4 ? ` 외 ${g.items.length-4}개` : '');
@@ -5301,6 +5277,27 @@ function pcgRenderSummary(sub) {
       <div style="font-size:11px;color:#475569;">${detailTxt || '-'}</div>
     </div>`;
   }).join('');
+}
+
+/**
+ * b 그룹이 변경될 때 c 그룹 items를 b와 동기화
+ * - b에 있는 그룹 → c에도 같은 이름으로 유지 (items 업데이트, bwbx 보존)
+ * - b에 없는 그룹 → c에서 제거
+ * - b에 새로 추가된 그룹 → c에도 추가 (bwbx: [])
+ */
+function _pcgSyncCfromB() {
+  const cMap = {};
+  pcgGroups['c'].forEach(g => { cMap[g.name] = g; });
+  pcgGroups['c'] = pcgGroups['b'].map(bg => {
+    const existing = cMap[bg.name];
+    return {
+      name:  bg.name,
+      items: [...bg.items],                        // b에서 최신 상품 목록 복사
+      bwbx:  existing ? (existing.bwbx || []) : [] // 기존 bwbx 유지, 신규는 []
+    };
+  });
+  // pcgSelIdx['c'] 범위 보정
+  if (pcgSelIdx['c'] >= pcgGroups['c'].length) pcgSelIdx['c'] = -1;
 }
 
 async function pcgPersist() {
@@ -6655,38 +6652,32 @@ function laRenderCategorySection(periods) {
 
 /**
  * 화해채권(sub='c') 테이블 렌더러
- * items 포맷: [{prod: '상품명', bwbx: ['[회생]xxx', ...]}]
- * - 그룹 없음: BW/BX 항목 키 그대로 (secData 키 → 행)
- * - 그룹 있음: 그룹명 행 (items 내 prod×bwbx 조합 잔액 합산) + 전체화해 합계 행
+ * 그룹 포맷: { name, items: ['상품명',...], bwbx: ['[회생]xxx',...] }
+ * - 그룹 없음 또는 bwbx 미설정: BW/BX 항목 키 그대로 출력
+ * - 그룹 있음: 그룹명 행 (items × bwbx 조합 합산) + 전체화해 합계 행
  *   데이터: prodDetail[bwbxKey][prodName][ym]
  */
 function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
-  const tblId     = tbl.id;
-  const secKey    = '상품구분화해채권';
+  const tblId      = tbl.id;
+  const secKey     = '상품구분화해채권';
   const prodDetail = (assetData && assetData.sections['상품구분화해채권_상품별']) || {};
 
-  // ── 그룹 없음: 원시 BW/BX 키 그대로 출력 ────────────────────────
-  if (groups.length === 0) {
-    const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
-    rawKeys.push(totalKey);
-    laBuildTable(tblId, secKey, rawKeys, periods);
-    return;
-  }
-
-  // 유효한 그룹 (items가 새 포맷인 것만)
+  // 유효 그룹: items(상품명[]) + bwbx([]) 모두 있고 bwbx 설정된 것
   const validGroups = groups.filter(g =>
-    Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object'
+    Array.isArray(g.items) && g.items.length > 0 &&
+    typeof g.items[0] === 'string' &&
+    Array.isArray(g.bwbx) && g.bwbx.length > 0
   );
+
+  // 그룹 없거나 bwbx 미설정 → 원시 BW/BX 키 그대로 출력
   if (validGroups.length === 0) {
-    // 설정된 그룹이 있지만 아직 새 포맷으로 저장 안 됨 → 원시 키 표시
     const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
     rawKeys.push(totalKey);
     laBuildTable(tblId, secKey, rawKeys, periods);
     return;
   }
 
-  // ── 그룹 있음: 그룹명 행 + 합계 행 ───────────────────────────────
-  // thead
+  // ── 그룹별 행 + 전체화해 합계 행 ─────────────────────────────────
   const thead = tbl.querySelector('thead');
   thead.innerHTML = '';
   const tr0 = document.createElement('tr');
@@ -6716,9 +6707,9 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
     periods.forEach(ym => {
       const td = document.createElement('td');
       let sum = null;
-      // items: [{prod, bwbx:[]}] → 각 prod×bwbx 조합 잔액 합산
-      (g.items || []).forEach(({ prod, bwbx }) => {
-        (bwbx || []).forEach(bwbxKey => {
+      // 그룹 내 상품(items) × 상태값(bwbx) 조합 합산
+      (g.items || []).forEach(prod => {
+        (g.bwbx || []).forEach(bwbxKey => {
           const v = ((prodDetail[bwbxKey] || {})[prod] || {})[ym];
           if (v != null) sum = (sum ?? 0) + v;
         });
