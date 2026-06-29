@@ -4584,6 +4584,8 @@ async function crSaveGroup() {
   crRenderSummary();
   await crPersist();
   showToast(`✅ "${crGroups[crSelectedGroupIdx].name}" 그룹 저장 완료 (${checked.length}개 항목)`, 'success');
+  // 대출자산속성 접수경로 탭이 열려있으면 즉시 재렌더
+  if (laCurSection === '08') laRenderSection('08');
 }
 
 async function crAddGroup() {
@@ -4598,6 +4600,8 @@ async function crAddGroup() {
   await crPersist();
   crSelectGroup(crGroups.length - 1);
   showToast(`✅ "${name}" 그룹 추가됨`, 'success');
+  // 대출자산속성 접수경로 탭이 열려있으면 즉시 재렌더
+  if (laCurSection === '08') laRenderSection('08');
 }
 
 async function crDeleteGroup(idx) {
@@ -4611,6 +4615,8 @@ async function crDeleteGroup(idx) {
   crRenderSummary();
   await crPersist();
   showToast(`🗑️ "${name}" 그룹 삭제됨`, 'success');
+  // 대출자산속성 접수경로 탭이 열려있으면 즉시 재렌더
+  if (laCurSection === '08') laRenderSection('08');
 }
 
 function crRenderSummary() {
@@ -5713,6 +5719,86 @@ function laGetPeriods() {
   return all.slice(-n);
 }
 
+// ── 접수경로 탭 전용 렌더러 (구분설정 그룹 연동) ──────────────────
+function laRenderChannelSection(periods) {
+  const tbl = document.getElementById('la-tbl-08');
+  if (!tbl || !assetData) return;
+  const secData = assetData.sections['접수경로'] || {};
+
+  // crGroups에 설정된 그룹이 없으면 → asset_data 원본 키로 기본 렌더
+  if (!crGroups || crGroups.length === 0) {
+    const rawKeys = Object.keys(secData).filter(k => k !== '전체융잔 합계');
+    rawKeys.push('전체융잔 합계');
+    laBuildTable('la-tbl-08', '접수경로', rawKeys, periods);
+    return;
+  }
+
+  // ── 그룹이 있는 경우: 그룹명을 행으로, 그룹 내 채널 잔액 합산 ──
+
+  // thead
+  const thead = tbl.querySelector('thead');
+  thead.innerHTML = '';
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '구분';
+  th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:160px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym.replace('-', '.').replace(/^20/, '');
+    th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  // tbody
+  const tbody = tbl.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  // 각 그룹행 렌더
+  crGroups.forEach(g => {
+    const tr = document.createElement('tr');
+    const td0 = document.createElement('td');
+    td0.textContent = g.name;
+    td0.className = 'bs-sub-col';
+    td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;white-space:nowrap;';
+    tr.appendChild(td0);
+
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      // 그룹 내 채널들의 해당 연월 잔액 합산
+      let sum = null;
+      (g.channels || []).forEach(ch => {
+        const v = (secData[ch] || {})[ym];
+        if (v != null) sum = (sum ?? 0) + v;
+      });
+      td.textContent = laFmt(sum, '접수경로', g.name);
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  // 전체융잔 합계 행 (항상 마지막)
+  const trTotal = document.createElement('tr');
+  trTotal.style.cssText = 'background:#f8fafc;font-weight:700;';
+  const tdTotal0 = document.createElement('td');
+  tdTotal0.textContent = '전체융잔 합계';
+  tdTotal0.className = 'bs-sub-col';
+  tdTotal0.style.cssText = 'position:sticky;left:0;z-index:2;background:#f1f5f9;min-width:160px;white-space:nowrap;';
+  trTotal.appendChild(tdTotal0);
+  periods.forEach(ym => {
+    const td = document.createElement('td');
+    const rowData = secData['전체융잔 합계'] || {};
+    const v = rowData[ym] ?? null;
+    td.textContent = laFmt(v, '접수경로', '전체융잔 합계');
+    td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+    trTotal.appendChild(td);
+  });
+  tbody.appendChild(trTotal);
+}
+
 // ── 공통 테이블 빌더 ───────────────────────────────────────────
 function laBuildTable(tblId, secKey, rowLabels, periods) {
   const tbl = document.getElementById(tblId);
@@ -5974,7 +6060,7 @@ function laRenderSection(sid) {
   }
   else if (sid === '06') laRenderRepayment(periods);
   else if (sid === '07') laBuildTable('la-tbl-07', '금액별', LA_ROW_DEFS['금액별'], periods);
-  else if (sid === '08') laBuildTable('la-tbl-08', '접수경로', LA_ROW_DEFS['접수경로'], periods);
+  else if (sid === '08') laRenderChannelSection(periods);
   else if (sid === '09') laBuildTable('la-tbl-09', '상품별', LA_ROW_DEFS['상품별'], periods);
   else if (sid === '10') {
     laBuildTable('la-tbl-10a', '상품구분',        LA_ROW_DEFS['상품구분'], periods);
