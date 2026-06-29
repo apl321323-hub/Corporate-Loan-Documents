@@ -11,7 +11,7 @@
   U열 (index 20) : 상환방식  ('원리균등' | '자유상환')
   X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
   AC열 (index 28): 직업분류
-  CN열 (index 65): 만나이    (숫자)
+  CN열 (index 91): 만나이    (숫자)
 
 연체 구간 (자산건전성 기존 테이블 기준):
   무연체  : 0일
@@ -301,8 +301,8 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # ── 성별 집계 버킷 (T열, index 19) ───────────────────────────
     # gender_sec: {'남성': float, '여성': float}  (원 단위)
     GENDER_LABEL: dict[str, str] = {
-        '남': '남성', '남성': '남성',
-        '여': '여성', '여성': '여성',
+        '남': '남성', '남성': '남성', '남자': '남성',
+        '여': '여성', '여성': '여성', '여자': '여성',
     }
     gender_sec: dict[str, float] = {'남성': 0.0, '여성': 0.0}
 
@@ -326,7 +326,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
         job_raw      = str(row[28]).strip() if len(row) > 28 and row[28] is not None else None  # AC열: 직업분류
         channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
-        age_raw      = _to_int(row[65]) if len(row) > 65 else None          # CN열: 만나이
+        age_raw      = int(float(row[91])) if len(row) > 91 and row[91] is not None else None  # CN열: 만나이 (index 91, float→int)
         bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
         bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX열: 신복상태
 
