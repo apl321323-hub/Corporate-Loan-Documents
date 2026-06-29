@@ -69,6 +69,7 @@ async def lifespan(app_):
                 or not pdata.get("repayment")
                 or not pdata.get("amount_band")
                 or not pdata.get("channels")
+                or not pdata.get("hwahae_bw")
                 for pdata in saq_store.values()
             )
             if needs_rebuild:
@@ -177,6 +178,21 @@ async def lifespan(app_):
                             channels = result.get("channels", [])
                             if channels and pkey in saq_store:
                                 saq_store[pkey]["channels"] = channels
+
+                            # ── BW/BX 화해채권 업데이트 ──────────────────────
+                            hwahae_bw = result.get("hwahae_bw", [])
+                            hwahae_bx = result.get("hwahae_bx", [])
+                            section5_bw = result.get("section5_bw", {})
+                            section5_bx = result.get("section5_bx", {})
+                            if pkey in saq_store:
+                                if hwahae_bw:
+                                    saq_store[pkey]["hwahae_bw"]   = hwahae_bw
+                                if hwahae_bx:
+                                    saq_store[pkey]["hwahae_bx"]   = hwahae_bx
+                                if section5_bw:
+                                    saq_store[pkey]["section5_bw"] = section5_bw
+                                if section5_bx:
+                                    saq_store[pkey]["section5_bx"] = section5_bx
 
                             print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
@@ -855,6 +871,29 @@ async def save_product_category_groups(request: Request):
     with open(_path, "w", encoding="utf-8") as f:
         json.dump(body, f, ensure_ascii=False, indent=2)
     return JSONResponse({"success": True})
+
+
+
+@app.get("/api/product-category-groups/hwahae-items")
+async def get_hwahae_items():
+    """BW열(회생상태) + BX열(신복상태) 고유값 목록 반환
+    구분설정 상품구분(화해채권) 탭의 항목 선택에 사용.
+    반환: {"bw": [...], "bx": [...]}
+    """
+    saq = uploaded_data.get("settlement_aq") or {}
+    if not saq:
+        _saq_file = os.path.join(os.path.dirname(__file__), "data", "settlement_aq.json")
+        if os.path.exists(_saq_file):
+            with open(_saq_file, encoding="utf-8") as f:
+                saq = json.load(f)
+
+    all_bw: set[str] = set()
+    all_bx: set[str] = set()
+    for pdata in saq.values():
+        all_bw.update(pdata.get("hwahae_bw") or [])
+        all_bx.update(pdata.get("hwahae_bx") or [])
+
+    return JSONResponse({"bw": sorted(all_bw), "bx": sorted(all_bx)})
 
 
 @app.get("/api/channel-groups/all-channels")
@@ -1661,6 +1700,60 @@ async def get_asset_data():
 
         sections["상품별"] = prod_sec
         result["sections"] = sections
+
+        # ── settlement_aq BW/BX → sections['상품구분화해채권'] 동적 구성 ──
+        # sections['상품구분화해채권'][item_key][ym] = 원단위  (item_key = '[회생]xxx' or '[신복]xxx')
+        # sections['상품구분화해채권_상품별'][item_key][상품명][ym] = 원단위  (상품별 분해용)
+        hwahae_sec: dict[str, dict[str, float]] = {}
+        hwahae_prod: dict[str, dict[str, dict[str, float]]] = {}  # {item_key: {상품명: {ym: 원}}}
+        for pkey, pdata in saq.items():
+            ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
+            if not ym:
+                continue
+            s5_bw_data = pdata.get("section5_bw") or {}
+            s5_bx_data = pdata.get("section5_bx") or {}
+            # BW값별: 해당 ym에서 상품별 잔액 집계
+            for bw_val, prod_dict in s5_bw_data.items():
+                item_key = f"[회생]{bw_val}"
+                if item_key not in hwahae_sec:
+                    hwahae_sec[item_key] = {}
+                hwahae_sec[item_key][ym] = sum(float(v) * 1_000_000 for v in prod_dict.values())
+                # 상품별 분해
+                if item_key not in hwahae_prod:
+                    hwahae_prod[item_key] = {}
+                for prod_name, val in prod_dict.items():
+                    if prod_name not in hwahae_prod[item_key]:
+                        hwahae_prod[item_key][prod_name] = {}
+                    hwahae_prod[item_key][prod_name][ym] = float(val) * 1_000_000
+            # BX값별
+            for bx_val, prod_dict in s5_bx_data.items():
+                item_key = f"[신복]{bx_val}"
+                if item_key not in hwahae_sec:
+                    hwahae_sec[item_key] = {}
+                hwahae_sec[item_key][ym] = sum(float(v) * 1_000_000 for v in prod_dict.values())
+                # 상품별 분해
+                if item_key not in hwahae_prod:
+                    hwahae_prod[item_key] = {}
+                for prod_name, val in prod_dict.items():
+                    if prod_name not in hwahae_prod[item_key]:
+                        hwahae_prod[item_key][prod_name] = {}
+                    hwahae_prod[item_key][prod_name][ym] = float(val) * 1_000_000
+
+        if hwahae_sec:
+            # 전체화해 합계 계산
+            all_yms: set[str] = set()
+            for v in hwahae_sec.values():
+                all_yms.update(v.keys())
+            total_hwahae: dict[str, float] = {}
+            for ym in all_yms:
+                total_hwahae[ym] = sum(
+                    hwahae_sec[k].get(ym, 0.0) for k in hwahae_sec
+                )
+            hwahae_sec["전체화해 합계"] = total_hwahae
+            sections["상품구분화해채권"] = hwahae_sec
+            # 상품별 분해 데이터도 함께 응답
+            sections["상품구분화해채권_상품별"] = hwahae_prod
+            result["sections"] = sections
 
     return JSONResponse(result)
 

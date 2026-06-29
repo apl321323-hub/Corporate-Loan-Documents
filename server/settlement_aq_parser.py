@@ -287,6 +287,14 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # ── 광고매체(접수경로) 고유값 수집 ──────────────────────────────
     channel_set: set[str] = set()
 
+    # ── 화해채권: BW(74)/BX(75) 고유값 수집 및 집계 버킷 ────────────
+    # s5_bw: {bw값: {product: balance_원}}
+    # s5_bx: {bx값: {product: balance_원}}
+    bw_set: set[str] = set()
+    bx_set: set[str] = set()
+    s5_bw: dict[str, dict[str, float]] = {}
+    s5_bx: dict[str, dict[str, float]] = {}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -297,6 +305,8 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         repay_raw    = str(row[20]).strip() if len(row) > 20 and row[20] is not None else None  # U열: 상환방식
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
         channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
+        bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
+        bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX열: 신복상태
 
         if product is None or days is None or balance is None:
             continue
@@ -363,6 +373,26 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         # ── 광고매체(접수경로): Q열 고유값 수집 ─────────────────────
         if channel_raw:
             channel_set.add(channel_raw)
+
+        # ── 화해채권: BW/BX 고유값 수집 + 상품별 잔액 집계 ──────────
+        # BW열(회생상태): 고유값 수집 + {bw값: {product: balance}} 집계
+        if bw_raw and bw_raw not in ('None', ''):
+            bw_set.add(bw_raw)
+            if product and balance is not None:
+                if bw_raw not in s5_bw:
+                    s5_bw[bw_raw] = {}
+                if product not in s5_bw[bw_raw]:
+                    s5_bw[bw_raw][product] = 0.0
+                s5_bw[bw_raw][product] += balance
+        # BX열(신복상태): 고유값 수집 + {bx값: {product: balance}} 집계
+        if bx_raw and bx_raw not in ('None', ''):
+            bx_set.add(bx_raw)
+            if product and balance is not None:
+                if bx_raw not in s5_bx:
+                    s5_bx[bx_raw] = {}
+                if product not in s5_bx[bx_raw]:
+                    s5_bx[bx_raw][product] = 0.0
+                s5_bx[bx_raw][product] += balance
 
     wb.close()
 
@@ -437,6 +467,19 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # ── 광고매체(접수경로) 정렬된 목록 ──────────────────────────────
     channels_list = sorted(channel_set)
 
+    # ── 화해채권 BW/BX 백만원 변환 및 정렬 ──────────────────────────
+    hwahae_bw = sorted(bw_set)
+    hwahae_bx = sorted(bx_set)
+    # section5: 원 단위 → 백만원 반올림
+    section5_bw = {
+        bw: {p: round(v / 1_000_000) for p, v in prods.items()}
+        for bw, prods in s5_bw.items()
+    }
+    section5_bx = {
+        bx: {p: round(v / 1_000_000) for p, v in prods.items()}
+        for bx, prods in s5_bx.items()
+    }
+
     return {
         "period"      : period,
         "section1"    : s1_m,
@@ -446,7 +489,11 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "avg_rate"    : avg_rate,    # 평균이율 집계 결과
         "repayment"   : repayment,   # 상환방식 집계 결과 (백만원)
         "amount_band" : amount_band, # 금액별 집계 결과 (백만원)
-        "channels"    : channels_list,  # 광고매체(접수경로) 고유값 목록  ← 신규 추가
+        "channels"    : channels_list,  # 광고매체(접수경로) 고유값 목록
+        "hwahae_bw"   : hwahae_bw,   # BW열(회생상태) 고유값 목록
+        "hwahae_bx"   : hwahae_bx,   # BX열(신복상태) 고유값 목록
+        "section5_bw" : section5_bw, # BW값별 상품별 잔액 (백만원)
+        "section5_bx" : section5_bx, # BX값별 상품별 잔액 (백만원)
         "products"    : products_list,
     }
 

@@ -4821,6 +4821,11 @@ async function pcgInit() {
     pcgGroups.b = data.b || [];
     pcgGroups.c = data.c || [];
   } catch(e) { pcgGroups = { a:[], b:[], c:[] }; }
+  // BW/BX 화해채권 항목 목록 로드
+  try {
+    const res2 = await axios.get(`${API_BASE}/api/product-category-groups/hwahae-items`);
+    window._hwahaeItems = res2.data || { bw: [], bx: [] };
+  } catch(e) { window._hwahaeItems = { bw: [], bx: [] }; }
   ['a','b','c'].forEach(s => { pcgRenderGroupList(s); pcgRenderSummary(s); });
 }
 
@@ -4879,10 +4884,27 @@ function pcgRenderEditor(sub) {
   // 이미 다른 그룹에서 사용 중인 항목
   const usedElsewhere = new Set();
   g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
-  // 전체 항목 목록 (asset_data 기준)
-  const allItems = assetData
-    ? Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'))
-    : PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+  // 전체 항목 목록
+  // sub='c'(화해채권): hwahaeItems(BW/BX 고유값) 사용
+  // sub='a'/'b': asset_data 섹션 키 사용
+  let allItems;
+  if (sub === 'c') {
+    // hwahaeItems는 pcgInit()에서 로드한 {bw:[...], bx:[...]}
+    const bwItems = (window._hwahaeItems || {bw:[], bx:[]}).bw.map(v => `[회생]${v}`);
+    const bxItems = (window._hwahaeItems || {bw:[], bx:[]}).bx.map(v => `[신복]${v}`);
+    allItems = [...bwItems, ...bxItems];
+    // fallback: assetData에 이미 상품구분화해채권 섹션 있으면 그 키도 포함
+    if (allItems.length === 0 && assetData) {
+      allItems = Object.keys(assetData.sections['상품구분화해채권'] || {}).filter(k => !k.includes('합계'));
+    }
+    if (allItems.length === 0) {
+      allItems = PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+    }
+  } else {
+    allItems = assetData
+      ? Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'))
+      : PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+  }
 
   wrap.innerHTML = `
     <div class="card" style="padding:0;overflow:hidden;">
@@ -6263,6 +6285,12 @@ function laRenderCategorySection(periods) {
     const secData = assetData.sections[secKey] || {};
     const groups  = pcgGroups ? (pcgGroups[sub] || []) : [];
 
+    // ── sub='c': BW/BX 상품별 분해 렌더 ──────────────────────────
+    if (sub === 'c') {
+      _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey);
+      return;
+    }
+
     if (groups.length === 0) {
       // 그룹 없음 → 기존 asset_data 키 그대로
       const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
@@ -6328,6 +6356,127 @@ function laRenderCategorySection(periods) {
     });
     tbody.appendChild(trT);
   });
+}
+
+/**
+ * 화해채권(sub='c') 테이블 렌더러
+ * - 그룹이 없으면: BW/BX 항목별 합계 행 (기존 secData 키)
+ * - 그룹이 있으면: 그룹 헤더 행 + 그룹 내 선택된 BW/BX 항목에 속한 상품별 잔액 행 + 소계 행
+ * 데이터 출처: assetData.sections['상품구분화해채권_상품별']
+ *   구조: { '[회생]xxx': { 상품명: { ym: 원단위 } }, ... }
+ */
+function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
+  const tblId  = tbl.id;
+  const secKey = '상품구분화해채권';
+  // 상품별 분해 데이터
+  const prodDetail = (assetData && assetData.sections['상품구분화해채권_상품별']) || {};
+
+  if (groups.length === 0) {
+    // 그룹 미설정: BW/BX 항목 키 그대로 표시
+    const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
+    rawKeys.push(totalKey);
+    laBuildTable(tblId, secKey, rawKeys, periods);
+    return;
+  }
+
+  // thead
+  const thead = tbl.querySelector('thead');
+  thead.innerHTML = '';
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '구분';
+  th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:180px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym.replace('-', '.').replace(/^20/, '');
+    th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  const tbody = tbl.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  // 전체 화해 합계 계산용
+  const grandTotal = {};  // {ym: 원단위 합계}
+
+  groups.forEach(g => {
+    // ── 그룹 헤더 행 ──────────────────────────────────────────────
+    const trH  = document.createElement('tr');
+    trH.style.cssText = 'background:#e0f2fe;font-weight:700;';
+    const tdH0 = document.createElement('td');
+    tdH0.textContent = `▶ ${g.name}`;
+    tdH0.className   = 'bs-sub-col';
+    tdH0.style.cssText = 'position:sticky;left:0;z-index:2;background:#e0f2fe;min-width:180px;white-space:nowrap;font-size:12px;color:#0369a1;';
+    trH.appendChild(tdH0);
+    // 그룹 소계 계산 (그룹 내 모든 items × 모든 상품 합산)
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      let sum = null;
+      (g.items || []).forEach(itemKey => {
+        const prodMap = prodDetail[itemKey] || {};
+        Object.values(prodMap).forEach(ymMap => {
+          const v = ymMap[ym];
+          if (v != null) sum = (sum ?? 0) + v;
+        });
+      });
+      td.textContent = laFmt(sum, secKey, g.name);
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;';
+      trH.appendChild(td);
+    });
+    tbody.appendChild(trH);
+
+    // ── 그룹 내 상품별 행 ──────────────────────────────────────────
+    // 선택된 items에 걸쳐 상품명 유니온 수집
+    const prodSet = new Set();
+    (g.items || []).forEach(itemKey => {
+      Object.keys(prodDetail[itemKey] || {}).forEach(p => prodSet.add(p));
+    });
+    const prodList = [...prodSet].sort();
+
+    prodList.forEach(prodName => {
+      const tr  = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = `  ${prodName}`;
+      td0.className   = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:180px;white-space:nowrap;font-size:12px;padding-left:20px;';
+      tr.appendChild(td0);
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        let sum = null;
+        (g.items || []).forEach(itemKey => {
+          const v = ((prodDetail[itemKey] || {})[prodName] || {})[ym];
+          if (v != null) sum = (sum ?? 0) + v;
+        });
+        // 전체 합계 누적
+        if (sum != null) grandTotal[ym] = (grandTotal[ym] ?? 0) + sum;
+        td.textContent = laFmt(sum, secKey, prodName);
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
+
+  // ── 전체화해 합계 행 ───────────────────────────────────────────
+  const trT  = document.createElement('tr');
+  trT.style.cssText = 'background:#f8fafc;font-weight:700;';
+  const tdT0 = document.createElement('td');
+  tdT0.textContent = totalKey;
+  tdT0.className   = 'bs-sub-col';
+  tdT0.style.cssText = 'position:sticky;left:0;z-index:2;background:#f1f5f9;min-width:180px;white-space:nowrap;';
+  trT.appendChild(tdT0);
+  periods.forEach(ym => {
+    const td = document.createElement('td');
+    // secData의 전체화해 합계 우선, 없으면 grandTotal 사용
+    const v = (secData[totalKey] || {})[ym] ?? grandTotal[ym] ?? null;
+    td.textContent = laFmt(v, secKey, totalKey);
+    td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+    trT.appendChild(td);
+  });
+  tbody.appendChild(trT);
 }
 
 function laRenderRepayment(periods) {
