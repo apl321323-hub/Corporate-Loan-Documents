@@ -193,6 +193,16 @@ async def lifespan(app_):
                                     saq_store[pkey]["section5_bw"] = section5_bw
                                 if section5_bx:
                                     saq_store[pkey]["section5_bx"] = section5_bx
+                                # 성별/연령별/직업별 재저장
+                                gender_r = result.get("gender", {})
+                                age_r    = result.get("age_band", {})
+                                job_r    = result.get("job_raw", {})
+                                if gender_r:
+                                    saq_store[pkey]["gender"]   = gender_r
+                                if age_r:
+                                    saq_store[pkey]["age_band"] = age_r
+                                if job_r:
+                                    saq_store[pkey]["job_raw"]  = job_r
 
                             print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
@@ -737,6 +747,24 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
                 asset_data["sections"] = sections
                 uploaded_data["asset_data"] = asset_data
 
+        # ── 성별 → saq_store 저장 (asset 섹션은 /api/data/asset에서 동적 구성) ──
+        gender = data.get("gender", {})
+        if gender and pkey in saq_store:
+            saq_store[pkey]["gender"] = gender
+            uploaded_data["settlement_aq"] = saq_store
+
+        # ── 연령별 → saq_store 저장 ──────────────────────────────────
+        age_band_data = data.get("age_band", {})
+        if age_band_data and pkey in saq_store:
+            saq_store[pkey]["age_band"] = age_band_data
+            uploaded_data["settlement_aq"] = saq_store
+
+        # ── 직업분류 → saq_store 저장 ────────────────────────────────
+        job_raw_data = data.get("job_raw", {})
+        if job_raw_data and pkey in saq_store:
+            saq_store[pkey]["job_raw"] = job_raw_data
+            uploaded_data["settlement_aq"] = saq_store
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -748,6 +776,9 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "avg_rate_updated":  bool(avg_rate   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
             "repayment_updated":    bool(repayment   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
             "amount_band_updated": bool(amount_band and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "gender_updated":    bool(gender      and pkey and pkey != "unknown"),
+            "age_band_updated2": bool(age_band_data and pkey and pkey != "unknown"),
+            "job_updated":       bool(job_raw_data and pkey and pkey != "unknown"),
         })
     except Exception as e:
         import traceback
@@ -894,6 +925,51 @@ async def get_hwahae_items():
         all_bx.update(pdata.get("hwahae_bx") or [])
 
     return JSONResponse({"bw": sorted(all_bw), "bx": sorted(all_bx)})
+
+
+@app.get("/api/job-groups")
+async def get_job_groups():
+    """저장된 직업분류 그룹 설정 반환"""
+    groups = uploaded_data.get("job_groups", [])
+    if not groups:
+        _path = os.path.join(os.path.dirname(__file__), "data", "job_groups.json")
+        if os.path.exists(_path):
+            with open(_path, encoding="utf-8") as f:
+                groups = json.load(f)
+            uploaded_data["job_groups"] = groups
+    return JSONResponse(groups)
+
+
+@app.post("/api/job-groups")
+async def save_job_groups(request: Request):
+    """직업분류 그룹 전체 저장 (덮어쓰기)"""
+    body = await request.json()
+    if not isinstance(body, list):
+        raise HTTPException(status_code=400, detail="배열 형태로 전송하세요")
+    uploaded_data["job_groups"] = body
+    _path = os.path.join(os.path.dirname(__file__), "data", "job_groups.json")
+    os.makedirs(os.path.dirname(_path), exist_ok=True)
+    with open(_path, "w", encoding="utf-8") as f:
+        json.dump(body, f, ensure_ascii=False, indent=2)
+    return JSONResponse({"success": True})
+
+
+@app.get("/api/job-groups/all-jobs")
+async def get_all_jobs():
+    """결산자료 AC열(직업분류) 고유값 목록 반환"""
+    saq = uploaded_data.get("settlement_aq") or {}
+    if not saq:
+        _saq_file = os.path.join(os.path.dirname(__file__), "data", "settlement_aq.json")
+        if os.path.exists(_saq_file):
+            with open(_saq_file, encoding="utf-8") as f:
+                saq = json.load(f)
+    all_jobs: set[str] = set()
+    for pdata in saq.values():
+        job_raw = pdata.get("job_raw") or {}
+        for k in job_raw.keys():
+            if k != "전체융잔 합계":
+                all_jobs.add(k)
+    return JSONResponse(sorted(all_jobs))
 
 
 @app.get("/api/channel-groups/all-channels")
@@ -1754,6 +1830,53 @@ async def get_asset_data():
             # 상품별 분해 데이터도 함께 응답
             sections["상품구분화해채권_상품별"] = hwahae_prod
             result["sections"] = sections
+
+        # ── settlement_aq gender/age_band/job_raw → sections['성별'/'연령별'/'직업별'] 동적 구성 ──
+        # 구조: sections['성별']['남성'][ym] = 원단위
+        gender_sec_out: dict[str, dict[str, float]] = {}
+        age_sec_out:    dict[str, dict[str, float]] = {}
+        job_sec_out:    dict[str, dict[str, float]] = {}
+
+        for pkey, pdata in saq.items():
+            ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
+            if not ym:
+                continue
+
+            # 성별
+            gender_data = pdata.get("gender") or {}
+            for row_key, val in gender_data.items():
+                if val is None:
+                    continue
+                if row_key not in gender_sec_out:
+                    gender_sec_out[row_key] = {}
+                gender_sec_out[row_key][ym] = float(val) * 1_000_000
+
+            # 연령별
+            age_data = pdata.get("age_band") or {}
+            for row_key, val in age_data.items():
+                if val is None:
+                    continue
+                if row_key not in age_sec_out:
+                    age_sec_out[row_key] = {}
+                age_sec_out[row_key][ym] = float(val) * 1_000_000
+
+            # 직업별
+            job_data = pdata.get("job_raw") or {}
+            for row_key, val in job_data.items():
+                if val is None:
+                    continue
+                if row_key not in job_sec_out:
+                    job_sec_out[row_key] = {}
+                job_sec_out[row_key][ym] = float(val) * 1_000_000
+
+        sections = result.get("sections", {})
+        if gender_sec_out:
+            sections["성별"] = gender_sec_out
+        if age_sec_out:
+            sections["연령별"] = age_sec_out
+        if job_sec_out:
+            sections["직업별"] = job_sec_out
+        result["sections"] = sections
 
     return JSONResponse(result)
 

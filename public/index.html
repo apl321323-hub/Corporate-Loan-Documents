@@ -2129,6 +2129,11 @@
              background:none;color:#64748b;cursor:pointer;">
       <i class="fas fa-layer-group"></i> 상품구분
     </button>
+    <button id="cfg-tab-btn-job" onclick="cfgSwitchTab('job')"
+      style="padding:9px 22px;font-size:13px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+             background:none;color:#64748b;cursor:pointer;">
+      <i class="fas fa-briefcase"></i> 직업분류
+    </button>
   </div>
 
   <!-- ── 상품구성 탭 ── -->
@@ -2359,6 +2364,53 @@
       <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
         <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;"><i class="fas fa-list-ul"></i> 전체 그룹 현황</div>
         <div id="pcg-c-summary" style="padding:16px;"><span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 직업분류 탭 ── -->
+  <div id="cfg-tab-job" style="display:none;">
+    <div style="margin-bottom:12px;">
+      <span style="font-size:12px;color:#64748b;">직업분류 항목을 그룹으로 묶어 대출자산속성 직업별 탭에 반영합니다.</span>
+    </div>
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+      <!-- 왼쪽: 그룹 목록 + 신규 추가 -->
+      <div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;background:#7c3aed;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="fas fa-briefcase"></i> 직업분류 그룹</span>
+            <span id="jg-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+          </div>
+          <div id="jg-group-list" style="max-height:400px;overflow-y:auto;">
+            <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+          </div>
+          <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+            <div style="display:flex;gap:6px;">
+              <input id="jg-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 직장인, 자영업…)"
+                style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                onkeydown="if(event.key==='Enter') jgAddGroup()">
+              <button onclick="jgAddGroup()"
+                style="background:#7c3aed;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                <i class="fas fa-plus"></i> 추가
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 오른쪽: 직업분류 편집 -->
+      <div id="jg-editor-wrap">
+        <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+          <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>
+          왼쪽에서 그룹을 선택하세요
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
+        <i class="fas fa-list-ul"></i> 전체 그룹 현황
+      </div>
+      <div id="jg-summary" style="padding:16px;">
+        <span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>
       </div>
     </div>
   </div>
@@ -4539,10 +4591,12 @@ function cfgSwitchTab(tab) {
   document.getElementById('cfg-tab-product').style.display  = tab === 'product'  ? '' : 'none';
   document.getElementById('cfg-tab-channel').style.display  = tab === 'channel'  ? '' : 'none';
   document.getElementById('cfg-tab-category').style.display = tab === 'category' ? '' : 'none';
+  document.getElementById('cfg-tab-job').style.display      = tab === 'job'      ? '' : 'none';
   // 버튼 스타일
   const btnP = document.getElementById('cfg-tab-btn-product');
   const btnC = document.getElementById('cfg-tab-btn-channel');
   const btnK = document.getElementById('cfg-tab-btn-category');
+  const btnJ = document.getElementById('cfg-tab-btn-job');
   if (btnP) {
     btnP.style.color             = tab === 'product'  ? '#7c3aed' : '#64748b';
     btnP.style.borderBottomColor = tab === 'product'  ? '#7c3aed' : 'transparent';
@@ -4558,6 +4612,13 @@ function cfgSwitchTab(tab) {
     btnK.style.borderBottomColor = tab === 'category' ? '#0369a1' : 'transparent';
     btnK.style.fontWeight        = tab === 'category' ? '700' : '600';
   }
+  if (btnJ) {
+    btnJ.style.color             = tab === 'job'      ? '#7c3aed' : '#64748b';
+    btnJ.style.borderBottomColor = tab === 'job'      ? '#7c3aed' : 'transparent';
+    btnJ.style.fontWeight        = tab === 'job'      ? '700' : '600';
+  }
+  // 직업분류 탭 진입 시 초기화
+  if (tab === 'job') jgInit();
 }
 
 // ===== 접수경로 구분 (Channel Groups) =====
@@ -4812,6 +4873,11 @@ const PCG_SEC_MAP = {
 let pcgGroups      = { a: [], b: [], c: [] };  // {name, items:[]}
 let pcgSelIdx      = { a: -1, b: -1, c: -1 };
 let pcgCurSub      = 'a';
+
+// ── 직업분류 그룹 전역 변수 ───────────────────────────────────────
+let jgGroups    = [];   // [{name, items:[직업분류raw값, ...]}, ...]
+let jgSelIdx    = -1;
+let jgAllJobs   = [];   // 결산자료 AC열 고유값 목록
 
 async function pcgInit() {
   // assetData가 없으면 먼저 로드 (항목 목록 표시에 필요)
@@ -5304,6 +5370,217 @@ async function pcgPersist() {
   try {
     await axios.post(`${API_BASE}/api/product-category-groups`, { a: pcgGroups.a, b: pcgGroups.b, c: pcgGroups.c });
   } catch(e) { console.warn('상품구분 그룹 저장 실패:', e.message); }
+}
+
+
+// ===== 직업분류 그룹 (Job Groups) =====
+
+async function jgInit() {
+  // 결산자료 직업분류 고유값 로드
+  try {
+    const res = await axios.get(`${API_BASE}/api/job-groups/all-jobs`);
+    jgAllJobs = res.data || [];
+  } catch(e) { jgAllJobs = []; }
+  // 저장된 그룹 설정 로드
+  try {
+    const res = await axios.get(`${API_BASE}/api/job-groups`);
+    jgGroups = res.data || [];
+    window._jobGroups = jgGroups;
+  } catch(e) { jgGroups = []; }
+  jgRenderGroupList();
+  jgRenderSummary();
+}
+
+function jgRenderGroupList() {
+  const list = document.getElementById('jg-group-list');
+  const cnt  = document.getElementById('jg-group-count');
+  if (!list) return;
+  cnt.textContent = jgGroups.length + '개';
+  list.innerHTML  = '';
+
+  if (jgGroups.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:20px;text-align:center;color:#94a3b8;font-size:13px;';
+    empty.textContent = '아직 그룹이 없습니다';
+    list.appendChild(empty);
+    return;
+  }
+
+  jgGroups.forEach((g, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
+      + 'cursor:pointer;border-bottom:1px solid #f1f5f9;'
+      + 'background:' + (idx === jgSelIdx ? '#f3e8ff' : '#fff') + ';';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:13px;font-weight:600;color:#1e293b;flex:1;pointer-events:none;';
+    nameSpan.textContent = g.name;
+    const cntSpan = document.createElement('span');
+    cntSpan.style.cssText = 'font-size:11px;font-weight:400;color:#64748b;margin-left:6px;';
+    cntSpan.textContent = (g.items ? g.items.length : 0) + '개';
+    nameSpan.appendChild(cntSpan);
+
+    row.addEventListener('click', (function(i){ return function(e){
+      if (e.target.classList.contains('jg-del-btn')) return;
+      jgSelectGroup(i);
+    }; })(idx));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'jg-del-btn';
+    delBtn.title = '삭제';
+    delBtn.style.cssText = 'border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;flex-shrink:0;';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', (function(i){ return function(e){
+      e.stopPropagation();
+      jgDeleteGroup(i);
+    }; })(idx));
+
+    row.appendChild(nameSpan);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+
+function jgSelectGroup(idx) {
+  jgSelIdx = idx;
+  jgRenderEditor();
+  jgRenderGroupList();
+}
+
+function jgRenderEditor() {
+  const wrap = document.getElementById('jg-editor-wrap');
+  if (!wrap) return;
+  if (jgSelIdx < 0 || jgSelIdx >= jgGroups.length) {
+    wrap.innerHTML = '<div class="card" style="padding:32px;text-align:center;color:#94a3b8;">'
+      + '<i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>';
+    return;
+  }
+  const cur = jgGroups[jgSelIdx];
+  const usedElsewhere = new Set();
+  jgGroups.forEach((og, i) => { if (i !== jgSelIdx) (og.items || []).forEach(it => usedElsewhere.add(it)); });
+
+  wrap.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'padding:0;overflow:hidden;';
+
+  // 헤더
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:12px 16px;background:#7c3aed;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;';
+  header.innerHTML = `<span><i class="fas fa-edit"></i> "${cur.name}" 항목 설정</span>`;
+  card.appendChild(header);
+
+  const body = document.createElement('div');
+  body.style.cssText = 'padding:16px;';
+
+  if (jgAllJobs.length === 0) {
+    body.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:12px;">결산자료를 먼저 업로드하면 직업분류 항목이 표시됩니다.</div>';
+  } else {
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:350px;overflow-y:auto;';
+    jgAllJobs.forEach(jobKey => {
+      const checked = (cur.items || []).includes(jobKey);
+      const disabled = usedElsewhere.has(jobKey);
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;'
+        + 'cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';'
+        + 'background:' + (checked ? '#f3e8ff' : '#f8fafc') + ';'
+        + 'border:1px solid ' + (checked ? '#c4b5fd' : '#e2e8f0') + ';'
+        + 'opacity:' + (disabled && !checked ? '0.5' : '1') + ';';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = checked;
+      cb.disabled = disabled && !checked;
+      cb.value = jobKey;
+      const span = document.createElement('span');
+      span.style.cssText = 'font-size:12px;color:#1e293b;word-break:break-all;';
+      span.textContent = jobKey;
+      label.appendChild(cb);
+      label.appendChild(span);
+      grid.appendChild(label);
+    });
+    body.appendChild(grid);
+  }
+
+  const btnSave = document.createElement('button');
+  btnSave.style.cssText = 'margin-top:12px;background:#7c3aed;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;';
+  btnSave.innerHTML = '<i class="fas fa-save"></i> 저장';
+  btnSave.onclick = () => jgSaveGroup();
+  body.appendChild(btnSave);
+
+  card.appendChild(body);
+  wrap.appendChild(card);
+}
+
+async function jgSaveGroup() {
+  if (jgSelIdx < 0 || jgSelIdx >= jgGroups.length) return;
+  const wrap = document.getElementById('jg-editor-wrap');
+  const checkboxes = wrap ? wrap.querySelectorAll('input[type="checkbox"]') : [];
+  const items = [];
+  checkboxes.forEach(cb => { if (cb.checked) items.push(cb.value); });
+  jgGroups[jgSelIdx].items = items;
+  window._jobGroups = jgGroups;
+  try {
+    await axios.post(`${API_BASE}/api/job-groups`, jgGroups);
+    showToast('✅ 직업분류 그룹 저장됨', 'success');
+  } catch(e) { showToast('❌ 저장 실패: ' + e.message, 'error'); }
+  jgRenderGroupList();
+  jgRenderSummary();
+}
+
+async function jgAddGroup() {
+  const inp = document.getElementById('jg-new-group-name');
+  const name = inp ? inp.value.trim() : '';
+  if (!name) { showToast('❌ 그룹명을 입력하세요', 'error'); return; }
+  if (jgGroups.find(g => g.name === name)) { showToast('❌ 이미 같은 이름의 그룹이 있습니다', 'error'); return; }
+  jgGroups.push({ name, items: [] });
+  if (inp) inp.value = '';
+  window._jobGroups = jgGroups;
+  try {
+    await axios.post(`${API_BASE}/api/job-groups`, jgGroups);
+  } catch(e) {}
+  jgRenderGroupList();
+  jgRenderSummary();
+  jgSelectGroup(jgGroups.length - 1);
+  showToast(`✅ "${name}" 그룹 추가됨`, 'success');
+}
+
+async function jgDeleteGroup(idx) {
+  const name = jgGroups[idx].name;
+  if (!confirm(`"${name}" 그룹을 삭제하시겠습니까?`)) return;
+  jgGroups.splice(idx, 1);
+  if (jgSelIdx === idx) jgSelIdx = -1;
+  else if (jgSelIdx > idx) jgSelIdx--;
+  window._jobGroups = jgGroups;
+  try {
+    await axios.post(`${API_BASE}/api/job-groups`, jgGroups);
+  } catch(e) {}
+  jgRenderGroupList();
+  jgRenderEditor();
+  jgRenderSummary();
+  showToast(`🗑️ "${name}" 그룹 삭제됨`, 'success');
+}
+
+function jgRenderSummary() {
+  const el = document.getElementById('jg-summary');
+  if (!el) return;
+  if (jgGroups.length === 0) {
+    el.innerHTML = '<span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>';
+    return;
+  }
+  const colors = ['#7c3aed','#1e3a5f','#0f5132','#7c2d12','#0891b2','#334155','#b45309','#dc2626'];
+  el.innerHTML = jgGroups.map((g, i) => `
+    <div style="display:inline-flex;flex-direction:column;gap:4px;margin:6px;padding:10px 14px;
+        border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;min-width:160px;vertical-align:top;">
+      <div style="font-weight:700;font-size:13px;color:${colors[i % colors.length]};">
+        <i class="fas fa-briefcase"></i> ${g.name}
+        <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:4px;">(${(g.items||[]).length}개)</span>
+      </div>
+      <div style="font-size:11px;color:#64748b;line-height:1.6;">
+        ${(g.items||[]).length > 0 ? (g.items||[]).join(', ') : '<span style="color:#cbd5e1;">항목 없음</span>'}
+      </div>
+    </div>
+  `).join('');
 }
 
 
@@ -7010,14 +7287,204 @@ async function laRenderSection(sid) {
   else if (sid === '08') laRenderChannelSection(periods);
   else if (sid === '09') laRenderProductSection(periods);
   else if (sid === '10') await laRenderCategorySection(periods);
-  else if (sid === '11') {
-    laBuildTable('la-tbl-11a', '성별',   LA_ROW_DEFS['성별'], periods);
-    laBuildTable('la-tbl-11b', '연령별', LA_ROW_DEFS['연령별'], periods);
-    laBuildTable('la-tbl-11c', '직업별', LA_ROW_DEFS['직업별'], periods);
-  }
+  else if (sid === '11') await laRenderGenderAgeJob(periods);
   else if (sid === '12') laBuildTable('la-tbl-12', '지역별', LA_ROW_DEFS['지역별'], periods);
   else if (sid === '13') laBuildTable('la-tbl-13', 'CB등급', LA_ROW_DEFS['CB등급'], periods);
   else if (sid === '14') laRenderCbProduct();
+}
+
+// ── 성별/연령별/직업별 렌더 ──────────────────────────────────────
+async function laRenderGenderAgeJob(periods) {
+  if (!assetData) return;
+
+  // ── jobGroups 로드 (직업별 그룹 설정) ────────────────────────────
+  let jobGroupsLocal = window._jobGroups || [];
+  if (!jobGroupsLocal || jobGroupsLocal.length === 0) {
+    try {
+      const res = await axios.get(`${API_BASE}/api/job-groups`);
+      jobGroupsLocal = res.data || [];
+      window._jobGroups = jobGroupsLocal;
+    } catch(e) { jobGroupsLocal = []; }
+  }
+
+  // ── 공통 테이블 헬퍼 ─────────────────────────────────────────────
+  function _buildSimpleTable(tblId, secKey, rowKeys, totalKey) {
+    const tbl = document.getElementById(tblId);
+    if (!tbl) return;
+    const secData = assetData.sections[secKey] || {};
+
+    const thead = tbl.querySelector('thead');
+    const tbody = tbl.querySelector('tbody');
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    // 헤더 행
+    const tr0 = document.createElement('tr');
+    const th0 = document.createElement('th');
+    th0.textContent = '구분'; th0.className = 'bs-sub-col';
+    th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:140px;';
+    tr0.appendChild(th0);
+    periods.forEach(ym => {
+      const th = document.createElement('th');
+      th.textContent = ym;
+      th.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;background:#f1f5f9;min-width:90px;';
+      tr0.appendChild(th);
+    });
+    thead.appendChild(tr0);
+
+    // 데이터 행
+    const dataRows = rowKeys.filter(k => k !== totalKey);
+    const totalRow = rowKeys.find(k => k === totalKey);
+
+    dataRows.forEach(rowKey => {
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = rowKey; td0.className = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:140px;';
+      tr.appendChild(td0);
+      const rowData = secData[rowKey] || {};
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        const v = rowData[ym] ?? null;
+        td.textContent = v !== null ? Math.round(v / 1_000_000).toLocaleString() : '–';
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    // 합계 행 (그룹 행 합산)
+    if (totalRow) {
+      const tr = document.createElement('tr');
+      tr.style.cssText = 'background:#f0f9ff;font-weight:700;';
+      const td0 = document.createElement('td');
+      td0.textContent = totalRow; td0.className = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#e0f2fe;font-weight:700;min-width:140px;';
+      tr.appendChild(td0);
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        // 그룹 행 합산
+        let total = null;
+        dataRows.forEach(rowKey => {
+          const v = (secData[rowKey] || {})[ym];
+          if (v != null) total = (total ?? 0) + v;
+        });
+        td.textContent = total !== null ? Math.round(total / 1_000_000).toLocaleString() : '–';
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+  }
+
+  // ── 성별 테이블 ──────────────────────────────────────────────────
+  _buildSimpleTable('la-tbl-11a', '성별', ['남성', '여성', '전체융잔 합계'], '전체융잔 합계');
+
+  // ── 연령별 테이블 ────────────────────────────────────────────────
+  _buildSimpleTable('la-tbl-11b', '연령별', ['20대', '30대', '40대', '50대이상', '전체융잔 합계'], '전체융잔 합계');
+
+  // ── 직업별 테이블 (그룹 설정 기반) ──────────────────────────────
+  _buildJobTable(periods, jobGroupsLocal);
+}
+
+function _buildJobTable(periods, jobGroups) {
+  const tbl = document.getElementById('la-tbl-11c');
+  if (!tbl) return;
+  const secData = (assetData && assetData.sections && assetData.sections['직업별']) || {};
+
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // 헤더 행
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '직업분류'; th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:160px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym;
+    th.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;background:#f1f5f9;min-width:90px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  // 그룹 설정이 없으면 raw 값 그대로 표시
+  const allRawKeys = Object.keys(secData).filter(k => k !== '전체융잔 합계');
+
+  if (!jobGroups || jobGroups.length === 0) {
+    // 그룹 미설정: raw 키 직접 표시
+    allRawKeys.sort().forEach(rowKey => {
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = rowKey; td0.className = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;';
+      tr.appendChild(td0);
+      const rowData = secData[rowKey] || {};
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        const v = rowData[ym] ?? null;
+        td.textContent = v !== null ? Math.round(v / 1_000_000).toLocaleString() : '–';
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  } else {
+    // 그룹 설정 기반 표시
+    const groupSums = [];
+    jobGroups.forEach(g => {
+      const ymVals = {};
+      periods.forEach(ym => {
+        let sum = null;
+        (g.items || []).forEach(it => {
+          const v = (secData[it] || {})[ym];
+          if (v != null) sum = (sum ?? 0) + v;
+        });
+        ymVals[ym] = sum;
+      });
+      groupSums.push(ymVals);
+
+      const tr = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = g.name; td0.className = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;';
+      tr.appendChild(td0);
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        const v = ymVals[ym];
+        td.textContent = v !== null ? Math.round(v / 1_000_000).toLocaleString() : '–';
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    // 합계 행
+    const trTotal = document.createElement('tr');
+    trTotal.style.cssText = 'background:#f0f9ff;font-weight:700;';
+    const td0 = document.createElement('td');
+    td0.textContent = '전체융잔 합계'; td0.className = 'bs-sub-col';
+    td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#e0f2fe;font-weight:700;min-width:160px;';
+    trTotal.appendChild(td0);
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      const hasAny = groupSums.some(gs => gs[ym] != null);
+      let total = null;
+      if (hasAny) {
+        total = groupSums.reduce((acc, gs) => acc + (gs[ym] ?? 0), 0);
+      } else {
+        const v = (secData['전체융잔 합계'] || {})[ym];
+        if (v != null) total = v;
+      }
+      td.textContent = total !== null ? Math.round(total / 1_000_000).toLocaleString() : '–';
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;';
+      trTotal.appendChild(td);
+    });
+    tbody.appendChild(trTotal);
+  }
 }
 
 // ── 상품별CB등급 렌더 ─────────────────────────────────────────

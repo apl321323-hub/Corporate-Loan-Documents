@@ -7,8 +7,11 @@
   J열 (index 9)  : 연체일수  (문자열로 저장됨)
   L열 (index 11) : 잔액      (숫자)
   O열 (index 14) : 정상이율  (%)
+  T열 (index 19) : 성별      ('남' | '여' 등)
   U열 (index 20) : 상환방식  ('원리균등' | '자유상환')
   X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
+  AC열 (index 28): 직업분류
+  CN열 (index 65): 만나이    (숫자)
 
 연체 구간 (자산건전성 기존 테이블 기준):
   무연체  : 0일
@@ -295,6 +298,22 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     s5_bw: dict[str, dict[str, float]] = {}
     s5_bx: dict[str, dict[str, float]] = {}
 
+    # ── 성별 집계 버킷 (T열, index 19) ───────────────────────────
+    # gender_sec: {'남성': float, '여성': float}  (원 단위)
+    GENDER_LABEL: dict[str, str] = {
+        '남': '남성', '남성': '남성',
+        '여': '여성', '여성': '여성',
+    }
+    gender_sec: dict[str, float] = {'남성': 0.0, '여성': 0.0}
+
+    # ── 연령별 집계 버킷 (CN열, index 65) ─────────────────────────
+    # age_sec: {'20대': float, '30대': float, '40대': float, '50대이상': float}  (원 단위)
+    age_sec: dict[str, float] = {'20대': 0.0, '30대': 0.0, '40대': 0.0, '50대이상': 0.0}
+
+    # ── 직업분류 집계 버킷 (AC열, index 28) ──────────────────────
+    # job_sec: {직업분류값: float}  (원 단위, 고유값 동적 수집)
+    job_sec: dict[str, float] = {}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -302,9 +321,12 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         days         = _to_int(row[9])                                       # J열
         balance      = _to_float(row[11])                                    # L열
         rate         = _to_float(row[14]) if len(row) > 14 else None         # O열: 정상이율(%)
+        gender_raw   = str(row[19]).strip() if len(row) > 19 and row[19] is not None else None  # T열: 성별
         repay_raw    = str(row[20]).strip() if len(row) > 20 and row[20] is not None else None  # U열: 상환방식
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
+        job_raw      = str(row[28]).strip() if len(row) > 28 and row[28] is not None else None  # AC열: 직업분류
         channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
+        age_raw      = _to_int(row[65]) if len(row) > 65 else None          # CN열: 만나이
         bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
         bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX열: 신복상태
 
@@ -394,6 +416,29 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                     s5_bx[bx_raw][product] = 0.0
                 s5_bx[bx_raw][product] += balance
 
+        # ── 성별: T열 집계 ───────────────────────────────────────────
+        if gender_raw and gender_raw not in ('None', ''):
+            gender_label = GENDER_LABEL.get(gender_raw)
+            if gender_label and balance is not None:
+                gender_sec[gender_label] = gender_sec.get(gender_label, 0.0) + balance
+
+        # ── 연령별: CN열 만나이 → 구간 집계 ─────────────────────────
+        if age_raw is not None and balance is not None:
+            if 20 <= age_raw <= 29:
+                age_sec['20대'] += balance
+            elif 30 <= age_raw <= 39:
+                age_sec['30대'] += balance
+            elif 40 <= age_raw <= 49:
+                age_sec['40대'] += balance
+            elif age_raw >= 50:
+                age_sec['50대이상'] += balance
+
+        # ── 직업분류: AC열 고유값별 집계 ────────────────────────────
+        if job_raw and job_raw not in ('None', '') and balance is not None:
+            if job_raw not in job_sec:
+                job_sec[job_raw] = 0.0
+            job_sec[job_raw] += balance
+
     wb.close()
 
     # ── 섹션3 연체율(%) 계산 ────────────────────────────────────────
@@ -480,6 +525,19 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         for bx, prods in s5_bx.items()
     }
 
+    # ── 성별 섹션 (백만원 단위) ──────────────────────────────────────
+    gender_m: dict[str, int] = {k: _m(v) for k, v in gender_sec.items()}
+    gender_m['전체융잔 합계'] = sum(gender_m.values())
+
+    # ── 연령별 섹션 (백만원 단위) ────────────────────────────────────
+    age_band_m: dict[str, int] = {k: _m(v) for k, v in age_sec.items()}
+    age_band_m['전체융잔 합계'] = sum(age_band_m.values())
+
+    # ── 직업분류 섹션 (백만원 단위) ─────────────────────────────────
+    # raw 값 그대로 키로 사용, 전체융잔 합계 추가
+    job_m: dict[str, int] = {k: _m(v) for k, v in job_sec.items()}
+    job_m['전체융잔 합계'] = _m(sum(job_sec.values()))
+
     return {
         "period"      : period,
         "section1"    : s1_m,
@@ -494,6 +552,9 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "hwahae_bx"   : hwahae_bx,   # BX열(신복상태) 고유값 목록
         "section5_bw" : section5_bw, # BW값별 상품별 잔액 (백만원)
         "section5_bx" : section5_bx, # BX값별 상품별 잔액 (백만원)
+        "gender"      : gender_m,    # 성별별 융잔 합계 (백만원)
+        "age_band"    : age_band_m,  # 연령대별 융잔 합계 (백만원)
+        "job_raw"     : job_m,       # 직업분류별 융잔 합계 (백만원, raw 키)
         "products"    : products_list,
     }
 
