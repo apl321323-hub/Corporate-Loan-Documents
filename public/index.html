@@ -2124,6 +2124,11 @@
              background:none;color:#64748b;cursor:pointer;">
       <i class="fas fa-door-open"></i> 접수경로
     </button>
+    <button id="cfg-tab-btn-category" onclick="cfgSwitchTab('category')"
+      style="padding:9px 22px;font-size:13px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+             background:none;color:#64748b;cursor:pointer;">
+      <i class="fas fa-layer-group"></i> 상품구분
+    </button>
   </div>
 
   <!-- ── 상품구성 탭 ── -->
@@ -2224,6 +2229,140 @@
     </div>
   </div>
 
+  <!-- ── 상품구분 탭 ── -->
+  <div id="cfg-tab-category" style="display:none;">
+    <div style="margin-bottom:12px;">
+      <span style="font-size:12px;color:#64748b;">상품구분 항목을 그룹으로 재구성하여 대출자산속성 상품구분 탭에 반영합니다.</span>
+    </div>
+
+    <!-- 서브섹션 탭 -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e2e8f0;">
+      <button id="pcg-sub-btn-a" onclick="pcgSwitchSub('a')"
+        style="padding:7px 18px;font-size:12px;font-weight:700;border:none;border-bottom:3px solid #0369a1;margin-bottom:-2px;background:none;color:#0369a1;cursor:pointer;">
+        상품구분
+      </button>
+      <button id="pcg-sub-btn-b" onclick="pcgSwitchSub('b')"
+        style="padding:7px 18px;font-size:12px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;color:#64748b;cursor:pointer;">
+        상품구분(상세)
+      </button>
+      <button id="pcg-sub-btn-c" onclick="pcgSwitchSub('c')"
+        style="padding:7px 18px;font-size:12px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;color:#64748b;cursor:pointer;">
+        상품구분(화해채권)
+      </button>
+    </div>
+
+    <!-- 서브섹션 A: 상품구분 -->
+    <div id="pcg-sub-a">
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+        <div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+              <span><i class="fas fa-layer-group"></i> 상품구분 그룹</span>
+              <span id="pcg-a-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+            </div>
+            <div id="pcg-a-group-list" style="max-height:400px;overflow-y:auto;">
+              <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+            </div>
+            <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+              <div style="display:flex;gap:6px;">
+                <input id="pcg-a-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 신용, 담보…)"
+                  style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                  onkeydown="if(event.key==='Enter') pcgAddGroup('a')">
+                <button onclick="pcgAddGroup('a')"
+                  style="background:#0369a1;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                  <i class="fas fa-plus"></i> 추가
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pcg-a-editor-wrap">
+          <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+            <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+        <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;"><i class="fas fa-list-ul"></i> 전체 그룹 현황</div>
+        <div id="pcg-a-summary" style="padding:16px;"><span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span></div>
+      </div>
+    </div>
+
+    <!-- 서브섹션 B: 상품구분(상세) -->
+    <div id="pcg-sub-b" style="display:none;">
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+        <div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+              <span><i class="fas fa-layer-group"></i> 상품구분(상세) 그룹</span>
+              <span id="pcg-b-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+            </div>
+            <div id="pcg-b-group-list" style="max-height:400px;overflow-y:auto;">
+              <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+            </div>
+            <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+              <div style="display:flex;gap:6px;">
+                <input id="pcg-b-new-group-name" type="text" placeholder="새 그룹명 입력"
+                  style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                  onkeydown="if(event.key==='Enter') pcgAddGroup('b')">
+                <button onclick="pcgAddGroup('b')"
+                  style="background:#0369a1;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                  <i class="fas fa-plus"></i> 추가
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pcg-b-editor-wrap">
+          <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+            <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+        <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;"><i class="fas fa-list-ul"></i> 전체 그룹 현황</div>
+        <div id="pcg-b-summary" style="padding:16px;"><span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span></div>
+      </div>
+    </div>
+
+    <!-- 서브섹션 C: 상품구분(화해채권) -->
+    <div id="pcg-sub-c" style="display:none;">
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+        <div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+              <span><i class="fas fa-layer-group"></i> 상품구분(화해채권) 그룹</span>
+              <span id="pcg-c-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+            </div>
+            <div id="pcg-c-group-list" style="max-height:400px;overflow-y:auto;">
+              <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+            </div>
+            <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+              <div style="display:flex;gap:6px;">
+                <input id="pcg-c-new-group-name" type="text" placeholder="새 그룹명 입력"
+                  style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                  onkeydown="if(event.key==='Enter') pcgAddGroup('c')">
+                <button onclick="pcgAddGroup('c')"
+                  style="background:#0369a1;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                  <i class="fas fa-plus"></i> 추가
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="pcg-c-editor-wrap">
+          <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+            <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+        <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;"><i class="fas fa-list-ul"></i> 전체 그룹 현황</div>
+        <div id="pcg-c-summary" style="padding:16px;"><span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span></div>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 </main>
@@ -2275,6 +2414,7 @@ function showPage(pageId) {
   if (pageId === 'page-product-config') {
     pgInit();
     crInit();
+    pcgInit();
   }
 }
 
@@ -4396,20 +4536,27 @@ async function pgPersist() {
 // ===== 구분설정 탭 전환 =====
 function cfgSwitchTab(tab) {
   // 탭 패널 토글
-  document.getElementById('cfg-tab-product').style.display = tab === 'product' ? '' : 'none';
-  document.getElementById('cfg-tab-channel').style.display = tab === 'channel' ? '' : 'none';
+  document.getElementById('cfg-tab-product').style.display  = tab === 'product'  ? '' : 'none';
+  document.getElementById('cfg-tab-channel').style.display  = tab === 'channel'  ? '' : 'none';
+  document.getElementById('cfg-tab-category').style.display = tab === 'category' ? '' : 'none';
   // 버튼 스타일
   const btnP = document.getElementById('cfg-tab-btn-product');
   const btnC = document.getElementById('cfg-tab-btn-channel');
+  const btnK = document.getElementById('cfg-tab-btn-category');
   if (btnP) {
-    btnP.style.color          = tab === 'product' ? '#7c3aed' : '#64748b';
-    btnP.style.borderBottomColor = tab === 'product' ? '#7c3aed' : 'transparent';
-    btnP.style.fontWeight     = tab === 'product' ? '700' : '600';
+    btnP.style.color             = tab === 'product'  ? '#7c3aed' : '#64748b';
+    btnP.style.borderBottomColor = tab === 'product'  ? '#7c3aed' : 'transparent';
+    btnP.style.fontWeight        = tab === 'product'  ? '700' : '600';
   }
   if (btnC) {
-    btnC.style.color          = tab === 'channel' ? '#0f766e' : '#64748b';
-    btnC.style.borderBottomColor = tab === 'channel' ? '#0f766e' : 'transparent';
-    btnC.style.fontWeight     = tab === 'channel' ? '700' : '600';
+    btnC.style.color             = tab === 'channel'  ? '#0f766e' : '#64748b';
+    btnC.style.borderBottomColor = tab === 'channel'  ? '#0f766e' : 'transparent';
+    btnC.style.fontWeight        = tab === 'channel'  ? '700' : '600';
+  }
+  if (btnK) {
+    btnK.style.color             = tab === 'category' ? '#0369a1' : '#64748b';
+    btnK.style.borderBottomColor = tab === 'category' ? '#0369a1' : 'transparent';
+    btnK.style.fontWeight        = tab === 'category' ? '700' : '600';
   }
 }
 
@@ -4647,7 +4794,205 @@ async function crPersist() {
     console.warn('접수경로 그룹 저장 실패:', e.message);
   }
 }
-let bsData = null;          // parse_business_excel 결과
+async function crPersist() {
+  try {
+    await axios.post(`${API_BASE}/api/channel-groups`, crGroups);
+  } catch(e) {
+    console.warn('접수경로 그룹 저장 실패:', e.message);
+  }
+}
+
+// ===== 상품구분 그룹 설정 (Product Category Groups) =====
+// 서브섹션 키: 'a'=상품구분, 'b'=상품구분상세, 'c'=상품구분화해채권
+const PCG_SEC_MAP = {
+  a: { secKey: '상품구분',         totalKey: '전체융잘 합계',  defItems: ['신용','담보','보증','기타','전체융잔 합계'] },
+  b: { secKey: '상품구분상세',     totalKey: '전체융잔 합계',  defItems: ['신용','부동산','자동차담보','기타담보(보증금)','회복파','전체융잔 합계'] },
+  c: { secKey: '상품구분화해채권', totalKey: '전체화해 합계',  defItems: ['일반신용','보증인','회파복','부동산','자동차담보','보증금','전체화해 합계'] },
+};
+let pcgGroups      = { a: [], b: [], c: [] };  // {name, items:[]}
+let pcgSelIdx      = { a: -1, b: -1, c: -1 };
+let pcgCurSub      = 'a';
+
+async function pcgInit() {
+  try {
+    const res = await axios.get(`${API_BASE}/api/product-category-groups`);
+    const data = res.data || {};
+    pcgGroups.a = data.a || [];
+    pcgGroups.b = data.b || [];
+    pcgGroups.c = data.c || [];
+  } catch(e) { pcgGroups = { a:[], b:[], c:[] }; }
+  ['a','b','c'].forEach(s => { pcgRenderGroupList(s); pcgRenderSummary(s); });
+}
+
+function pcgSwitchSub(sub) {
+  pcgCurSub = sub;
+  ['a','b','c'].forEach(s => {
+    document.getElementById(`pcg-sub-${s}`).style.display = s === sub ? '' : 'none';
+    const btn = document.getElementById(`pcg-sub-btn-${s}`);
+    if (btn) {
+      btn.style.color             = s === sub ? '#0369a1' : '#64748b';
+      btn.style.borderBottomColor = s === sub ? '#0369a1' : 'transparent';
+      btn.style.fontWeight        = s === sub ? '700' : '600';
+    }
+  });
+}
+
+function pcgRenderGroupList(sub) {
+  const list = document.getElementById(`pcg-${sub}-group-list`);
+  const cnt  = document.getElementById(`pcg-${sub}-group-count`);
+  if (!list) return;
+  cnt.textContent = `${pcgGroups[sub].length}개`;
+  if (pcgGroups[sub].length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = '';
+  pcgGroups[sub].forEach((g, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;
+      background:${idx === pcgSelIdx[sub] ? '#e0f2fe' : '#fff'};`;
+    div.innerHTML = `<span style="font-size:13px;font-weight:600;color:#1e293b;">${g.name}
+        <span style="font-size:11px;font-weight:400;color:#64748b;margin-left:6px;">${g.items.length}개</span></span>
+      <button title="삭제" onclick="pcgDeleteGroup('${sub}',${idx})" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;">✕</button>`;
+    div.querySelector('span:first-child').addEventListener('click', () => pcgSelectGroup(sub, idx));
+    list.appendChild(div);
+  });
+}
+
+function pcgSelectGroup(sub, idx) {
+  pcgSelIdx[sub] = idx;
+  pcgRenderGroupList(sub);
+  pcgRenderEditor(sub);
+}
+
+function pcgRenderEditor(sub) {
+  const wrap = document.getElementById(`pcg-${sub}-editor-wrap`);
+  if (!wrap) return;
+  const idx = pcgSelIdx[sub];
+  if (idx < 0 || idx >= pcgGroups[sub].length) {
+    wrap.innerHTML = `<div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+      <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>`;
+    return;
+  }
+  const g = pcgGroups[sub];
+  const cur = g[idx];
+  // 이미 다른 그룹에서 사용 중인 항목
+  const usedElsewhere = new Set();
+  g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
+  // 전체 항목 목록 (asset_data 기준)
+  const allItems = assetData
+    ? Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'))
+    : PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+
+  wrap.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;">
+        <i class="fas fa-edit"></i> "${cur.name}" 항목 편집
+      </div>
+      <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;">
+        <button onclick="pcgCheckAll('${sub}',true)"
+          style="font-size:12px;padding:4px 10px;border:1px solid #0369a1;color:#0369a1;background:#fff;border-radius:5px;cursor:pointer;">전체선택</button>
+        <button onclick="pcgCheckAll('${sub}',false)"
+          style="font-size:12px;padding:4px 10px;border:1px solid #94a3b8;color:#64748b;background:#fff;border-radius:5px;cursor:pointer;">전체해제</button>
+      </div>
+      <div id="pcg-${sub}-item-list" style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;">
+        ${allItems.map(it => {
+          const checked = cur.items.includes(it);
+          const locked  = usedElsewhere.has(it);
+          return `<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:13px;cursor:${locked?'not-allowed':'pointer'};
+            border:1.5px solid ${checked?'#0369a1':locked?'#e2e8f0':'#cbd5e1'};
+            background:${checked?'#e0f2fe':locked?'#f8fafc':'#fff'};
+            color:${checked?'#0369a1':locked?'#cbd5e1':'#475569'};" title="${locked?'다른 그룹에서 사용 중':''}">
+            <input type="checkbox" value="${it}" ${checked?'checked':''} ${locked?'disabled':''}
+              style="accent-color:#0369a1;"> ${it}</label>`;
+        }).join('')}
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #e2e8f0;text-align:right;">
+        <button onclick="pcgSaveGroup('${sub}')"
+          style="background:#0369a1;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">
+          <i class="fas fa-save"></i> 저장
+        </button>
+      </div>
+    </div>`;
+}
+
+function pcgCheckAll(sub, flag) {
+  document.querySelectorAll(`#pcg-${sub}-item-list input:not(:disabled)`).forEach(cb => cb.checked = flag);
+}
+
+async function pcgSaveGroup(sub) {
+  const idx = pcgSelIdx[sub];
+  if (idx < 0) return;
+  const checked = [...document.querySelectorAll(`#pcg-${sub}-item-list input:checked:not(:disabled)`)].map(cb => cb.value);
+  // 중복 검증
+  const usedElsewhere = new Map();
+  pcgGroups[sub].forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.set(it, og.name)); });
+  const conflicts = checked.filter(it => usedElsewhere.has(it));
+  if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
+  pcgGroups[sub][idx].items = checked;
+  pcgRenderGroupList(sub);
+  pcgRenderEditor(sub);
+  pcgRenderSummary(sub);
+  await pcgPersist();
+  showToast(`✅ "${pcgGroups[sub][idx].name}" 그룹 저장 완료 (${checked.length}개 항목)`, 'success');
+  if (laCurSection === '10') laRenderSection('10');
+}
+
+async function pcgAddGroup(sub) {
+  const inp = document.getElementById(`pcg-${sub}-new-group-name`);
+  const name = inp.value.trim();
+  if (!name) { showToast('❌ 그룹명을 입력하세요', 'error'); return; }
+  if (pcgGroups[sub].find(g => g.name === name)) { showToast('❌ 이미 같은 이름의 그룹이 있습니다', 'error'); return; }
+  pcgGroups[sub].push({ name, items: [] });
+  inp.value = '';
+  pcgRenderGroupList(sub);
+  pcgRenderSummary(sub);
+  await pcgPersist();
+  pcgSelectGroup(sub, pcgGroups[sub].length - 1);
+  showToast(`✅ "${name}" 그룹 추가됨`, 'success');
+  if (laCurSection === '10') laRenderSection('10');
+}
+
+async function pcgDeleteGroup(sub, idx) {
+  const name = pcgGroups[sub][idx].name;
+  if (!confirm(`"${name}" 그룹을 삭제하시겠습니까?`)) return;
+  pcgGroups[sub].splice(idx, 1);
+  if (pcgSelIdx[sub] === idx) pcgSelIdx[sub] = -1;
+  else if (pcgSelIdx[sub] > idx) pcgSelIdx[sub]--;
+  pcgRenderGroupList(sub);
+  pcgRenderEditor(sub);
+  pcgRenderSummary(sub);
+  await pcgPersist();
+  showToast(`🗑️ "${name}" 그룹 삭제됨`, 'success');
+  if (laCurSection === '10') laRenderSection('10');
+}
+
+function pcgRenderSummary(sub) {
+  const el = document.getElementById(`pcg-${sub}-summary`);
+  if (!el) return;
+  if (pcgGroups[sub].length === 0) {
+    el.innerHTML = '<span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>';
+    return;
+  }
+  const colors = ['#0369a1','#0f766e','#4c1d95','#0f5132','#7c2d12','#b45309','#dc2626'];
+  el.innerHTML = pcgGroups[sub].map((g, i) => `
+    <div style="display:inline-flex;flex-direction:column;gap:4px;margin:6px;padding:10px 14px;
+        border-radius:10px;background:#f0f9ff;border:1.5px solid #bae6fd;min-width:140px;vertical-align:top;">
+      <div style="font-weight:700;font-size:13px;color:${colors[i%colors.length]};">
+        <i class="fas fa-layer-group"></i> ${g.name}
+        <span style="margin-left:6px;font-size:11px;font-weight:400;color:#64748b;">${g.items.length}개</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">${g.items.slice(0,4).join(', ')}${g.items.length>4?` 외 ${g.items.length-4}개`:''}</div>
+    </div>`).join('');
+}
+
+async function pcgPersist() {
+  try {
+    await axios.post(`${API_BASE}/api/product-category-groups`, { a: pcgGroups.a, b: pcgGroups.b, c: pcgGroups.c });
+  } catch(e) { console.warn('상품구분 그룹 저장 실패:', e.message); }
+}
+
+
 let bsCurrentSection = 's1';
 
 // ── 섹션1 행 정의 (엑셀 병합셀 구조 반영) ─────────────────────────────
@@ -5904,6 +6249,87 @@ function laBuildTable(tblId, secKey, rowLabels, periods) {
 }
 
 // ── 상환방식 탭 전용 렌더러 (그룹 헤더 구분선 포함) ──────────────
+// ── 상품구분 탭 전용 렌더러 (구분설정 상품구분 그룹 연동) ──────────
+function laRenderCategorySection(periods) {
+  // sub: 'a'→상품구분, 'b'→상품구분상세, 'c'→상품구분화해채권
+  const subDefs = [
+    { sub:'a', tblId:'la-tbl-10a', secKey:'상품구분',         totalKey:'전체융잔 합계' },
+    { sub:'b', tblId:'la-tbl-10b', secKey:'상품구분상세',     totalKey:'전체융잔 합계' },
+    { sub:'c', tblId:'la-tbl-10c', secKey:'상품구분화해채권', totalKey:'전체화해 합계' },
+  ];
+  subDefs.forEach(({ sub, tblId, secKey, totalKey }) => {
+    const tbl = document.getElementById(tblId);
+    if (!tbl || !assetData) return;
+    const secData = assetData.sections[secKey] || {};
+    const groups  = pcgGroups ? (pcgGroups[sub] || []) : [];
+
+    if (groups.length === 0) {
+      // 그룹 없음 → 기존 asset_data 키 그대로
+      const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
+      rawKeys.push(totalKey);
+      laBuildTable(tblId, secKey, rawKeys, periods);
+      return;
+    }
+
+    // thead
+    const thead = tbl.querySelector('thead');
+    thead.innerHTML = '';
+    const tr0 = document.createElement('tr');
+    const th0 = document.createElement('th');
+    th0.textContent = '구분';
+    th0.className = 'bs-sub-col';
+    th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:160px;';
+    tr0.appendChild(th0);
+    periods.forEach(ym => {
+      const th = document.createElement('th');
+      th.textContent = ym.replace('-', '.').replace(/^20/, '');
+      th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+      tr0.appendChild(th);
+    });
+    thead.appendChild(tr0);
+
+    // tbody
+    const tbody = tbl.querySelector('tbody');
+    tbody.innerHTML = '';
+    groups.forEach(g => {
+      const tr  = document.createElement('tr');
+      const td0 = document.createElement('td');
+      td0.textContent = g.name;
+      td0.className   = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:#fff;min-width:160px;white-space:nowrap;';
+      tr.appendChild(td0);
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        let sum = null;
+        (g.items || []).forEach(it => {
+          const v = (secData[it] || {})[ym];
+          if (v != null) sum = (sum ?? 0) + v;
+        });
+        td.textContent = laFmt(sum, secKey, g.name);
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    // 합계 행
+    const trT  = document.createElement('tr');
+    trT.style.cssText = 'background:#f8fafc;font-weight:700;';
+    const tdT0 = document.createElement('td');
+    tdT0.textContent = totalKey;
+    tdT0.className   = 'bs-sub-col';
+    tdT0.style.cssText = 'position:sticky;left:0;z-index:2;background:#f1f5f9;min-width:160px;white-space:nowrap;';
+    trT.appendChild(tdT0);
+    periods.forEach(ym => {
+      const td = document.createElement('td');
+      const v  = (secData[totalKey] || {})[ym] ?? null;
+      td.textContent = laFmt(v, secKey, totalKey);
+      td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+      trT.appendChild(td);
+    });
+    tbody.appendChild(trT);
+  });
+}
+
 function laRenderRepayment(periods) {
   const tbl = document.getElementById('la-tbl-06');
   if (!tbl || !assetData) return;
@@ -6115,11 +6541,7 @@ function laRenderSection(sid) {
   else if (sid === '07') laBuildTable('la-tbl-07', '금액별', LA_ROW_DEFS['금액별'], periods);
   else if (sid === '08') laRenderChannelSection(periods);
   else if (sid === '09') laRenderProductSection(periods);
-  else if (sid === '10') {
-    laBuildTable('la-tbl-10a', '상품구분',        LA_ROW_DEFS['상품구분'], periods);
-    laBuildTable('la-tbl-10b', '상품구분상세',     LA_ROW_DEFS['상품구분상세'], periods);
-    laBuildTable('la-tbl-10c', '상품구분화해채권', LA_ROW_DEFS['상품구분화해채권'], periods);
-  }
+  else if (sid === '10') laRenderCategorySection(periods);
   else if (sid === '11') {
     laBuildTable('la-tbl-11a', '성별',   LA_ROW_DEFS['성별'], periods);
     laBuildTable('la-tbl-11b', '연령별', LA_ROW_DEFS['연령별'], periods);

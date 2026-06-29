@@ -826,6 +826,37 @@ async def save_channel_groups(request: Request):
     return JSONResponse({"success": True, "count": len(body)})
 
 
+# ── 상품구분 그룹 설정 API ──────────────────────────────────────────
+# body: {"상품구분": [...], "상품구분상세": [...], "상품구분화해채권": [...]}
+# 각 배열 원소: {"name": str, "items": [str, ...]}
+
+@app.get("/api/product-category-groups")
+async def get_product_category_groups():
+    """저장된 상품구분 그룹 설정 반환"""
+    groups = uploaded_data.get("product_category_groups", {})
+    if not groups:
+        _path = os.path.join(os.path.dirname(__file__), "data", "product_category_groups.json")
+        if os.path.exists(_path):
+            with open(_path, encoding="utf-8") as f:
+                groups = json.load(f)
+            uploaded_data["product_category_groups"] = groups
+    return JSONResponse(groups)
+
+
+@app.post("/api/product-category-groups")
+async def save_product_category_groups(request: Request):
+    """상품구분 그룹 전체 저장 (덮어쓰기)"""
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="객체 형태로 전송하세요")
+    uploaded_data["product_category_groups"] = body
+    _path = os.path.join(os.path.dirname(__file__), "data", "product_category_groups.json")
+    os.makedirs(os.path.dirname(_path), exist_ok=True)
+    with open(_path, "w", encoding="utf-8") as f:
+        json.dump(body, f, ensure_ascii=False, indent=2)
+    return JSONResponse({"success": True})
+
+
 @app.get("/api/channel-groups/all-channels")
 async def get_all_channels():
     """접수경로 전체 항목 반환
