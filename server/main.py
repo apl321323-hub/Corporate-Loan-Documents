@@ -67,6 +67,7 @@ async def lifespan(app_):
                 not pdata.get("maturity") or not any(v > 0 for v in pdata["maturity"].values())
                 or not pdata.get("avg_rate")
                 or not pdata.get("repayment")
+                or not pdata.get("amount_band")
                 for pdata in saq_store.values()
             )
             if needs_rebuild:
@@ -156,7 +157,22 @@ async def lifespan(app_):
                                 sections["상환방식"] = sec_rep
                                 asset_data["sections"] = sections
 
-                            print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}")
+                            # ── 금액별 섹션 업데이트 ─────────────────────────
+                            amount_band = result.get("amount_band", {})
+                            if amount_band:
+                                if pkey in saq_store:
+                                    saq_store[pkey]["amount_band"] = amount_band
+                                sections = asset_data.get("sections", {})
+                                sec_amt = sections.get("금액별", {})
+                                for row_key, val in amount_band.items():
+                                    if val is not None:
+                                        if row_key not in sec_amt:
+                                            sec_amt[row_key] = {}
+                                        sec_amt[row_key][pkey] = float(val) * 1_000_000
+                                sections["금액별"] = sec_amt
+                                asset_data["sections"] = sections
+
+                            print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
                             print(f"[startup] {sf} 재처리 실패: {ex}")
 
@@ -681,6 +697,24 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
                 asset_data["sections"] = sections
                 uploaded_data["asset_data"] = asset_data
 
+        # ── 금액별 → asset_data.sections['금액별'] 병합 ──────────────
+        # amount_band 구조: {"300만원이하": int(백만원), ..., "전체융잔 합계": int}
+        # 단위 통일: amount_band는 백만원 → 원 단위(×1_000_000)로 변환 후 저장
+        amount_band = data.get("amount_band", {})
+        if amount_band and pkey and pkey != "unknown":
+            asset_data = uploaded_data.get("asset_data")
+            if asset_data is not None:
+                sections = asset_data.get("sections", {})
+                sec_amt = sections.get("금액별", {})
+                for row_key, val in amount_band.items():
+                    if val is not None:
+                        if row_key not in sec_amt:
+                            sec_amt[row_key] = {}
+                        sec_amt[row_key][pkey] = float(val) * 1_000_000
+                sections["금액별"] = sec_amt
+                asset_data["sections"] = sections
+                uploaded_data["asset_data"] = asset_data
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -690,7 +724,8 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "upload_period": period or "(미지정)",
             "maturity_updated":  bool(maturity   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
             "avg_rate_updated":  bool(avg_rate   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
-            "repayment_updated": bool(repayment  and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "repayment_updated":    bool(repayment   and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
+            "amount_band_updated": bool(amount_band and pkey and pkey != "unknown" and uploaded_data.get("asset_data") is not None),
         })
     except Exception as e:
         import traceback
@@ -1548,7 +1583,23 @@ async def rebuild_maturity():
 
     saq_store = uploaded_data.get("settlement_aq") or {}
     if not saq_store:
+        # 메모리에 없으면 파일에서 로드
+        _saq_file = os.path.join(os.path.dirname(__file__), "data", "settlement_aq.json")
+        if os.path.exists(_saq_file):
+            with open(_saq_file, encoding="utf-8") as _f:
+                saq_store = json.load(_f)
+            uploaded_data["settlement_aq"] = saq_store  # 메모리에도 캐시
+    if not saq_store:
         return JSONResponse({"error": "결산자료 데이터가 없습니다. 결산자료를 먼저 업로드하세요."}, status_code=404)
+
+    # asset_data: 메모리에 없으면 파일에서 로드
+    asset_data = uploaded_data.get("asset_data")
+    if asset_data is None:
+        _asset_path = os.path.join(os.path.dirname(__file__), "data", "asset_data.json")
+        if os.path.exists(_asset_path):
+            with open(_asset_path, encoding="utf-8") as _f:
+                asset_data = json.load(_f)
+            uploaded_data["asset_data"] = asset_data  # 메모리에도 캐시
 
     results = []
     for pkey, pdata in saq_store.items():
@@ -1557,8 +1608,45 @@ async def rebuild_maturity():
         if not maturity or not any(v > 0 for v in maturity.values()):
             results.append({"period": pkey, "status": "maturity_empty", "note": "결산자료 파일을 다시 업로드하세요."})
             continue
+
+        # ── amount_band가 없으면 원본 결산자료 파일 재파싱 ──────────
+        if not pdata.get("amount_band"):
+            _search_dirs = [
+                os.path.join(os.path.dirname(__file__), "..", "..", "uploaded_files"),
+                os.path.join(os.path.dirname(__file__), "..", "..", "uploaded_files2"),
+            ]
+            _reparsed = None
+            for _d in _search_dirs:
+                _d = os.path.abspath(_d)
+                if not os.path.exists(_d):
+                    continue
+                for _fn in sorted(os.listdir(_d), key=lambda n: os.path.getmtime(os.path.join(_d, n)), reverse=True):
+                    if "결산" in _fn and _fn.lower().endswith((".xlsx", ".xls")):
+                        try:
+                            from settlement_aq_parser import parse_settlement_asset_quality
+                            _pg_path = os.path.join(os.path.dirname(__file__), "data", "product_groups.json")
+                            with open(_pg_path, encoding="utf-8") as _pf:
+                                _pg = json.load(_pf)
+                            _res = parse_settlement_asset_quality(os.path.join(_d, _fn), _pg)
+                            if _res.get("period") == pkey:
+                                _reparsed = _res
+                                break
+                        except Exception:
+                            continue
+                if _reparsed:
+                    break
+            if _reparsed:
+                pdata["amount_band"] = _reparsed.get("amount_band", {})
+                pdata["repayment"]   = _reparsed.get("repayment", pdata.get("repayment", {}))
+                pdata["maturity"]    = _reparsed.get("maturity", maturity)
+                maturity = pdata["maturity"]
+                saq_store[pkey] = pdata
+                # saq_store 파일에도 저장
+                _saq_save = os.path.join(os.path.dirname(__file__), "data", "settlement_aq.json")
+                with open(_saq_save, "w", encoding="utf-8") as _sf:
+                    json.dump(saq_store, _sf, ensure_ascii=False, indent=2)
+
         # maturity 값이 있는 경우 → asset_data에 반영
-        asset_data = uploaded_data.get("asset_data")
         if asset_data is None:
             results.append({"period": pkey, "status": "no_asset_data", "note": "대출자산속성 파일 없음 — 반영 불가"})
             continue
@@ -1617,8 +1705,30 @@ async def rebuild_maturity():
             sections["상환방식"] = sec_rep
             asset_data["sections"] = sections
 
+        # ── 금액별 섹션도 함께 재적용 ────────────────────────────
+        amount_band = pdata.get("amount_band", {})
+        if amount_band:
+            sections = asset_data.get("sections", {})
+            sec_amt = sections.get("금액별", {})
+            for row_key, val in amount_band.items():
+                if val is not None:
+                    if row_key not in sec_amt:
+                        sec_amt[row_key] = {}
+                    sec_amt[row_key][pkey] = float(val) * 1_000_000
+            sections["금액별"] = sec_amt
+            asset_data["sections"] = sections
+
         uploaded_data["asset_data"] = asset_data
-        results.append({"period": pkey, "status": "merged", "maturity": maturity, "avg_rate": avg_rate, "repayment": repayment})
+        results.append({"period": pkey, "status": "merged", "maturity": maturity, "avg_rate": avg_rate, "repayment": repayment, "amount_band": amount_band})
+
+    # ── rebuild 결과를 파일에 저장 ──────────────────────────────
+    if any(r.get("status") == "merged" for r in results) and asset_data is not None:
+        _asset_save_path = os.path.join(os.path.dirname(__file__), "data", "asset_data.json")
+        try:
+            with open(_asset_save_path, "w", encoding="utf-8") as _f:
+                json.dump(asset_data, _f, ensure_ascii=False, indent=2)
+        except Exception as _e:
+            pass  # 저장 실패는 무시 (메모리 반영은 이미 완료)
 
     return JSONResponse({"success": True, "results": results})
 

@@ -2376,8 +2376,8 @@ async function uploadFile(sector) {
 
     if (sector === 'settle') {
       await loadSettlementAQData();
-      // 대출만기/평균이자율/상환방식 섹션 갱신: 서버에서 asset_data 갱신됐으면 통째로 재로드
-      const anyUpdated = res.data.maturity_updated || res.data.avg_rate_updated || res.data.repayment_updated;
+      // 대출만기/평균이자율/상환방식/금액별 섹션 갱신: 서버에서 asset_data 갱신됐으면 통째로 재로드
+      const anyUpdated = res.data.maturity_updated || res.data.avg_rate_updated || res.data.repayment_updated || res.data.amount_band_updated;
       if (anyUpdated) {
         await loadAssetData();
       } else if (assetData && res.data.period) {
@@ -2385,13 +2385,15 @@ async function uploadFile(sector) {
         await loadAndMergeMaturityToAsset(res.data.period);
         await loadAndMergeAvgRateToAsset(res.data.period);
         await loadAndMergeRepaymentToAsset(res.data.period);
+        await loadAndMergeAmountBandToAsset(res.data.period);
       }
       const p = res.data.period ? ` [${res.data.period}]` : '';
       const total = res.data.section1_total ? ` · 융잔합계 ${res.data.section1_total.toLocaleString()}백만원` : '';
-      const matMsg  = res.data.maturity_updated   ? ' / 대출만기 갱신' : '';
-      const rateMsg = res.data.avg_rate_updated   ? ' / 평균이자율 갱신' : '';
-      const repMsg  = res.data.repayment_updated  ? ' / 상환방식 갱신' : '';
-      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total}${matMsg}${rateMsg}${repMsg})`, 'success');
+      const matMsg  = res.data.maturity_updated     ? ' / 대출만기 갱신' : '';
+      const rateMsg = res.data.avg_rate_updated     ? ' / 평균이자율 갱신' : '';
+      const repMsg  = res.data.repayment_updated    ? ' / 상환방식 갱신' : '';
+      const amtMsg  = res.data.amount_band_updated  ? ' / 금액별 갱신' : '';
+      showToast(`✅ 결산자료 자산건전성 업로드 완료${p} (${res.data.products}개 상품${total}${matMsg}${rateMsg}${repMsg}${amtMsg})`, 'success');
     } else if (sector === 'company') {
       const ciRes = await axios.get(`${API_BASE}/api/data/company_info`);
       appData.company_info = ciRes.data;
@@ -5905,11 +5907,49 @@ async function loadAndMergeRepaymentToAsset(period) {
   }
 }
 
+/**
+ * 결산자료(settlement-aq)의 amount_band → assetData.sections['금액별'] 실시간 병합
+ * amount_band 구조: {"300만원이하": int(백만원), ..., "전체융잔 합계": int}
+ */
+async function loadAndMergeAmountBandToAsset(period) {
+  try {
+    if (!assetData) return;
+    const res = await fetch(`/api/data/settlement-aq`);
+    if (!res.ok) return;
+    const d = await res.json();
+    if (!d || d.error || !d.amount_band) return;
+
+    const pkey = d.period || period;
+    if (!pkey) return;
+
+    if (!assetData.sections) assetData.sections = {};
+    if (!assetData.sections['금액별']) assetData.sections['금액별'] = {};
+    const sec = assetData.sections['금액별'];
+
+    // amount_band는 백만원 단위 → asset_data와 단위 통일 위해 ×1_000_000
+    Object.entries(d.amount_band).forEach(([rowKey, val]) => {
+      if (val != null) {
+        if (!sec[rowKey]) sec[rowKey] = {};
+        sec[rowKey][pkey] = val * 1_000_000;
+      }
+    });
+
+    // 기간 목록에 추가
+    if (!assetData.periods) assetData.periods = [];
+    if (!assetData.periods.includes(pkey)) {
+      assetData.periods.push(pkey);
+      assetData.periods.sort();
+    }
+
+    // 현재 금액별 탭(07)이 열려 있으면 즉시 재렌더
+    if (laCurSection === '07') laRenderSection('07');
+  } catch(e) {
+    console.warn('amount_band 병합 실패:', e.message);
+  }
+}
+
 // ── 데이터 로드 ────────────────────────────────────────────────
 async function loadAssetData() {
-  try {
-    const res = await fetch('/api/data/asset');
-    if (!res.ok) return;
     assetData = await res.json();
     // 상태 도트
     const dot = document.getElementById('dot-asset');

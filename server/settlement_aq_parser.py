@@ -82,6 +82,32 @@ S3_KEYS = ["무연체","1~30","31~60","61~90","91~180","181~","연체합계","�
 # ── 대출만기 구간 정의 ──────────────────────────────────────────
 MATURITY_KEYS = ["12개월 미만", "12~24개월 미만", "24~36개월 미만", "36개월 이상", "전체융잔 합계"]
 
+# ── 금액별 구간 정의 (L열 잔액 기준, 원 단위 경계값) ────────────
+# (행 키, 하한(이상), 상한(이하))  ← 양 끝 포함
+AMOUNT_BANDS: list[tuple[str, float, float]] = [
+    ("300만원이하",   0,           3_000_000),
+    ("500만원이하",   3_000_001,   5_000_000),
+    ("700만원이하",   5_000_001,   7_000_000),
+    ("1000만원이하",  7_000_001,  10_000_000),
+    ("1000만원초과", 10_000_001,  99_999_999_999),  # 합계 보조키 (1000만 초과 전체)
+    ("2000만원이하", 10_000_001,  20_000_000),
+    ("3000만원이하", 20_000_001,  30_000_000),
+    ("4000만원이하", 30_000_001,  40_000_000),
+    ("5000만원이하", 40_000_001,  50_000_000),
+    ("1억원이하",    50_000_001, 100_000_000),
+    ("1억원초과",   100_000_001,  99_999_999_999),
+]
+AMOUNT_KEYS = [b[0] for b in AMOUNT_BANDS] + ["전체융잔 합계"]
+
+
+def _classify_amount(balance: float) -> list[str]:
+    """잔액(원) → 해당하는 모든 금액 구간 키 리스트 반환"""
+    result = []
+    for key, lo, hi in AMOUNT_BANDS:
+        if lo <= balance <= hi:
+            result.append(key)
+    return result
+
 
 def _last_day_of_month(year: int, month: int) -> date:
     """해당 연월의 마지막 날 반환"""
@@ -255,6 +281,10 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # 전체 집계
     repay_total: dict[str, float] = {"원리금균등상환": 0.0, "자유상환": 0.0, "합계": 0.0}
 
+    # ── 금액별 집계 버킷 (원 단위) ───────────────────────────────
+    # AMOUNT_BANDS의 각 구간 + 전체융잔 합계
+    amount_raw: dict[str, float] = {k: 0.0 for k in AMOUNT_KEYS}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -319,6 +349,13 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
             repay_group[gname]["합계"] += balance
             if repay_label and repay_label in repay_group[gname]:
                 repay_group[gname][repay_label] += balance
+
+        # ── 금액별: L열 잔액 구간 집계 ───────────────────────────────
+        # 전체융잔 합계는 항상 누적, 각 구간은 _classify_amount() 결과로 집계
+        if balance > 0:
+            amount_raw["전체융잔 합계"] += balance
+            for band_key in _classify_amount(balance):
+                amount_raw[band_key] += balance
 
     wb.close()
 
@@ -386,15 +423,20 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
 
     products_list = sorted(s4_m.keys())
 
+    # ── 금액별 섹션 구성 (백만원 단위) ──────────────────────────────
+    # 행 키는 기존 asset_data.sections['금액별'] 키와 일치시킴
+    amount_band: dict[str, int] = {k: _m(v) for k, v in amount_raw.items()}
+
     return {
-        "period"    : period,
-        "section1"  : s1_m,
-        "section3"  : s3_m,
-        "section4"  : s4_m,
-        "maturity"  : maturity_m,
-        "avg_rate"  : avg_rate,    # 평균이율 집계 결과
-        "repayment" : repayment,   # 상환방식 집계 결과 (백만원)
-        "products"  : products_list,
+        "period"      : period,
+        "section1"    : s1_m,
+        "section3"    : s3_m,
+        "section4"    : s4_m,
+        "maturity"    : maturity_m,
+        "avg_rate"    : avg_rate,    # 평균이율 집계 결과
+        "repayment"   : repayment,   # 상환방식 집계 결과 (백만원)
+        "amount_band" : amount_band, # 금액별 집계 결과 (백만원)  ← 신규 추가
+        "products"    : products_list,
     }
 
 
