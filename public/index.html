@@ -6564,7 +6564,21 @@ function laBuildTable(tblId, secKey, rowLabels, periods) {
 
 // ── 상환방식 탭 전용 렌더러 (그룹 헤더 구분선 포함) ──────────────
 // ── 상품구분 탭 전용 렌더러 (구분설정 상품구분 그룹 연동) ──────────
-function laRenderCategorySection(periods) {
+async function laRenderCategorySection(periods) {
+  // pcgGroups가 아직 로드 안 됐으면 먼저 로드 후 동기화
+  const needsLoad = !pcgGroups ||
+    (pcgGroups.a.length === 0 && pcgGroups.b.length === 0 && pcgGroups.c.length === 0);
+  if (needsLoad) {
+    try {
+      const res = await axios.get(`${API_BASE}/api/product-category-groups`);
+      const data = res.data || {};
+      pcgGroups.a = data.a || [];
+      pcgGroups.b = data.b || [];
+      pcgGroups.c = data.c || [];
+      _pcgSyncCfromB();
+    } catch(e) { /* 실패 시 빈 그룹으로 계속 */ }
+  }
+
   // sub: 'a'→상품구분, 'b'→상품구분상세, 'c'→상품구분화해채권
   const subDefs = [
     { sub:'a', tblId:'la-tbl-10a', secKey:'상품구분',         totalKey:'전체융잔 합계' },
@@ -6858,7 +6872,7 @@ const LA_ROW_DEFS = {
 const LA_CB_GRADES = ['1 등급(965~1000)', '2 등급(945~964)', '3 등급(930~944)', '4 등급(905~929)', '5 등급(880~904)', '6 등급(825~879)', '7 등급(785~824)', '8 등급(750~784)', '9 등급(725~749)', '10 등급(1~724)', '무등급', '융잔합계'];
 
 // ── 탭 전환 ────────────────────────────────────────────────────
-function laSwitchSection(sid) {
+async function laSwitchSection(sid) {
   laCurSection = sid;
   document.querySelectorAll('.la-view').forEach(v => v.style.display = 'none');
   document.querySelectorAll('[id^="la-stab-"]').forEach(b => b.classList.remove('active'));
@@ -6866,11 +6880,11 @@ function laSwitchSection(sid) {
   const btn  = document.getElementById(`la-stab-${sid}`);
   if (view) view.style.display = '';
   if (btn)  btn.classList.add('active');
-  laRenderSection(sid);
+  await laRenderSection(sid);
 }
 
 // ── 섹션 렌더 ─────────────────────────────────────────────────
-function laRenderSection(sid) {
+async function laRenderSection(sid) {
   if (!assetData) return;
   const periods = laGetPeriods();
 
@@ -6950,7 +6964,7 @@ function laRenderSection(sid) {
   else if (sid === '07') laBuildTable('la-tbl-07', '금액별', LA_ROW_DEFS['금액별'], periods);
   else if (sid === '08') laRenderChannelSection(periods);
   else if (sid === '09') laRenderProductSection(periods);
-  else if (sid === '10') laRenderCategorySection(periods);
+  else if (sid === '10') await laRenderCategorySection(periods);
   else if (sid === '11') {
     laBuildTable('la-tbl-11a', '성별',   LA_ROW_DEFS['성별'], periods);
     laBuildTable('la-tbl-11b', '연령별', LA_ROW_DEFS['연령별'], periods);
@@ -7011,8 +7025,8 @@ function laRenderCbProduct() {
 }
 
 // ── 기간 변경 시 현재 섹션 재렌더 ────────────────────────────
-function laRenderCurrent() {
-  laRenderSection(laCurSection);
+async function laRenderCurrent() {
+  await laRenderSection(laCurSection);
 }
 
 /**
