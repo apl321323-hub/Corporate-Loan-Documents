@@ -1576,37 +1576,53 @@ async def get_asset_data():
     import copy
     result = copy.deepcopy(d)
 
-    # ── settlement_aq section4 → sections['상품별'] 동적 구성 ──────────
-    # H열(현재상품)별 L열(잔액) 합산값을 기간별로 집계하여 상품별 섹션을 대체
+    # ── settlement_aq section4 → sections['상품별'] 병합 구성 ───────────
+    # 기본값: asset_data.sections['상품별'] (대출자산속성.xlsx 전체 기간)
+    # 덮어쓰기: settlement_aq에 해당 기간이 있으면 그 기간만 결산자료 값으로 교체
     saq = uploaded_data.get("settlement_aq") or {}
     if saq:
-        prod_sec: dict[str, dict[str, float]] = {}
+        sections = result.get("sections", {})
+        # asset_data 기존 상품별 섹션을 기본으로 복사
+        prod_sec: dict[str, dict[str, float]] = {
+            k: dict(v) for k, v in sections.get("상품별", {}).items()
+        }
+
+        # settlement_aq에 있는 기간만 덮어씀
         for pkey, pdata in saq.items():
-            # pkey 형식: "2025-06" 또는 "2025-06_suffix"
             ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
             if not ym:
                 continue
             s4 = pdata.get("section4") or {}
+            if not s4:
+                continue
+
+            # 해당 기간에 settlement_aq에 없는 상품은 0 처리
+            # (기존 prod_sec에 있던 상품의 해당 ym을 결산자료 값으로 교체)
+            # 먼저 해당 ym의 기존 값을 모두 제거
+            for prod in list(prod_sec.keys()):
+                if prod in prod_sec and ym in prod_sec[prod]:
+                    prod_sec[prod].pop(ym, None)
+
+            # settlement_aq section4 값으로 채움 (백만원 → 원 단위 복원)
             for prod, buckets in s4.items():
-                # 융잔합계 키 (백만원 단위로 이미 변환됨)
                 val = buckets.get("융잔합계")
                 if val is None:
                     continue
                 if prod not in prod_sec:
                     prod_sec[prod] = {}
-                prod_sec[prod][ym] = float(val) * 1_000_000  # 원 단위로 복원
+                prod_sec[prod][ym] = float(val) * 1_000_000
 
-        if prod_sec:
-            # 전체융잔 합계: 기간별 모든 상품 합산
-            total_by_ym: dict[str, float] = {}
-            for prod, ymap in prod_sec.items():
-                for ym, val in ymap.items():
-                    total_by_ym[ym] = total_by_ym.get(ym, 0.0) + val
-            prod_sec["전체융잔 합계"] = total_by_ym
+            # 해당 기간 전체융잔 합계 재계산
+            total_ym = sum(
+                prod_sec[p].get(ym, 0.0) or 0.0
+                for p in prod_sec if p != "전체융잔 합계"
+            )
+            if "전체융잔 합계" not in prod_sec:
+                prod_sec["전체융잔 합계"] = {}
+            prod_sec["전체융잔 합계"][ym] = total_ym
 
-            sections = result.get("sections", {})
-            sections["상품별"] = prod_sec
-            result["sections"] = sections
+        sections["상품별"] = prod_sec
+        result["sections"] = sections
 
     return JSONResponse(result)
 
