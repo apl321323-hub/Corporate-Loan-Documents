@@ -6605,6 +6605,19 @@ async function laRenderCategorySection(periods) {
       return;
     }
 
+    // ── 그룹명 → 섹션 키 매핑 헬퍼 ────────────────────────────────
+    // 공백·괄호를 제거한 정규화 문자열로 secData 키를 검색
+    const _normKey = s => s.replace(/\s+/g, '').replace(/[()（）]/g, '').toLowerCase();
+    const _secKeyMap = {}; // { 정규화그룹명: 실제secData키 }
+    Object.keys(secData).forEach(sk => { _secKeyMap[_normKey(sk)] = sk; });
+    // 그룹명으로 실제 secData 키를 반환 (없으면 null)
+    const _resolveSecKey = (groupName) => {
+      // ① 완전 일치
+      if (secData[groupName] !== undefined) return groupName;
+      // ② 정규화 일치 (공백·괄호 무시)
+      return _secKeyMap[_normKey(groupName)] || null;
+    };
+
     // thead
     const thead = tbl.querySelector('thead');
     thead.innerHTML = '';
@@ -6643,10 +6656,11 @@ async function laRenderCategorySection(periods) {
           const v = (secData[it] || {})[ym];
           if (v != null) sum = (sum ?? 0) + v;
         });
-        // ② 합산값 없으면 그룹명 자체를 섹션 키로 직접 조회
+        // ② 합산값 없으면 그룹명(또는 정규화 매핑된 섹션키)으로 직접 조회
         //    (상품구분 섹션은 '신용'/'담보' 등 그룹명이 곧 키)
         if (sum === null) {
-          const v = (secData[g.name] || {})[ym];
+          const resolvedKey = _resolveSecKey(g.name);
+          const v = resolvedKey ? (secData[resolvedKey] || {})[ym] : null;
           if (v != null && v !== 0) sum = v;
         }
         ymVals[ym] = sum;
