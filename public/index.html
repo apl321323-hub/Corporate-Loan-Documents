@@ -5450,6 +5450,101 @@ function laBuildTable(tblId, secKey, rowLabels, periods) {
   });
 }
 
+// ── 상환방식 탭 전용 렌더러 (그룹 헤더 구분선 포함) ──────────────
+function laRenderRepayment(periods) {
+  const tbl = document.getElementById('la-tbl-06');
+  if (!tbl || !assetData) return;
+  const secData = assetData.sections['상환방식'] || {};
+
+  // thead
+  const thead = tbl.querySelector('thead');
+  thead.innerHTML = '';
+  const tr0 = document.createElement('tr');
+  const th0 = document.createElement('th');
+  th0.textContent = '구분';
+  th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:170px;';
+  tr0.appendChild(th0);
+  periods.forEach(ym => {
+    const th = document.createElement('th');
+    th.textContent = ym.replace('-', '.').replace(/^20/, '');
+    th.style.cssText = 'text-align:right;white-space:nowrap;padding:5px 8px;font-size:11px;';
+    tr0.appendChild(th);
+  });
+  thead.appendChild(tr0);
+
+  // 그룹 구조 정의
+  const GROUPS = [
+    {
+      header: '▶ 신용',
+      color: '#dbeafe',        // blue-100
+      headerColor: '#1d4ed8',  // blue-700
+      rows: ['신용 _원리금균등상환', '신용 _자유상환', '신용 _전체융잔 합계'],
+    },
+    {
+      header: '▶ 담보',
+      color: '#d1fae5',        // green-100
+      headerColor: '#065f46',  // green-800
+      rows: ['담보 _원리금균등상환', '담보 _자유상환', '담보 _체융잔 합계'],
+    },
+    {
+      header: '▶ 전체',
+      color: '#f1f5f9',        // slate-100
+      headerColor: '#334155',  // slate-700
+      rows: ['원리금균등상환', '자유상환', '전체융잔 합계'],
+    },
+  ];
+
+  const tbody = tbl.querySelector('tbody');
+  tbody.innerHTML = '';
+
+  GROUPS.forEach(grp => {
+    // 그룹 헤더 행
+    const trH = document.createElement('tr');
+    trH.style.cssText = `background:${grp.color};`;
+    const tdH = document.createElement('td');
+    tdH.textContent = grp.header;
+    tdH.colSpan = periods.length + 1;
+    tdH.style.cssText = `font-weight:700;font-size:11px;color:${grp.headerColor};padding:5px 12px;border-top:2px solid #cbd5e1;`;
+    trH.appendChild(tdH);
+    tbody.appendChild(trH);
+
+    // 데이터 행
+    grp.rows.forEach(label => {
+      const rowData = secData[label] || {};
+      const tr = document.createElement('tr');
+
+      const isSubTotal = label.includes('합계');
+      if (isSubTotal) tr.style.cssText = 'background:#f8fafc;font-weight:700;';
+
+      // 표시 레이블: 그룹 접두사 제거
+      const displayLabel = label
+        .replace('신용 _', '')
+        .replace('담보 _', '');
+
+      const td0 = document.createElement('td');
+      td0.textContent = displayLabel;
+      td0.className = 'bs-sub-col';
+      td0.style.cssText = 'position:sticky;left:0;z-index:2;background:' +
+        (isSubTotal ? '#f1f5f9' : '#fff') +
+        ';min-width:170px;white-space:nowrap;padding-left:20px;';
+      tr.appendChild(td0);
+
+      periods.forEach(ym => {
+        const td = document.createElement('td');
+        const v = rowData[ym] ?? null;
+        // 원 단위 → 백만원
+        const mln = v !== null ? v / 1_000_000 : null;
+        td.textContent = mln === null || mln === 0 ? '–' :
+          (mln >= 1 ? Math.round(mln).toLocaleString() : mln.toFixed(1));
+        td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
+}
+
 // ── 섹션별 행 레이블 정의 ──────────────────────────────────────
 const LA_ROW_DEFS = {
   '대출취급건수':       ['신청건수(신규대출)', '신청건수(추가재대출)', '승인건수(신규대출)', '승인건수(추가재대출)'],
@@ -5563,7 +5658,7 @@ function laRenderSection(sid) {
       });
     }
   }
-  else if (sid === '06') laBuildTable('la-tbl-06', '상환방식', LA_ROW_DEFS['상환방식'], periods);
+  else if (sid === '06') laRenderRepayment(periods);
   else if (sid === '07') laBuildTable('la-tbl-07', '금액별', LA_ROW_DEFS['금액별'], periods);
   else if (sid === '08') laBuildTable('la-tbl-08', '접수경로', LA_ROW_DEFS['접수경로'], periods);
   else if (sid === '09') laBuildTable('la-tbl-09', '상품별', LA_ROW_DEFS['상품별'], periods);
