@@ -4876,7 +4876,10 @@ function pcgRenderGroupList(sub) {
     nameSpan.textContent = g.name;
     const cntSpan = document.createElement('span');
     cntSpan.style.cssText = 'font-size:11px;font-weight:400;color:#64748b;margin-left:6px;';
-    cntSpan.textContent = g.items.length + '개';
+    cntSpan.textContent = (sub === 'c'
+      ? (Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object'
+          ? g.items.length + '개' : '0개')
+      : g.items.length + '개');
     nameSpan.appendChild(cntSpan);
     // 클릭 → 그룹 선택 (row에만 이벤트, nameSpan은 pointer-events:none)
     row.addEventListener('click', (function(capturedSub, i){ return function(e){
@@ -4917,43 +4920,35 @@ function pcgRenderEditor(sub) {
       + '<i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>';
     return;
   }
+
+  // ── sub='c': 화해채권 전용 편집기 ────────────────────────────────
+  if (sub === 'c') {
+    _pcgRenderHwahaeEditor(wrap, idx);
+    return;
+  }
+
   const g   = pcgGroups[sub];
   const cur = g[idx];
 
-  // 이미 다른 그룹에서 사용 중인 항목 (sub='c' 화해채권은 중복 허용)
+  // 이미 다른 그룹에서 사용 중인 항목
   const usedElsewhere = new Set();
-  if (sub !== 'c') {
-    g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
-  }
+  g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
 
   // ── 전체 항목 목록 결정 ────────────────────────────────────────────
-  // sub='c'(화해채권): BW/BX 고유값 → [회생]xxx / [신복]xxx
-  // sub='a'/'b'(상품구분/상세): 결산자료 H열 현재상품명 (sections['상품별'] 키)
+  // sub='a'/'b': 결산자료 H열 현재상품명 (sections['상품별'] 키)
+  const prodKeys = assetData
+    ? Object.keys(assetData.sections['상품별'] || {}).filter(k => k.indexOf('합계') < 0)
+    : [];
   let allItems;
-  if (sub === 'c') {
-    const bwItems = (window._hwahaeItems || {bw:[], bx:[]}).bw.map(v => '[회생]' + v);
-    const bxItems = (window._hwahaeItems || {bw:[], bx:[]}).bx.map(v => '[신복]' + v);
-    allItems = [...bwItems, ...bxItems];
-    if (allItems.length === 0 && assetData) {
-      allItems = Object.keys(assetData.sections['상품구분화해채권'] || {}).filter(k => k.indexOf('합계') < 0);
-    }
-    if (allItems.length === 0) {
-      allItems = PCG_SEC_MAP[sub].defItems.filter(k => k.indexOf('합계') < 0);
-    }
+  if (prodKeys.length > 0) {
+    allItems = prodKeys.sort();
+  } else if (assetData) {
+    allItems = Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => k.indexOf('합계') < 0);
   } else {
-    const prodKeys = assetData
-      ? Object.keys(assetData.sections['상품별'] || {}).filter(k => k.indexOf('합계') < 0)
-      : [];
-    if (prodKeys.length > 0) {
-      allItems = prodKeys.sort();
-    } else if (assetData) {
-      allItems = Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => k.indexOf('합계') < 0);
-    } else {
-      allItems = PCG_SEC_MAP[sub].defItems.filter(k => k.indexOf('합계') < 0);
-    }
+    allItems = PCG_SEC_MAP[sub].defItems.filter(k => k.indexOf('합계') < 0);
   }
 
-  // ── DOM 직접 구성 (innerHTML 중첩 백틱 이슈 회피) ─────────────────
+  // ── DOM 직접 구성 ─────────────────────────────────────────────────
   wrap.innerHTML = '';
   const card = document.createElement('div');
   card.className = 'card';
@@ -5011,7 +5006,6 @@ function pcgRenderEditor(sub) {
       cb.checked = checked;
       cb.disabled = locked;
       cb.style.accentColor = '#0369a1';
-      // 체크 상태 변경 시 label 스타일 즉시 반영
       cb.addEventListener('change', () => {
         const on = cb.checked;
         label.style.borderColor  = on ? '#0369a1' : '#cbd5e1';
@@ -5039,21 +5033,207 @@ function pcgRenderEditor(sub) {
   wrap.appendChild(card);
 }
 
+/**
+ * 화해채권(sub='c') 전용 편집기
+ * items 포맷: [{prod: '상품명', bwbx: ['[회생]xxx', ...]}]
+ * UI: 상품명 목록(체크박스) + 선택된 상품의 BW/BX 항목 인라인 표시
+ */
+function _pcgRenderHwahaeEditor(wrap, idx) {
+  const cur = pcgGroups['c'][idx];
+  // cur.items: [{prod, bwbx:[]}] 또는 구버전 string[] → 마이그레이션
+  if (!Array.isArray(cur.items) || (cur.items.length > 0 && typeof cur.items[0] === 'string')) {
+    cur.items = []; // 구버전 포맷 초기화
+  }
+  // 현재 저장된 items를 prod 키 맵으로 변환
+  const savedMap = {}; // {prod: [bwbx, ...]}
+  (cur.items || []).forEach(it => { savedMap[it.prod] = it.bwbx || []; });
+
+  // 전체 상품 목록 (H열)
+  const allProds = assetData
+    ? Object.keys(assetData.sections['상품별'] || {}).filter(k => k.indexOf('합계') < 0).sort()
+    : [];
+
+  // 전체 BW/BX 목록
+  const hwi = window._hwahaeItems || {bw:[], bx:[]};
+  const allBwBx = [
+    ...hwi.bw.map(v => '[회생]' + v),
+    ...hwi.bx.map(v => '[신복]' + v),
+  ];
+
+  // ── DOM 구성 ────────────────────────────────────────────────────
+  wrap.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'padding:0;overflow:hidden;';
+
+  // 헤더
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;';
+  hdr.innerHTML = '<i class="fas fa-edit"></i> "' + cur.name + '" 항목 편집 (화해채권)';
+  card.appendChild(hdr);
+
+  // 안내문
+  const guide = document.createElement('div');
+  guide.style.cssText = 'padding:8px 16px;background:#f0f9ff;border-bottom:1px solid #bae6fd;font-size:12px;color:#0369a1;';
+  guide.textContent = '상품을 선택하고, 각 상품에 해당하는 회생/신복 상태값을 설정하세요.';
+  card.appendChild(guide);
+
+  // 상품별 설정 목록
+  const listDiv = document.createElement('div');
+  listDiv.id = 'pcg-c-item-list';
+  listDiv.style.cssText = 'padding:8px 16px;max-height:420px;overflow-y:auto;';
+
+  if (allProds.length === 0) {
+    const msg = document.createElement('div');
+    msg.textContent = '항목 없음 (결산자료를 먼저 업로드하세요)';
+    msg.style.cssText = 'color:#94a3b8;font-size:13px;padding:16px 0;';
+    listDiv.appendChild(msg);
+  } else {
+    allProds.forEach(prod => {
+      const isSelected = prod in savedMap;
+      const selectedBwBx = savedMap[prod] || [];
+
+      // 상품 행 컨테이너
+      const row = document.createElement('div');
+      row.style.cssText = 'border:1px solid ' + (isSelected ? '#bae6fd' : '#e2e8f0') + ';'
+        + 'border-radius:8px;margin-bottom:8px;overflow:hidden;'
+        + 'background:' + (isSelected ? '#f0f9ff' : '#fff') + ';';
+
+      // 상품명 헤더 행 (체크박스 + 이름)
+      const prodHdr = document.createElement('div');
+      prodHdr.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;';
+
+      const prodCb = document.createElement('input');
+      prodCb.type = 'checkbox';
+      prodCb.dataset.prod = prod;
+      prodCb.checked = isSelected;
+      prodCb.style.cssText = 'accent-color:#0369a1;width:15px;height:15px;flex-shrink:0;cursor:pointer;';
+
+      const prodLabel = document.createElement('span');
+      prodLabel.textContent = prod;
+      prodLabel.style.cssText = 'font-size:13px;font-weight:600;color:' + (isSelected ? '#0369a1' : '#1e293b') + ';flex:1;';
+
+      const cntBadge = document.createElement('span');
+      cntBadge.style.cssText = 'font-size:11px;color:#64748b;';
+      cntBadge.textContent = isSelected ? selectedBwBx.length + '개 선택' : '';
+
+      prodHdr.appendChild(prodCb);
+      prodHdr.appendChild(prodLabel);
+      prodHdr.appendChild(cntBadge);
+
+      // BW/BX 항목 패널 (상품 선택 시 표시)
+      const bwbxPanel = document.createElement('div');
+      bwbxPanel.style.cssText = 'padding:8px 12px 10px 36px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;gap:6px;'
+        + (isSelected ? '' : 'display:none;');
+
+      if (allBwBx.length === 0) {
+        const noData = document.createElement('span');
+        noData.textContent = '회생/신복 데이터 없음';
+        noData.style.cssText = 'color:#94a3b8;font-size:12px;';
+        bwbxPanel.appendChild(noData);
+      } else {
+        allBwBx.forEach(bwbxVal => {
+          const isChecked = selectedBwBx.indexOf(bwbxVal) >= 0;
+          const lbl = document.createElement('label');
+          lbl.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;font-size:12px;cursor:pointer;'
+            + 'border:1.5px solid ' + (isChecked ? '#0369a1' : '#cbd5e1') + ';'
+            + 'background:' + (isChecked ? '#e0f2fe' : '#fff') + ';'
+            + 'color:' + (isChecked ? '#0369a1' : '#475569') + ';';
+          const cb2 = document.createElement('input');
+          cb2.type = 'checkbox';
+          cb2.dataset.bwbx = bwbxVal;
+          cb2.checked = isChecked;
+          cb2.style.accentColor = '#0369a1';
+          cb2.addEventListener('change', () => {
+            const on = cb2.checked;
+            lbl.style.borderColor = on ? '#0369a1' : '#cbd5e1';
+            lbl.style.background  = on ? '#e0f2fe' : '#fff';
+            lbl.style.color       = on ? '#0369a1' : '#475569';
+            // 배지 업데이트
+            const checked2 = [...bwbxPanel.querySelectorAll('input[data-bwbx]:checked')];
+            cntBadge.textContent = checked2.length > 0 ? checked2.length + '개 선택' : '';
+          });
+          lbl.appendChild(cb2);
+          lbl.appendChild(document.createTextNode(' ' + bwbxVal));
+          bwbxPanel.appendChild(lbl);
+        });
+      }
+
+      // 상품 체크박스 change: 패널 토글
+      prodCb.addEventListener('change', () => {
+        const on = prodCb.checked;
+        bwbxPanel.style.display = on ? 'flex' : 'none';
+        row.style.border   = '1px solid ' + (on ? '#bae6fd' : '#e2e8f0');
+        row.style.background = on ? '#f0f9ff' : '#fff';
+        prodLabel.style.color = on ? '#0369a1' : '#1e293b';
+        if (!on) {
+          bwbxPanel.querySelectorAll('input[data-bwbx]').forEach(cb2 => { cb2.checked = false; });
+          cntBadge.textContent = '';
+        }
+      });
+      // 헤더 행 클릭(체크박스 제외)으로도 토글
+      prodHdr.addEventListener('click', e => {
+        if (e.target === prodCb) return;
+        prodCb.checked = !prodCb.checked;
+        prodCb.dispatchEvent(new Event('change'));
+      });
+
+      row.appendChild(prodHdr);
+      row.appendChild(bwbxPanel);
+      listDiv.appendChild(row);
+    });
+  }
+  card.appendChild(listDiv);
+
+  // 저장 버튼
+  const foot = document.createElement('div');
+  foot.style.cssText = 'padding:12px 16px;border-top:1px solid #e2e8f0;text-align:right;';
+  const btnSave = document.createElement('button');
+  btnSave.style.cssText = 'background:#0369a1;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;';
+  btnSave.innerHTML = '<i class="fas fa-save"></i> 저장';
+  btnSave.onclick = () => pcgSaveGroup('c');
+  foot.appendChild(btnSave);
+  card.appendChild(foot);
+
+  wrap.appendChild(card);
+}
+
 function pcgCheckAll(sub, flag) {
+  if (sub === 'c') return; // 화해채권은 상품별 개별 선택 — 전체선택/해제 미지원
   document.querySelectorAll(`#pcg-${sub}-item-list input:not(:disabled)`).forEach(cb => cb.checked = flag);
 }
 
 async function pcgSaveGroup(sub) {
   const idx = pcgSelIdx[sub];
   if (idx < 0) return;
-  const checked = [...document.querySelectorAll(`#pcg-${sub}-item-list input:checked:not(:disabled)`)].map(cb => cb.value);
-  // 중복 검증 (sub='c' 화해채권은 중복 허용이므로 건너뜀)
-  if (sub !== 'c') {
-    const usedElsewhere = new Map();
-    pcgGroups[sub].forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.set(it, og.name)); });
-    const conflicts = checked.filter(it => usedElsewhere.has(it));
-    if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
+
+  // ── sub='c': {prod, bwbx[]} 포맷으로 저장 ───────────────────────
+  if (sub === 'c') {
+    const listDiv = document.getElementById('pcg-c-item-list');
+    if (!listDiv) return;
+    const newItems = [];
+    listDiv.querySelectorAll('input[data-prod]:checked').forEach(prodCb => {
+      const prod = prodCb.dataset.prod;
+      const row  = prodCb.closest('div[style]');
+      const bwbx = [...(row ? row.querySelectorAll('input[data-bwbx]:checked') : [])].map(cb2 => cb2.dataset.bwbx);
+      newItems.push({ prod, bwbx });
+    });
+    pcgGroups['c'][idx].items = newItems;
+    pcgRenderGroupList('c');
+    pcgRenderEditor('c');
+    pcgRenderSummary('c');
+    await pcgPersist();
+    showToast(`✅ "${pcgGroups['c'][idx].name}" 그룹 저장 완료 (${newItems.length}개 상품)`, 'success');
+    if (laCurSection === '10') laRenderSection('10');
+    return;
   }
+
+  // ── sub='a'/'b': 기존 string[] 포맷 ─────────────────────────────
+  const checked = [...document.querySelectorAll(`#pcg-${sub}-item-list input:checked:not(:disabled)`)].map(cb => cb.value);
+  const usedElsewhere = new Map();
+  pcgGroups[sub].forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.set(it, og.name)); });
+  const conflicts = checked.filter(it => usedElsewhere.has(it));
+  if (conflicts.length > 0) { showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error'); return; }
   pcgGroups[sub][idx].items = checked;
   pcgRenderGroupList(sub);
   pcgRenderEditor(sub);
@@ -5100,15 +5280,27 @@ function pcgRenderSummary(sub) {
     return;
   }
   const colors = ['#0369a1','#0f766e','#4c1d95','#0f5132','#7c2d12','#b45309','#dc2626'];
-  el.innerHTML = pcgGroups[sub].map((g, i) => `
+  el.innerHTML = pcgGroups[sub].map((g, i) => {
+    // sub='c': items = [{prod, bwbx:[]}]
+    let cntTxt, detailTxt;
+    if (sub === 'c') {
+      const validItems = Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object' ? g.items : [];
+      cntTxt    = validItems.length + '개 상품';
+      detailTxt = validItems.slice(0,3).map(it => it.prod).join(', ') + (validItems.length > 3 ? ` 외 ${validItems.length-3}개` : '');
+    } else {
+      cntTxt    = g.items.length + '개';
+      detailTxt = g.items.slice(0,4).join(', ') + (g.items.length > 4 ? ` 외 ${g.items.length-4}개` : '');
+    }
+    return `
     <div style="display:inline-flex;flex-direction:column;gap:4px;margin:6px;padding:10px 14px;
         border-radius:10px;background:#f0f9ff;border:1.5px solid #bae6fd;min-width:140px;vertical-align:top;">
       <div style="font-weight:700;font-size:13px;color:${colors[i%colors.length]};">
         <i class="fas fa-layer-group"></i> ${g.name}
-        <span style="margin-left:6px;font-size:11px;font-weight:400;color:#64748b;">${g.items.length}개</span>
+        <span style="margin-left:6px;font-size:11px;font-weight:400;color:#64748b;">${cntTxt}</span>
       </div>
-      <div style="font-size:11px;color:#475569;">${g.items.slice(0,4).join(', ')}${g.items.length>4?` 외 ${g.items.length-4}개`:''}</div>
-    </div>`).join('');
+      <div style="font-size:11px;color:#475569;">${detailTxt || '-'}</div>
+    </div>`;
+  }).join('');
 }
 
 async function pcgPersist() {
@@ -6463,13 +6655,15 @@ function laRenderCategorySection(periods) {
 
 /**
  * 화해채권(sub='c') 테이블 렌더러
+ * items 포맷: [{prod: '상품명', bwbx: ['[회생]xxx', ...]}]
  * - 그룹 없음: BW/BX 항목 키 그대로 (secData 키 → 행)
- * - 그룹 있음: a/b 탭과 동일하게 그룹명 행(items 합산) + 전체화해 합계 행
- *   데이터: secData[itemKey][ym] — itemKey는 '[회생]xxx'/[신복]xxx'
+ * - 그룹 있음: 그룹명 행 (items 내 prod×bwbx 조합 잔액 합산) + 전체화해 합계 행
+ *   데이터: prodDetail[bwbxKey][prodName][ym]
  */
 function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
-  const tblId  = tbl.id;
-  const secKey = '상품구분화해채권';
+  const tblId     = tbl.id;
+  const secKey    = '상품구분화해채권';
+  const prodDetail = (assetData && assetData.sections['상품구분화해채권_상품별']) || {};
 
   // ── 그룹 없음: 원시 BW/BX 키 그대로 출력 ────────────────────────
   if (groups.length === 0) {
@@ -6479,7 +6673,19 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
     return;
   }
 
-  // ── 그룹 있음: a/b 탭과 동일 구조 (그룹명 행 + 합계 행) ─────────
+  // 유효한 그룹 (items가 새 포맷인 것만)
+  const validGroups = groups.filter(g =>
+    Array.isArray(g.items) && g.items.length > 0 && typeof g.items[0] === 'object'
+  );
+  if (validGroups.length === 0) {
+    // 설정된 그룹이 있지만 아직 새 포맷으로 저장 안 됨 → 원시 키 표시
+    const rawKeys = Object.keys(secData).filter(k => k !== totalKey);
+    rawKeys.push(totalKey);
+    laBuildTable(tblId, secKey, rawKeys, periods);
+    return;
+  }
+
+  // ── 그룹 있음: 그룹명 행 + 합계 행 ───────────────────────────────
   // thead
   const thead = tbl.querySelector('thead');
   thead.innerHTML = '';
@@ -6497,11 +6703,10 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
   });
   thead.appendChild(tr0);
 
-  // tbody: 그룹별 행 (items에 속한 BW/BX 항목 잔액 합산)
   const tbody = tbl.querySelector('tbody');
   tbody.innerHTML = '';
 
-  groups.forEach(g => {
+  validGroups.forEach(g => {
     const tr  = document.createElement('tr');
     const td0 = document.createElement('td');
     td0.textContent = g.name;
@@ -6511,9 +6716,12 @@ function _laRenderHwahaeTable(tbl, periods, groups, secData, totalKey) {
     periods.forEach(ym => {
       const td = document.createElement('td');
       let sum = null;
-      (g.items || []).forEach(itemKey => {
-        const v = (secData[itemKey] || {})[ym];
-        if (v != null) sum = (sum ?? 0) + v;
+      // items: [{prod, bwbx:[]}] → 각 prod×bwbx 조합 잔액 합산
+      (g.items || []).forEach(({ prod, bwbx }) => {
+        (bwbx || []).forEach(bwbxKey => {
+          const v = ((prodDetail[bwbxKey] || {})[prod] || {})[ym];
+          if (v != null) sum = (sum ?? 0) + v;
+        });
       });
       td.textContent = laFmt(sum, secKey, g.name);
       td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;' + (sum !== null && sum < 0 ? 'color:#dc2626;' : '');
