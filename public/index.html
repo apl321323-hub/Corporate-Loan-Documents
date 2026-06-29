@@ -4884,16 +4884,17 @@ function pcgRenderEditor(sub) {
   // 이미 다른 그룹에서 사용 중인 항목
   const usedElsewhere = new Set();
   g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
-  // 전체 항목 목록
-  // sub='c'(화해채권): hwahaeItems(BW/BX 고유값) 사용
-  // sub='a'/'b': asset_data 섹션 키 사용
+
+  // ── 전체 항목 목록 결정 ────────────────────────────────────────────
+  // sub='c'(화해채권): BW/BX 고유값 → [회생]xxx / [신복]xxx
+  // sub='a'/'b'(상품구분/상세): 결산자료 H열 현재상품명 (sections['상품별'] 키)
   let allItems;
   if (sub === 'c') {
     // hwahaeItems는 pcgInit()에서 로드한 {bw:[...], bx:[...]}
     const bwItems = (window._hwahaeItems || {bw:[], bx:[]}).bw.map(v => `[회생]${v}`);
     const bxItems = (window._hwahaeItems || {bw:[], bx:[]}).bx.map(v => `[신복]${v}`);
     allItems = [...bwItems, ...bxItems];
-    // fallback: assetData에 이미 상품구분화해채권 섹션 있으면 그 키도 포함
+    // fallback: assetData 화해채권 섹션 키
     if (allItems.length === 0 && assetData) {
       allItems = Object.keys(assetData.sections['상품구분화해채권'] || {}).filter(k => !k.includes('합계'));
     }
@@ -4901,9 +4902,18 @@ function pcgRenderEditor(sub) {
       allItems = PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
     }
   } else {
-    allItems = assetData
-      ? Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'))
-      : PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+    // sub='a','b': 결산자료 H열 기반 현재상품명 (sections['상품별'] 키) 사용
+    // 없으면 기존 섹션 키 → defItems 순으로 폴백
+    const prodKeys = assetData
+      ? Object.keys(assetData.sections['상품별'] || {}).filter(k => !k.includes('합계'))
+      : [];
+    if (prodKeys.length > 0) {
+      allItems = prodKeys.sort();
+    } else if (assetData) {
+      allItems = Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'));
+    } else {
+      allItems = PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+    }
   }
 
   wrap.innerHTML = `
