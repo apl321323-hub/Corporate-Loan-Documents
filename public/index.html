@@ -678,7 +678,7 @@
       <i class="fas fa-sliders-h"></i> PDF 매핑 설정
     </a>
     <a onclick="showPage('page-product-config')" id="nav-product-config" class="nav-mapping">
-      <i class="fas fa-tags"></i> 상품구성
+      <i class="fas fa-sliders-h"></i> 구분설정
     </a>
   </nav>
 </aside>
@@ -2105,62 +2105,125 @@
   </div>
 </section>
 
-<!-- ===== 상품구성 설정 페이지 ===== -->
+<!-- ===== 구분설정 페이지 ===== -->
 <section class="page" id="page-product-config">
   <div class="section-header" style="margin-bottom:16px;">
-    <h3><i class="fas fa-tags" style="color:#7c3aed;margin-right:8px;"></i>상품구성</h3>
-    <span style="font-size:12px;color:#64748b;">상품을 그룹으로 묶어 자산건전성·영업현황·대출자산속성 화면에 반영합니다.</span>
+    <h3><i class="fas fa-sliders-h" style="color:#7c3aed;margin-right:8px;"></i>구분설정</h3>
+    <span style="font-size:12px;color:#64748b;">상품 그룹 및 접수경로 구분을 설정합니다.</span>
   </div>
 
-  <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+  <!-- 탭 버튼 -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #e2e8f0;">
+    <button id="cfg-tab-btn-product" onclick="cfgSwitchTab('product')"
+      style="padding:9px 22px;font-size:13px;font-weight:700;border:none;border-bottom:3px solid #7c3aed;margin-bottom:-2px;
+             background:none;color:#7c3aed;cursor:pointer;">
+      <i class="fas fa-tags"></i> 상품구성
+    </button>
+    <button id="cfg-tab-btn-channel" onclick="cfgSwitchTab('channel')"
+      style="padding:9px 22px;font-size:13px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+             background:none;color:#64748b;cursor:pointer;">
+      <i class="fas fa-door-open"></i> 접수경로
+    </button>
+  </div>
 
-    <!-- 왼쪽: 그룹 목록 + 신규 추가 -->
-    <div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div style="padding:12px 16px;background:#4c1d95;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
-          <span><i class="fas fa-layer-group"></i> 상품 그룹</span>
-          <span id="pg-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
-        </div>
-        <!-- 그룹 목록 -->
-        <div id="pg-group-list" style="max-height:400px;overflow-y:auto;">
-          <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">
-            아직 그룹이 없습니다
+  <!-- ── 상품구성 탭 ── -->
+  <div id="cfg-tab-product">
+    <div style="margin-bottom:12px;">
+      <span style="font-size:12px;color:#64748b;">상품을 그룹으로 묶어 자산건전성·영업현황·대출자산속성 화면에 반영합니다.</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+      <!-- 왼쪽: 그룹 목록 + 신규 추가 -->
+      <div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;background:#4c1d95;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="fas fa-layer-group"></i> 상품 그룹</span>
+            <span id="pg-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+          </div>
+          <div id="pg-group-list" style="max-height:400px;overflow-y:auto;">
+            <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+          </div>
+          <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+            <div style="display:flex;gap:6px;">
+              <input id="pg-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 신용, 담보…)"
+                style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                onkeydown="if(event.key==='Enter') pgAddGroup()">
+              <button onclick="pgAddGroup()"
+                style="background:#4c1d95;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                <i class="fas fa-plus"></i> 추가
+              </button>
+            </div>
           </div>
         </div>
-        <!-- 그룹 추가 입력 -->
-        <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
-          <div style="display:flex;gap:6px;">
-            <input id="pg-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 신용, 담보…)"
-              style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
-              onkeydown="if(event.key==='Enter') pgAddGroup()">
-            <button onclick="pgAddGroup()"
-              style="background:#4c1d95;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
-              <i class="fas fa-plus"></i> 추가
-            </button>
-          </div>
+      </div>
+      <!-- 오른쪽: 상품 편집 -->
+      <div id="pg-editor-wrap">
+        <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+          <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>
+          왼쪽에서 그룹을 선택하세요
         </div>
       </div>
     </div>
 
-    <!-- 오른쪽: 선택된 그룹의 상품 편집 -->
-    <div id="pg-editor-wrap">
-      <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
-        <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>
-        왼쪽에서 그룹을 선택하세요
+    <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
+        <i class="fas fa-list-ul"></i> 전체 그룹 현황
+      </div>
+      <div id="pg-summary" style="padding:16px;">
+        <span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 접수경로 탭 ── -->
+  <div id="cfg-tab-channel" style="display:none;">
+    <div style="margin-bottom:12px;">
+      <span style="font-size:12px;color:#64748b;">접수경로를 그룹으로 묶어 대출자산속성 접수경로 탭에 반영합니다.</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;">
+      <!-- 왼쪽: 그룹 목록 + 신규 추가 -->
+      <div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:12px 16px;background:#0f766e;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="fas fa-layer-group"></i> 접수경로 그룹</span>
+            <span id="cr-group-count" style="font-size:11px;font-weight:400;opacity:.8;">0개</span>
+          </div>
+          <div id="cr-group-list" style="max-height:400px;overflow-y:auto;">
+            <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>
+          </div>
+          <div style="padding:12px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+            <div style="display:flex;gap:6px;">
+              <input id="cr-new-group-name" type="text" placeholder="새 그룹명 입력 (예: 온라인, 오프라인…)"
+                style="flex:1;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:13px;outline:none;"
+                onkeydown="if(event.key==='Enter') crAddGroup()">
+              <button onclick="crAddGroup()"
+                style="background:#0f766e;color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                <i class="fas fa-plus"></i> 추가
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 오른쪽: 접수경로 편집 -->
+      <div id="cr-editor-wrap">
+        <div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
+          <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>
+          왼쪽에서 그룹을 선택하세요
+        </div>
       </div>
     </div>
 
+    <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
+        <i class="fas fa-list-ul"></i> 전체 그룹 현황
+      </div>
+      <div id="cr-summary" style="padding:16px;">
+        <span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>
+      </div>
+    </div>
   </div>
 
-  <!-- 저장된 그룹 현황 (전체 요약) -->
-  <div class="card" style="margin-top:20px;padding:0;overflow:hidden;">
-    <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
-      <i class="fas fa-list-ul"></i> 전체 그룹 현황
-    </div>
-    <div id="pg-summary" style="padding:16px;">
-      <span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>
-    </div>
-  </div>
 </section>
 
 </main>
@@ -2198,7 +2261,7 @@ function showPage(pageId) {
     'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
     'page-business': '영업현황', 'page-loan': '대출자산속성',
     'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드', 'page-mapping': 'PDF 매핑 설정',
-    'page-product-config': '상품구성'
+    'page-product-config': '구분설정'
   };
   const nav = document.getElementById(navMap[pageId]);
   if (nav) nav.classList.add('active');
@@ -2211,6 +2274,7 @@ function showPage(pageId) {
   // 상품구성 페이지 진입 시 자동 로드
   if (pageId === 'page-product-config') {
     pgInit();
+    crInit();
   }
 }
 
@@ -4328,7 +4392,253 @@ async function pgPersist() {
   }
 }
 
-// ===== 영업현황 렌더링 (신규) =====
+// ===== 구분설정 탭 전환 =====
+function cfgSwitchTab(tab) {
+  // 탭 패널 토글
+  document.getElementById('cfg-tab-product').style.display = tab === 'product' ? '' : 'none';
+  document.getElementById('cfg-tab-channel').style.display = tab === 'channel' ? '' : 'none';
+  // 버튼 스타일
+  const btnP = document.getElementById('cfg-tab-btn-product');
+  const btnC = document.getElementById('cfg-tab-btn-channel');
+  if (btnP) {
+    btnP.style.color          = tab === 'product' ? '#7c3aed' : '#64748b';
+    btnP.style.borderBottomColor = tab === 'product' ? '#7c3aed' : 'transparent';
+    btnP.style.fontWeight     = tab === 'product' ? '700' : '600';
+  }
+  if (btnC) {
+    btnC.style.color          = tab === 'channel' ? '#0f766e' : '#64748b';
+    btnC.style.borderBottomColor = tab === 'channel' ? '#0f766e' : 'transparent';
+    btnC.style.fontWeight     = tab === 'channel' ? '700' : '600';
+  }
+}
+
+// ===== 접수경로 구분 (Channel Groups) =====
+let crGroups = [];           // [{name, channels:[]}]
+let crAllChannels = [];      // 전체 접수경로 항목
+let crSelectedGroupIdx = -1;
+
+async function crInit() {
+  try {
+    const [gRes, cRes] = await Promise.all([
+      axios.get(`${API_BASE}/api/channel-groups`),
+      axios.get(`${API_BASE}/api/channel-groups/all-channels`),
+    ]);
+    crGroups      = gRes.data || [];
+    crAllChannels = cRes.data || [];
+  } catch(e) { crGroups = []; crAllChannels = []; }
+  crRenderGroupList();
+  crRenderSummary();
+}
+
+function crRenderGroupList() {
+  const list = document.getElementById('cr-group-list');
+  const cnt  = document.getElementById('cr-group-count');
+  if (!list) return;
+  cnt.textContent = `${crGroups.length}개`;
+  if (crGroups.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">아직 그룹이 없습니다</div>';
+    return;
+  }
+  list.innerHTML = '';
+  crGroups.forEach((g, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:center;gap:8px;padding:10px 14px;
+      cursor:pointer;border-bottom:1px solid #f1f5f9;
+      background:${idx === crSelectedGroupIdx ? '#ccfbf1' : '#fff'};`;
+    div.innerHTML = `
+      <span style="flex:1;font-size:13px;font-weight:600;color:#1e293b;">${g.name}</span>
+      <span style="font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:99px;">${g.channels.length}개</span>
+      <button title="삭제" onclick="crDeleteGroup(${idx})" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px;">✕</button>`;
+    div.querySelector('span:first-child').addEventListener('click', () => crSelectGroup(idx));
+    list.appendChild(div);
+  });
+}
+
+function crSelectGroup(idx) {
+  crSelectedGroupIdx = idx;
+  crRenderGroupList();
+  crRenderEditor();
+}
+
+function crRenderEditor() {
+  const wrap = document.getElementById('cr-editor-wrap');
+  if (crSelectedGroupIdx < 0 || crSelectedGroupIdx >= crGroups.length) {
+    wrap.innerHTML = '<div class="card" style="padding:32px;text-align:center;color:#94a3b8;"><i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>';
+    return;
+  }
+  const g = crGroups[crSelectedGroupIdx];
+  const selectedSet = new Set(g.channels);
+
+  // 다른 그룹에 배정된 항목
+  const usedElsewhere = new Map();
+  crGroups.forEach((og, i) => {
+    if (i === crSelectedGroupIdx) return;
+    og.channels.forEach(c => usedElsewhere.set(c, og.name));
+  });
+
+  const availableCount = crAllChannels.filter(c => !usedElsewhere.has(c)).length;
+
+  const channelRows = crAllChannels.map(c => {
+    const isOwn      = selectedSet.has(c);
+    const ownerGroup = usedElsewhere.get(c);
+    const isDisabled = !!ownerGroup;
+
+    if (isDisabled) {
+      return `<label title="${ownerGroup} 그룹에 배정됨"
+          style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border-radius:6px;
+                 cursor:not-allowed;background:#f1f5f9;border:1px solid #e2e8f0;opacity:.65;">
+        <input type="checkbox" value="${c}" disabled
+               style="accent-color:#94a3b8;width:15px;height:15px;margin-top:2px;flex-shrink:0;">
+        <span style="display:flex;flex-direction:column;gap:1px;">
+          <span style="font-size:13px;color:#94a3b8;text-decoration:line-through;">${c}</span>
+          <span style="font-size:10px;color:#0f766e;font-weight:600;">
+            <i class="fas fa-lock" style="font-size:9px;"></i> ${ownerGroup}
+          </span>
+        </span>
+      </label>`;
+    }
+
+    const chk = isOwn ? 'checked' : '';
+    const bg  = isOwn ? '#ccfbf1' : 'transparent';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;
+        cursor:pointer;background:${bg};transition:.15s;">
+      <input type="checkbox" value="${c}" ${chk} style="accent-color:#0f766e;width:15px;height:15px;">
+      <span style="font-size:13px;color:#1e293b;">${c}</span>
+    </label>`;
+  }).join('');
+
+  const hasDisabled = usedElsewhere.size > 0;
+  const legendHtml  = hasDisabled
+    ? `<div style="padding:6px 14px 0;font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px;">
+         <i class="fas fa-lock" style="color:#0f766e;"></i>
+         자물쇠 표시 항목은 다른 그룹에 배정되어 선택 불가합니다.
+       </div>`
+    : '';
+
+  wrap.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:12px 16px;background:#0f766e;color:#fff;font-weight:700;font-size:14px;
+          display:flex;align-items:center;justify-content:space-between;">
+        <span><i class="fas fa-edit"></i> ${g.name} — 접수경로 선택</span>
+        <span style="font-size:11px;font-weight:400;opacity:.8;" id="cr-sel-count">${g.channels.length}개 선택됨</span>
+      </div>
+      <div style="padding:10px 14px;background:#f0fdfa;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button onclick="crCheckAll(true)"  style="font-size:12px;padding:4px 12px;border:1px solid #0f766e;border-radius:5px;background:#fff;color:#0f766e;cursor:pointer;">전체 선택</button>
+        <button onclick="crCheckAll(false)" style="font-size:12px;padding:4px 12px;border:1px solid #cbd5e1;border-radius:5px;background:#fff;color:#64748b;cursor:pointer;">전체 해제</button>
+        <span style="font-size:11px;color:#64748b;margin-left:4px;">
+          (선택 가능 <strong>${availableCount}</strong>개 / 전체 ${crAllChannels.length}개)
+        </span>
+      </div>
+      ${legendHtml}
+      <div id="cr-channel-list" style="padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:420px;overflow-y:auto;">
+        ${channelRows}
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="crSaveGroup()" style="background:#0f766e;color:#fff;border:none;padding:8px 20px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">
+          <i class="fas fa-save"></i> 저장
+        </button>
+      </div>
+    </div>`;
+
+  document.getElementById('cr-channel-list').addEventListener('change', () => {
+    const checked = [...document.querySelectorAll('#cr-channel-list input:checked:not(:disabled)')];
+    document.getElementById('cr-sel-count').textContent = `${checked.length}개 선택됨`;
+    document.querySelectorAll('#cr-channel-list label').forEach(lbl => {
+      const inp = lbl.querySelector('input');
+      if (!inp.disabled) lbl.style.background = inp.checked ? '#ccfbf1' : 'transparent';
+    });
+  });
+}
+
+function crCheckAll(val) {
+  let count = 0;
+  document.querySelectorAll('#cr-channel-list input[type=checkbox]:not(:disabled)').forEach(cb => {
+    cb.checked = val;
+    cb.closest('label').style.background = val ? '#ccfbf1' : 'transparent';
+    if (val) count++;
+  });
+  const cnt = document.getElementById('cr-sel-count');
+  if (cnt) cnt.textContent = `${val ? count : 0}개 선택됨`;
+}
+
+async function crSaveGroup() {
+  if (crSelectedGroupIdx < 0) return;
+  const checked = [...document.querySelectorAll('#cr-channel-list input:checked:not(:disabled)')].map(cb => cb.value);
+
+  // 중복 검증
+  const usedElsewhere = new Map();
+  crGroups.forEach((og, i) => {
+    if (i === crSelectedGroupIdx) return;
+    og.channels.forEach(c => usedElsewhere.set(c, og.name));
+  });
+  const conflicts = checked.filter(c => usedElsewhere.has(c));
+  if (conflicts.length > 0) {
+    showToast(`❌ 중복 항목 저장 불가: ${conflicts.join(', ')}`, 'error');
+    return;
+  }
+
+  crGroups[crSelectedGroupIdx].channels = checked;
+  crRenderGroupList();
+  crRenderSummary();
+  await crPersist();
+  showToast(`✅ "${crGroups[crSelectedGroupIdx].name}" 그룹 저장 완료 (${checked.length}개 항목)`, 'success');
+}
+
+async function crAddGroup() {
+  const inp = document.getElementById('cr-new-group-name');
+  const name = inp.value.trim();
+  if (!name) { showToast('❌ 그룹명을 입력하세요', 'error'); return; }
+  if (crGroups.find(g => g.name === name)) { showToast('❌ 이미 같은 이름의 그룹이 있습니다', 'error'); return; }
+  crGroups.push({ name, channels: [] });
+  inp.value = '';
+  crRenderGroupList();
+  crRenderSummary();
+  await crPersist();
+  crSelectGroup(crGroups.length - 1);
+  showToast(`✅ "${name}" 그룹 추가됨`, 'success');
+}
+
+async function crDeleteGroup(idx) {
+  const name = crGroups[idx].name;
+  if (!confirm(`"${name}" 그룹을 삭제하시겠습니까?`)) return;
+  crGroups.splice(idx, 1);
+  if (crSelectedGroupIdx === idx) crSelectedGroupIdx = -1;
+  else if (crSelectedGroupIdx > idx) crSelectedGroupIdx--;
+  crRenderGroupList();
+  crRenderEditor();
+  crRenderSummary();
+  await crPersist();
+  showToast(`🗑️ "${name}" 그룹 삭제됨`, 'success');
+}
+
+function crRenderSummary() {
+  const el = document.getElementById('cr-summary');
+  if (!el) return;
+  if (crGroups.length === 0) {
+    el.innerHTML = '<span style="color:#94a3b8;font-size:13px;">그룹을 추가하면 여기에 요약이 표시됩니다.</span>';
+    return;
+  }
+  const colors = ['#0f766e','#0891b2','#1e3a5f','#0f5132','#7c2d12','#4c1d95','#b45309','#dc2626'];
+  el.innerHTML = crGroups.map((g, i) => `
+    <div style="display:inline-flex;flex-direction:column;gap:4px;margin:6px;padding:10px 14px;
+        border-radius:10px;background:#f0fdfa;border:1.5px solid #99f6e4;min-width:160px;vertical-align:top;">
+      <div style="font-weight:700;font-size:13px;color:${colors[i % colors.length]};">
+        <i class="fas fa-door-open"></i> ${g.name}
+        <span style="margin-left:6px;font-size:11px;font-weight:400;color:#64748b;">${g.channels.length}개</span>
+      </div>
+      <div style="font-size:11px;color:#475569;line-height:1.6;">
+        ${g.channels.length > 0 ? g.channels.join(', ') : '<em style="color:#94a3b8;">항목 없음</em>'}
+      </div>
+    </div>`).join('');
+}
+
+async function crPersist() {
+  try {
+    await axios.post(`${API_BASE}/api/channel-groups`, crGroups);
+  } catch(e) {
+    console.warn('접수경로 그룹 저장 실패:', e.message);
+  }
+}
 let bsData = null;          // parse_business_excel 결과
 let bsCurrentSection = 's1';
 

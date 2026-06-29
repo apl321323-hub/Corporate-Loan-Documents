@@ -790,6 +790,52 @@ async def get_all_products():
     return JSONResponse(default_products)
 
 
+# ── 접수경로 그룹 API ─────────────────────────────────────────────────────
+@app.get("/api/channel-groups")
+async def get_channel_groups():
+    """저장된 접수경로 그룹 목록 반환"""
+    groups = uploaded_data.get("channel_groups", [])
+    # 파일 폴백
+    if not groups:
+        _path = os.path.join(os.path.dirname(__file__), "data", "channel_groups.json")
+        if os.path.exists(_path):
+            with open(_path, encoding="utf-8") as f:
+                groups = json.load(f)
+            uploaded_data["channel_groups"] = groups
+    return JSONResponse(groups)
+
+
+@app.post("/api/channel-groups")
+async def save_channel_groups(request: Request):
+    """접수경로 그룹 전체 저장 (덮어쓰기)"""
+    body = await request.json()
+    if not isinstance(body, list):
+        raise HTTPException(status_code=400, detail="배열 형태로 전송하세요")
+    uploaded_data["channel_groups"] = body
+    # 파일에도 저장
+    _path = os.path.join(os.path.dirname(__file__), "data", "channel_groups.json")
+    os.makedirs(os.path.dirname(_path), exist_ok=True)
+    with open(_path, "w", encoding="utf-8") as f:
+        json.dump(body, f, ensure_ascii=False, indent=2)
+    return JSONResponse({"success": True, "count": len(body)})
+
+
+@app.get("/api/channel-groups/all-channels")
+async def get_all_channels():
+    """접수경로 전체 항목 반환 (LA_ROW_DEFS['접수경로'] 기준)"""
+    # 대출자산속성 asset_data에서 접수경로 섹션 키를 읽어 반환
+    # 없으면 기본값 반환
+    asset_data = uploaded_data.get("asset_data")
+    if asset_data:
+        sec = asset_data.get("sections", {}).get("접수경로", {})
+        channels = [k for k in sec.keys() if k != "전체융잔 합계"]
+        if channels:
+            return JSONResponse(channels)
+    # 기본 접수경로 목록 (fallback)
+    default_channels = ["에이전트", "직접대출", "홈페이지", "온라인플랫폼", "기타(고객추천)"]
+    return JSONResponse(default_channels)
+
+
 @app.get("/api/data/business_status")
 async def get_business_status():
     """영업현황 데이터 (기존 형식)"""
