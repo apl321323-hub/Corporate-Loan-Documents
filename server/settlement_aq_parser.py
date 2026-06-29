@@ -10,6 +10,7 @@
   T열 (index 19) : 성별      ('남' | '여' 등)
   U열 (index 20) : 상환방식  ('원리균등' | '자유상환')
   X열 (index 23) : 만기일    ('YYYY-MM-DD' 문자열)
+  AK열 (index 36): 자택주소  (시/도 약칭 예: '서울', '경기' 등)
   AC열 (index 28): 직업분류
   CN열 (index 91): 만나이    (숫자)
 
@@ -314,6 +315,10 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # job_sec: {직업분류값: float}  (원 단위, 고유값 동적 수집)
     job_sec: dict[str, float] = {}
 
+    # ── 지역별 집계 버킷 (AK열, index 36) ──────────────────────────
+    # region_sec: {시도명: float}  (원 단위, 고유값 동적 수집)
+    region_sec: dict[str, float] = {}
+
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
@@ -325,6 +330,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         repay_raw    = str(row[20]).strip() if len(row) > 20 and row[20] is not None else None  # U열: 상환방식
         maturity_str = row[23] if len(row) > 23 else None                   # X열: 만기일
         job_raw      = str(row[28]).strip() if len(row) > 28 and row[28] is not None else None  # AC열: 직업분류
+        region_raw   = str(row[36]).strip() if len(row) > 36 and row[36] is not None else None  # AK열: 자택주소
         channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
         age_raw      = int(float(row[91])) if len(row) > 91 and row[91] is not None else None  # CN열: 만나이 (index 91, float→int)
         bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
@@ -439,6 +445,12 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 job_sec[job_raw] = 0.0
             job_sec[job_raw] += balance
 
+        # ── 지역별: AK열 자택주소 고유값별 집계 ─────────────────────
+        if region_raw and region_raw not in ('None', '') and balance is not None:
+            if region_raw not in region_sec:
+                region_sec[region_raw] = 0.0
+            region_sec[region_raw] += balance
+
     wb.close()
 
     # ── 섹션3 연체율(%) 계산 ────────────────────────────────────────
@@ -538,6 +550,10 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     job_m: dict[str, int] = {k: _m(v) for k, v in job_sec.items()}
     job_m['전체융잔 합계'] = _m(sum(job_sec.values()))
 
+    # ── 지역별 섹션 (백만원 단위) ────────────────────────────────────
+    region_m: dict[str, int] = {k: _m(v) for k, v in region_sec.items()}
+    region_m['전체융잔 합계'] = _m(sum(region_sec.values()))
+
     return {
         "period"      : period,
         "section1"    : s1_m,
@@ -555,6 +571,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "gender"      : gender_m,    # 성별별 융잔 합계 (백만원)
         "age_band"    : age_band_m,  # 연령대별 융잔 합계 (백만원)
         "job_raw"     : job_m,       # 직업분류별 융잔 합계 (백만원, raw 키)
+        "region"      : region_m,    # 지역별 융잔 합계 (백만원)
         "products"    : products_list,
     }
 

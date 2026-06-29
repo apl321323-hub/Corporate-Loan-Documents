@@ -197,12 +197,15 @@ async def lifespan(app_):
                                 gender_r = result.get("gender", {})
                                 age_r    = result.get("age_band", {})
                                 job_r    = result.get("job_raw", {})
+                                region_r = result.get("region", {})
                                 if gender_r:
                                     saq_store[pkey]["gender"]   = gender_r
                                 if age_r:
                                     saq_store[pkey]["age_band"] = age_r
                                 if job_r:
                                     saq_store[pkey]["job_raw"]  = job_r
+                                if region_r:
+                                    saq_store[pkey]["region"]   = region_r
 
                             print(f"[startup] settlement_aq 재처리 완료: {pkey} → maturity={maturity}, avg_rate={avg_rate}, repayment keys={list(repayment.keys()) if repayment else []}, amount_band keys={list(amount_band.keys()) if amount_band else []}")
                         except Exception as ex:
@@ -765,6 +768,12 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             saq_store[pkey]["job_raw"] = job_raw_data
             uploaded_data["settlement_aq"] = saq_store
 
+        # ── 지역별 → saq_store 저장 ──────────────────────────────────
+        region_data = data.get("region", {})
+        if region_data and pkey in saq_store:
+            saq_store[pkey]["region"] = region_data
+            uploaded_data["settlement_aq"] = saq_store
+
         return JSONResponse({
             "success": True,
             "message": f"결산자료 '{file.filename}' 업로드 완료",
@@ -779,6 +788,7 @@ async def upload_settlement_aq(file: UploadFile = File(...), period: str = ""):
             "gender_updated":    bool(gender      and pkey and pkey != "unknown"),
             "age_band_updated2": bool(age_band_data and pkey and pkey != "unknown"),
             "job_updated":       bool(job_raw_data and pkey and pkey != "unknown"),
+            "region_updated":    bool(region_data  and pkey and pkey != "unknown"),
         })
     except Exception as e:
         import traceback
@@ -1836,6 +1846,7 @@ async def get_asset_data():
         gender_sec_out: dict[str, dict[str, float]] = {}
         age_sec_out:    dict[str, dict[str, float]] = {}
         job_sec_out:    dict[str, dict[str, float]] = {}
+        region_sec_out: dict[str, dict[str, float]] = {}
 
         for pkey, pdata in saq.items():
             ym = pkey[:7] if len(pkey) >= 7 and pkey[4] == '-' else None
@@ -1869,6 +1880,15 @@ async def get_asset_data():
                     job_sec_out[row_key] = {}
                 job_sec_out[row_key][ym] = float(val) * 1_000_000
 
+            # 지역별
+            region_data = pdata.get("region") or {}
+            for row_key, val in region_data.items():
+                if val is None:
+                    continue
+                if row_key not in region_sec_out:
+                    region_sec_out[row_key] = {}
+                region_sec_out[row_key][ym] = float(val) * 1_000_000
+
         sections = result.get("sections", {})
         if gender_sec_out:
             sections["성별"] = gender_sec_out
@@ -1876,6 +1896,8 @@ async def get_asset_data():
             sections["연령별"] = age_sec_out
         if job_sec_out:
             sections["직업별"] = job_sec_out
+        if region_sec_out:
+            sections["지역별"] = region_sec_out
         result["sections"] = sections
 
     return JSONResponse(result)
