@@ -4814,6 +4814,10 @@ let pcgSelIdx      = { a: -1, b: -1, c: -1 };
 let pcgCurSub      = 'a';
 
 async function pcgInit() {
+  // assetData가 없으면 먼저 로드 (항목 목록 표시에 필요)
+  if (!assetData) {
+    try { await loadAssetData(); } catch(e) {}
+  }
   try {
     const res = await axios.get(`${API_BASE}/api/product-category-groups`);
     const data = res.data || {};
@@ -4875,12 +4879,13 @@ function pcgRenderEditor(sub) {
   if (!wrap) return;
   const idx = pcgSelIdx[sub];
   if (idx < 0 || idx >= pcgGroups[sub].length) {
-    wrap.innerHTML = `<div class="card" style="padding:32px;text-align:center;color:#94a3b8;">
-      <i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>`;
+    wrap.innerHTML = '<div class="card" style="padding:32px;text-align:center;color:#94a3b8;">'
+      + '<i class="fas fa-hand-point-left" style="font-size:28px;margin-bottom:10px;display:block;"></i>왼쪽에서 그룹을 선택하세요</div>';
     return;
   }
-  const g = pcgGroups[sub];
+  const g   = pcgGroups[sub];
   const cur = g[idx];
+
   // 이미 다른 그룹에서 사용 중인 항목
   const usedElsewhere = new Set();
   g.forEach((og, i) => { if (i !== idx) og.items.forEach(it => usedElsewhere.add(it)); });
@@ -4890,62 +4895,112 @@ function pcgRenderEditor(sub) {
   // sub='a'/'b'(상품구분/상세): 결산자료 H열 현재상품명 (sections['상품별'] 키)
   let allItems;
   if (sub === 'c') {
-    // hwahaeItems는 pcgInit()에서 로드한 {bw:[...], bx:[...]}
-    const bwItems = (window._hwahaeItems || {bw:[], bx:[]}).bw.map(v => `[회생]${v}`);
-    const bxItems = (window._hwahaeItems || {bw:[], bx:[]}).bx.map(v => `[신복]${v}`);
+    const bwItems = (window._hwahaeItems || {bw:[], bx:[]}).bw.map(v => '[회생]' + v);
+    const bxItems = (window._hwahaeItems || {bw:[], bx:[]}).bx.map(v => '[신복]' + v);
     allItems = [...bwItems, ...bxItems];
-    // fallback: assetData 화해채권 섹션 키
     if (allItems.length === 0 && assetData) {
-      allItems = Object.keys(assetData.sections['상품구분화해채권'] || {}).filter(k => !k.includes('합계'));
+      allItems = Object.keys(assetData.sections['상품구분화해채권'] || {}).filter(k => k.indexOf('합계') < 0);
     }
     if (allItems.length === 0) {
-      allItems = PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+      allItems = PCG_SEC_MAP[sub].defItems.filter(k => k.indexOf('합계') < 0);
     }
   } else {
-    // sub='a','b': 결산자료 H열 기반 현재상품명 (sections['상품별'] 키) 사용
-    // 없으면 기존 섹션 키 → defItems 순으로 폴백
     const prodKeys = assetData
-      ? Object.keys(assetData.sections['상품별'] || {}).filter(k => !k.includes('합계'))
+      ? Object.keys(assetData.sections['상품별'] || {}).filter(k => k.indexOf('합계') < 0)
       : [];
     if (prodKeys.length > 0) {
       allItems = prodKeys.sort();
     } else if (assetData) {
-      allItems = Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => !k.includes('합계'));
+      allItems = Object.keys(assetData.sections[PCG_SEC_MAP[sub].secKey] || {}).filter(k => k.indexOf('합계') < 0);
     } else {
-      allItems = PCG_SEC_MAP[sub].defItems.filter(k => !k.includes('합계'));
+      allItems = PCG_SEC_MAP[sub].defItems.filter(k => k.indexOf('합계') < 0);
     }
   }
 
-  wrap.innerHTML = `
-    <div class="card" style="padding:0;overflow:hidden;">
-      <div style="padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;">
-        <i class="fas fa-edit"></i> "${cur.name}" 항목 편집
-      </div>
-      <div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;">
-        <button onclick="pcgCheckAll('${sub}',true)"
-          style="font-size:12px;padding:4px 10px;border:1px solid #0369a1;color:#0369a1;background:#fff;border-radius:5px;cursor:pointer;">전체선택</button>
-        <button onclick="pcgCheckAll('${sub}',false)"
-          style="font-size:12px;padding:4px 10px;border:1px solid #94a3b8;color:#64748b;background:#fff;border-radius:5px;cursor:pointer;">전체해제</button>
-      </div>
-      <div id="pcg-${sub}-item-list" style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;">
-        ${allItems.map(it => {
-          const checked = cur.items.includes(it);
-          const locked  = usedElsewhere.has(it);
-          return `<label style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:13px;cursor:${locked?'not-allowed':'pointer'};
-            border:1.5px solid ${checked?'#0369a1':locked?'#e2e8f0':'#cbd5e1'};
-            background:${checked?'#e0f2fe':locked?'#f8fafc':'#fff'};
-            color:${checked?'#0369a1':locked?'#cbd5e1':'#475569'};" title="${locked?'다른 그룹에서 사용 중':''}">
-            <input type="checkbox" value="${it}" ${checked?'checked':''} ${locked?'disabled':''}
-              style="accent-color:#0369a1;"> ${it}</label>`;
-        }).join('')}
-      </div>
-      <div style="padding:12px 16px;border-top:1px solid #e2e8f0;text-align:right;">
-        <button onclick="pcgSaveGroup('${sub}')"
-          style="background:#0369a1;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;">
-          <i class="fas fa-save"></i> 저장
-        </button>
-      </div>
-    </div>`;
+  // ── DOM 직접 구성 (innerHTML 중첩 백틱 이슈 회피) ─────────────────
+  wrap.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.cssText = 'padding:0;overflow:hidden;';
+
+  // 헤더
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:12px 16px;background:#0369a1;color:#fff;font-weight:700;font-size:13px;';
+  hdr.innerHTML = '<i class="fas fa-edit"></i> "' + cur.name + '" 항목 편집';
+  card.appendChild(hdr);
+
+  // 전체선택/해제 버튼
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'padding:12px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:8px;';
+  const btnAll = document.createElement('button');
+  btnAll.textContent = '전체선택';
+  btnAll.style.cssText = 'font-size:12px;padding:4px 10px;border:1px solid #0369a1;color:#0369a1;background:#fff;border-radius:5px;cursor:pointer;';
+  btnAll.onclick = () => pcgCheckAll(sub, true);
+  const btnNone = document.createElement('button');
+  btnNone.textContent = '전체해제';
+  btnNone.style.cssText = 'font-size:12px;padding:4px 10px;border:1px solid #94a3b8;color:#64748b;background:#fff;border-radius:5px;cursor:pointer;';
+  btnNone.onclick = () => pcgCheckAll(sub, false);
+  btnRow.appendChild(btnAll);
+  btnRow.appendChild(btnNone);
+  card.appendChild(btnRow);
+
+  // 항목 목록
+  const listDiv = document.createElement('div');
+  listDiv.id = 'pcg-' + sub + '-item-list';
+  listDiv.style.cssText = 'padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;';
+
+  if (allItems.length === 0) {
+    const msg = document.createElement('span');
+    msg.textContent = '항목 없음 (결산자료를 먼저 업로드하세요)';
+    msg.style.cssText = 'color:#94a3b8;font-size:13px;';
+    listDiv.appendChild(msg);
+  } else {
+    allItems.forEach(it => {
+      const checked = cur.items.indexOf(it) >= 0;
+      const locked  = usedElsewhere.has(it);
+
+      const label = document.createElement('label');
+      label.style.cssText = [
+        'display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:13px;',
+        'cursor:' + (locked ? 'not-allowed' : 'pointer') + ';',
+        'border:1.5px solid ' + (checked ? '#0369a1' : locked ? '#e2e8f0' : '#cbd5e1') + ';',
+        'background:' + (checked ? '#e0f2fe' : locked ? '#f8fafc' : '#fff') + ';',
+        'color:' + (checked ? '#0369a1' : locked ? '#cbd5e1' : '#475569') + ';',
+      ].join('');
+      if (locked) label.title = '다른 그룹에서 사용 중';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = it;
+      cb.checked = checked;
+      cb.disabled = locked;
+      cb.style.accentColor = '#0369a1';
+      // 체크 상태 변경 시 label 스타일 즉시 반영
+      cb.addEventListener('change', () => {
+        const on = cb.checked;
+        label.style.borderColor  = on ? '#0369a1' : '#cbd5e1';
+        label.style.background   = on ? '#e0f2fe' : '#fff';
+        label.style.color        = on ? '#0369a1' : '#475569';
+      });
+
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + it));
+      listDiv.appendChild(label);
+    });
+  }
+  card.appendChild(listDiv);
+
+  // 저장 버튼
+  const foot = document.createElement('div');
+  foot.style.cssText = 'padding:12px 16px;border-top:1px solid #e2e8f0;text-align:right;';
+  const btnSave = document.createElement('button');
+  btnSave.style.cssText = 'background:#0369a1;color:#fff;border:none;padding:8px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;';
+  btnSave.innerHTML = '<i class="fas fa-save"></i> 저장';
+  btnSave.onclick = () => pcgSaveGroup(sub);
+  foot.appendChild(btnSave);
+  card.appendChild(foot);
+
+  wrap.appendChild(card);
 }
 
 function pcgCheckAll(sub, flag) {
