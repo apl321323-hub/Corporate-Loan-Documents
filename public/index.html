@@ -524,8 +524,59 @@
   #sidebar nav a.nav-mapping:hover { background: rgba(147,197,253,0.1); }
   #sidebar nav a.nav-mapping.active { background: #93c5fd; color: #1e3a5f; }
 
-  /* ── 회사소개서 ──────────────────────────────────────────── */
-  #page-profile { padding: 0 28px 40px; }
+  /* ── 회사소개서 슬라이드 뷰어 ─────────────────────────── */
+  #page-profile { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
+  #page-profile .section-header { padding: 0 28px; flex-shrink: 0; }
+
+  /* 슬라이드 뷰어 래퍼 */
+  .slide-viewer-wrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 16px; padding: 12px 16px 0; min-height: 0; position: relative;
+  }
+
+  /* 스케일 프레임 */
+  .slide-frame-outer {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+    background: #e2e8f0; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  }
+  .slide-scale-wrapper {
+    /* JS로 transform:scale() 설정 */
+    transform-origin: top left;
+    flex-shrink: 0;
+  }
+
+  /* 개별 슬라이드 */
+  .slide { display: none; width: 1280px; height: 720px; flex-shrink: 0; }
+  .slide.active { display: block; }
+
+  /* 화살표 버튼 */
+  .slide-nav-btn {
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+    border: none; background: #1e3a5f; color: #fff; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); transition: background .15s;
+    z-index: 10;
+  }
+  .slide-nav-btn:hover { background: #2563eb; }
+  .slide-nav-btn:disabled { background: #cbd5e1; cursor: default; }
+
+  /* 페이지 인디케이터 */
+  .slide-indicator {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    padding: 8px 0 6px; flex-shrink: 0;
+  }
+  .slide-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+    cursor: pointer; transition: background .15s, transform .15s;
+  }
+  .slide-dot.active { background: #1e3a5f; transform: scale(1.3); }
+
+  /* 데이터 편집 패널 - 가로 스크롤 영역 */
+  #prof-data-panel {
+    margin: 8px 28px 12px; flex-shrink: 0;
+    max-height: 220px; overflow-y: auto;
+  }
   .profile-block {
     background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
     box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 20px; overflow: hidden;
@@ -1662,7 +1713,8 @@
 
   <!-- ===== 회사소개서 ===== -->
   <section class="page" id="page-profile">
-    <div class="section-header">
+    <!-- ── 툴바 ── -->
+    <div class="section-header" style="flex-shrink:0;">
       <h3><i class="fas fa-id-card" style="margin-right:8px;color:#1e3a5f;"></i>회사소개서</h3>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="save-btn" onclick="profileSyncFromApp()" style="background:#0f766e;">
@@ -1671,26 +1723,112 @@
         <button class="save-btn" onclick="profileSave()" style="background:#16a34a;">
           <i class="fas fa-save"></i> 저장
         </button>
-        <!-- TODO: PDF/PPTX 다운로드 버튼 확장 포인트 -->
+        <!-- TODO: PDF 출력 버튼 확장 포인트 -->
       </div>
     </div>
 
-    <!-- ────────────────────────────────────────
-         섹션 1. 기업 개요
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-overview">
+    <!-- ── 슬라이드 뷰어 래퍼 ── -->
+    <div class="slide-viewer-wrap">
+
+      <!-- 네비게이션: 이전 -->
+      <button class="slide-nav-btn slide-nav-prev" id="slide-prev" onclick="slideGo(-1)">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <!-- 슬라이드 프레임 (1280×720 비율 유지) -->
+      <div class="slide-frame-outer" id="slide-frame-outer">
+        <div class="slide-scale-wrapper" id="slide-scale-wrapper">
+
+          <!-- ════════════════════════════════════════
+               SLIDE 1 — 표지
+          ════════════════════════════════════════ -->
+          <div class="slide" id="slide-1" data-slide="1">
+            <div style="position:relative;width:1280px;height:720px;overflow:hidden;background-color:#1B3A7E;font-family:'Noto Sans KR',sans-serif;">
+              <!-- 배경 도형 1 -->
+              <div style="position:absolute;left:450px;top:0;width:830px;height:720px;background:rgba(255,255,255,0.03);clip-path:polygon(15% 0,100% 0,100% 100%,0% 100%);z-index:1;"></div>
+              <!-- 배경 도형 2 -->
+              <div style="position:absolute;left:880px;top:0;width:400px;height:720px;background:rgba(255,255,255,0.05);clip-path:polygon(30% 0,100% 0,100% 100%,0% 100%);z-index:2;"></div>
+              <!-- 장식 원 1 -->
+              <div style="position:absolute;left:830px;top:320px;width:500px;height:500px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);opacity:0.2;z-index:0;"></div>
+              <!-- 장식 원 2 -->
+              <div style="position:absolute;left:930px;top:470px;width:300px;height:300px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);opacity:0.1;z-index:0;"></div>
+              <!-- 로고 영역 -->
+              <div style="position:absolute;left:1040px;top:40px;width:200px;height:50px;z-index:20;display:flex;align-items:center;justify-content:flex-end;gap:12px;">
+                <div style="width:40px;height:40px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1B3A7E;font-weight:900;font-size:20px;box-shadow:0 0 15px rgba(255,255,255,0.2);">
+                  <span>A</span>
+                </div>
+                <div style="text-align:right;color:#fff;">
+                  <p style="font-size:20px;font-weight:700;letter-spacing:0.1em;line-height:1;margin:0;">APL</p>
+                  <p style="margin:4px 0 0;font-size:12px;letter-spacing:0.15em;opacity:0.8;line-height:1;">FINANCIAL</p>
+                </div>
+              </div>
+              <!-- 메인 컨텐츠 -->
+              <div style="position:absolute;left:96px;top:110px;width:620px;z-index:10;color:#fff;">
+                <!-- 상단 강조선 -->
+                <div style="width:64px;height:6px;background:#D4AF37;margin-bottom:40px;"></div>
+                <!-- 연도 & 부제 -->
+                <p style="font-size:24px;font-weight:300;color:#d1d5db;margin:0 0 8px;letter-spacing:0.1em;">2026</p>
+                <p style="font-size:18px;font-weight:300;color:#9ca3af;margin:0 0 32px;letter-spacing:0.1em;">
+                  Monthly Update <span style="margin:0 12px;color:#6b7280;">|</span>
+                  기준: <span id="slide1-basedate" class="slide-bind">2026.04</span>
+                </p>
+                <!-- 메인 타이틀 -->
+                <h1 style="font-size:60px;font-weight:700;margin:0;line-height:1.1;font-family:'Noto Serif KR',serif;color:#fff;">APL</h1>
+                <h1 style="font-size:60px;font-weight:700;margin:0 0 24px;line-height:1.1;font-family:'Noto Serif KR',serif;color:#fff;">FINANCIAL</h1>
+                <!-- 한글 서브타이틀 -->
+                <h2 style="font-size:34px;font-weight:700;margin:0 0 40px;opacity:0.9;color:#fff;" id="slide1-compname" class="slide-bind">㈜에이피엘파이낸셜대부</h2>
+                <!-- 구분선 -->
+                <div style="width:100%;max-width:512px;height:1px;background:#4b5563;margin-bottom:60px;"></div>
+                <!-- 슬로건 -->
+                <div style="border-left:4px solid #D4AF37;padding-left:24px;padding-top:4px;padding-bottom:4px;">
+                  <p style="font-size:28px;font-weight:300;color:#fff;line-height:1.3;margin:0;">
+                    전문성과 신뢰의<br><span style="font-weight:700;">금융 파트너</span>
+                  </p>
+                  <p style="font-size:14px;color:#9ca3af;margin:12px 0 0;letter-spacing:0.05em;font-weight:300;">
+                    Trusted Financial Partner for Sustainable Growth
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /SLIDE 1 -->
+
+          <!-- ════════════════════════════════════════
+               SLIDE 2 ~ N : 추가 페이지를 여기에 붙여넣으면 됩니다
+          ════════════════════════════════════════ -->
+          <!-- placeholder: 추가 슬라이드 -->
+
+        </div><!-- /slide-scale-wrapper -->
+      </div><!-- /slide-frame-outer -->
+
+      <!-- 네비게이션: 다음 -->
+      <button class="slide-nav-btn slide-nav-next" id="slide-next" onclick="slideGo(+1)">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+    </div><!-- /slide-viewer-wrap -->
+
+    <!-- 페이지 인디케이터 -->
+    <div class="slide-indicator" id="slide-indicator"></div>
+
+    <!-- 데이터 입력 패널 (기업정보 불러오기 / 수동 편집) -->
+    <div class="profile-block" id="prof-data-panel" style="margin:16px 28px 0;">
       <div class="profile-block-title">
-        <span class="profile-block-num">01</span> 기업 개요
-        <span class="profile-edit-hint">← 기업정보 탭 데이터가 자동 연계됩니다</span>
+        <span class="profile-block-num"><i class="fas fa-edit"></i></span> 슬라이드 데이터 편집
+        <span class="profile-edit-hint">← 값을 수정하면 슬라이드에 즉시 반영됩니다</span>
       </div>
-      <div class="profile-overview-grid">
+      <div class="profile-overview-grid" style="padding:16px 20px;">
         <div class="profile-field-row">
           <label class="profile-label">회사명</label>
-          <input class="profile-input" id="prof-name" placeholder="회사명">
+          <input class="profile-input slide-data-input" id="prof-name" data-bind="slide1-compname" placeholder="회사명" oninput="slideBind(this)">
         </div>
         <div class="profile-field-row">
           <label class="profile-label">대표이사</label>
           <input class="profile-input" id="prof-rep" placeholder="대표이사">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">기준 년월</label>
+          <input class="profile-input slide-data-input" id="prof-basedate" data-bind="slide1-basedate" placeholder="예) 2026.04" oninput="slideBind(this)">
         </div>
         <div class="profile-field-row">
           <label class="profile-label">설립일</label>
@@ -1724,175 +1862,19 @@
           <label class="profile-label">홈페이지</label>
           <input class="profile-input" id="prof-website" placeholder="https://">
         </div>
-      </div>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 2. 주요 현황 (KPI 자동 연계)
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-kpi">
-      <div class="profile-block-title">
-        <span class="profile-block-num">02</span> 주요 현황
-        <span class="profile-edit-hint">← 영업현황/자산건전성 탭 데이터가 자동 연계됩니다</span>
-      </div>
-      <div class="profile-kpi-grid" id="prof-kpi-grid">
-        <!-- JS로 동적 렌더링 -->
-        <div class="profile-kpi-card">
-          <div class="profile-kpi-label">대출 융자잔고</div>
-          <div class="profile-kpi-value" id="prof-kpi-balance">-</div>
-          <div class="profile-kpi-date" id="prof-kpi-balance-date"></div>
+        <div class="profile-field-row" style="grid-column:1/-1;">
+          <label class="profile-label">영업방향 및 장점</label>
+          <textarea class="profile-textarea" id="prof-direction" rows="4" style="width:100%;margin:0;box-sizing:border-box;" placeholder="영업 방향 및 장점"></textarea>
         </div>
-        <div class="profile-kpi-card yellow">
-          <div class="profile-kpi-label">연체율</div>
-          <div class="profile-kpi-value" id="prof-kpi-overdue">-</div>
-          <div class="profile-kpi-date" id="prof-kpi-overdue-date"></div>
+        <div class="profile-field-row" style="grid-column:1/-1;">
+          <label class="profile-label">관계사 및 계열사</label>
+          <input class="profile-input" id="prof-affiliates" placeholder="관계사 및 계열사">
         </div>
-        <div class="profile-kpi-card green">
-          <div class="profile-kpi-label">자본금</div>
-          <div class="profile-kpi-value" id="prof-kpi-capital">-</div>
-          <div class="profile-kpi-date" id="prof-kpi-capital-date"></div>
-        </div>
-        <div class="profile-kpi-card red">
-          <div class="profile-kpi-label">당기순이익</div>
-          <div class="profile-kpi-value" id="prof-kpi-netincome">-</div>
-          <div class="profile-kpi-date" id="prof-kpi-netincome-date"></div>
+        <div class="profile-field-row" style="grid-column:1/-1;">
+          <label class="profile-label">메모 / 특이사항</label>
+          <textarea class="profile-textarea" id="prof-memo" rows="4" style="width:100%;margin:0;box-sizing:border-box;" placeholder="심사 메모, 특이사항 등"></textarea>
         </div>
       </div>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 3. 회사 연혁
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-history">
-      <div class="profile-block-title">
-        <span class="profile-block-num">03</span> 회사 연혁
-        <span class="profile-edit-hint">← 기업정보 탭 연혁 데이터가 자동 연계됩니다</span>
-        <button class="profile-add-btn" onclick="profileAddHistory()" style="margin-left:auto;">
-          <i class="fas fa-plus"></i> 행 추가
-        </button>
-      </div>
-      <div class="profile-history-wrap">
-        <table class="profile-history-table">
-          <thead>
-            <tr>
-              <th style="width:120px;">일자(년/월)</th>
-              <th>내용</th>
-              <th style="width:40px;"></th>
-            </tr>
-          </thead>
-          <tbody id="prof-history-tbody">
-            <!-- JS로 동적 렌더링 -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 4. 영업 방향 및 장점
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-direction">
-      <div class="profile-block-title">
-        <span class="profile-block-num">04</span> 영업 방향 및 장점
-        <span class="profile-edit-hint">← 기업정보 탭 내용이 자동 연계됩니다</span>
-      </div>
-      <textarea class="profile-textarea" id="prof-direction" rows="8"
-        placeholder="영업 방향 및 장점을 입력하세요."></textarea>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 5. 관계사 및 계열사
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-affiliates">
-      <div class="profile-block-title">
-        <span class="profile-block-num">05</span> 관계사 및 계열사
-        <span class="profile-edit-hint">← 기업정보 탭 내용이 자동 연계됩니다</span>
-      </div>
-      <textarea class="profile-textarea" id="prof-affiliates" rows="4"
-        placeholder="관계사 및 계열사를 입력하세요."></textarea>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 6. 자산 건전성 요약 (자동 연계)
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-asset">
-      <div class="profile-block-title">
-        <span class="profile-block-num">06</span> 자산 건전성 요약
-        <span class="profile-edit-hint">← 자산건전성 탭 최신 데이터 자동 연계</span>
-      </div>
-      <div id="prof-asset-summary" class="profile-asset-summary">
-        <div class="profile-asset-row">
-          <span class="profile-asset-label">정상</span>
-          <span class="profile-asset-val" id="prof-asset-normal">-</span>
-          <span class="profile-asset-ratio" id="prof-asset-normal-r"></span>
-        </div>
-        <div class="profile-asset-row">
-          <span class="profile-asset-label">요주의</span>
-          <span class="profile-asset-val" id="prof-asset-watch">-</span>
-          <span class="profile-asset-ratio" id="prof-asset-watch-r"></span>
-        </div>
-        <div class="profile-asset-row">
-          <span class="profile-asset-label">고정</span>
-          <span class="profile-asset-val" id="prof-asset-fixed">-</span>
-          <span class="profile-asset-ratio" id="prof-asset-fixed-r"></span>
-        </div>
-        <div class="profile-asset-row">
-          <span class="profile-asset-label">회수의문</span>
-          <span class="profile-asset-val" id="prof-asset-doubt">-</span>
-          <span class="profile-asset-ratio" id="prof-asset-doubt-r"></span>
-        </div>
-        <div class="profile-asset-row">
-          <span class="profile-asset-label">추정손실</span>
-          <span class="profile-asset-val" id="prof-asset-loss">-</span>
-          <span class="profile-asset-ratio" id="prof-asset-loss-r"></span>
-        </div>
-        <div class="profile-asset-row total">
-          <span class="profile-asset-label">합계</span>
-          <span class="profile-asset-val" id="prof-asset-total">-</span>
-          <span class="profile-asset-ratio"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 7. 주주 현황
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-shareholders">
-      <div class="profile-block-title">
-        <span class="profile-block-num">07</span> 주주 현황
-        <span class="profile-edit-hint">← 기업정보 탭 주주현황 자동 연계</span>
-      </div>
-      <div class="profile-table-wrap">
-        <table class="profile-sh-table">
-          <thead>
-            <tr>
-              <th>주주명</th><th>주식수</th><th>지분율</th><th>주식금액</th><th>이해관계</th>
-            </tr>
-          </thead>
-          <tbody id="prof-sh-tbody">
-            <!-- JS로 렌더링 -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         섹션 8. 메모 / 특이사항  (자유 편집)
-    ──────────────────────────────────────────── -->
-    <div class="profile-block" id="prof-block-memo">
-      <div class="profile-block-title">
-        <span class="profile-block-num">08</span> 메모 / 특이사항
-      </div>
-      <textarea class="profile-textarea" id="prof-memo" rows="6"
-        placeholder="심사 메모, 특이사항 등 자유롭게 입력하세요."></textarea>
-    </div>
-
-    <!-- ────────────────────────────────────────
-         TODO 확장 포인트 안내 배너
-    ──────────────────────────────────────────── -->
-    <div class="profile-todo-banner">
-      <i class="fas fa-code" style="margin-right:8px;"></i>
-      <strong>추가 개발 포인트</strong> :
-      PDF 출력 · PPTX 생성 · 이미지 첨부 · AI 요약 자동 생성 등 기능을 이 아래에 추가하세요.
     </div>
 
   </section>
@@ -2870,9 +2852,10 @@ function showPage(pageId) {
     crInit();
     pcgInit();
   }
-  // 회사소개서 진입 시: localStorage 불러오기 + KPI/자산건전성 최신화
+  // 회사소개서 진입 시: localStorage 불러오기 + 슬라이드 초기화 + KPI/자산건전성 최신화
   if (pageId === 'page-profile') {
     profileLoad();
+    slideViewerInit();
     profSyncKPI();
     profSyncAsset();
   }
@@ -4105,8 +4088,86 @@ async function saveCompanyInfo() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  회사소개서 (page-profile)
+//  회사소개서 슬라이드 뷰어
 // ═══════════════════════════════════════════════════════════════
+
+// ── 슬라이드 상태 ──
+let slideCurrentIdx = 0;  // 0-based
+
+/** 슬라이드 총 개수 */
+function slideCount() {
+  return document.querySelectorAll('#page-profile .slide').length;
+}
+
+/** idx 번 슬라이드로 이동 (0-based) */
+function slideGoTo(idx) {
+  const slides = document.querySelectorAll('#page-profile .slide');
+  if (!slides.length) return;
+  idx = Math.max(0, Math.min(idx, slides.length - 1));
+  slideCurrentIdx = idx;
+
+  slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+
+  // 인디케이터 갱신
+  document.querySelectorAll('.slide-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+  // 버튼 비활성화
+  const prevBtn = document.getElementById('slide-prev');
+  const nextBtn = document.getElementById('slide-next');
+  if (prevBtn) prevBtn.disabled = (idx === 0);
+  if (nextBtn) nextBtn.disabled = (idx === slides.length - 1);
+}
+
+/** 이전/다음 이동 */
+function slideGo(delta) { slideGoTo(slideCurrentIdx + delta); }
+
+/** 인디케이터 점 초기화 */
+function slideInitIndicator() {
+  const cnt = slideCount();
+  const wrap = document.getElementById('slide-indicator');
+  if (!wrap) return;
+  wrap.innerHTML = Array.from({length: cnt}, (_, i) =>
+    `<span class="slide-dot${i===0?' active':''}" onclick="slideGoTo(${i})"></span>`
+  ).join('');
+}
+
+/** 슬라이드 크기를 뷰어에 맞게 스케일 조정 */
+function slideAutoScale() {
+  const outer = document.getElementById('slide-frame-outer');
+  const wrapper = document.getElementById('slide-scale-wrapper');
+  if (!outer || !wrapper) return;
+  const ow = outer.clientWidth  - 8;
+  const oh = outer.clientHeight - 8;
+  const scaleX = ow / 1280;
+  const scaleY = oh / 720;
+  const scale  = Math.min(scaleX, scaleY);
+  wrapper.style.transform = `scale(${scale})`;
+  wrapper.style.width  = '1280px';
+  wrapper.style.height = '720px';
+  // outer 안에서 가운데 정렬
+  outer.style.display = 'flex';
+  outer.style.alignItems = 'center';
+  outer.style.justifyContent = 'center';
+  outer.style.height = `${Math.round(720 * scale + 8)}px`;
+}
+
+/** data-bind 속성으로 슬라이드 내 텍스트 즉시 반영 */
+function slideBind(inputEl) {
+  const targetId = inputEl.dataset.bind;
+  if (!targetId) return;
+  const target = document.getElementById(targetId);
+  if (target) target.textContent = inputEl.value;
+}
+
+/** 회사소개서 탭 진입 시 초기화 */
+function slideViewerInit() {
+  slideInitIndicator();
+  slideGoTo(0);
+  slideAutoScale();
+  // 창 크기 변경 시 재조정
+  window.removeEventListener('resize', slideAutoScale);
+  window.addEventListener('resize', slideAutoScale);
+}
 
 /** ── 유틸 ── */
 function profFmt(won) {
@@ -4164,6 +4225,12 @@ function profileSyncFromApp() {
 
   // ── 6. 자산건전성 ─────────────────────────────────────────
   profSyncAsset();
+
+  // ── 7. 슬라이드 data-bind 텍스트 즉시 반영 ───────────────
+  document.querySelectorAll('.slide-data-input[data-bind]').forEach(inp => slideBind(inp));
+  // 회사명 슬라이드 반영
+  const sn = document.getElementById('slide1-compname');
+  if (sn) sn.textContent = gci('ci-name') || '㈜에이피엘파이낸셜대부';
 
   showToast('✅ 기업정보 탭 데이터를 불러왔습니다.', 'success');
 }
@@ -4349,6 +4416,7 @@ function profileSave() {
     direction:  document.getElementById('prof-direction')?.value  || '',
     affiliates: document.getElementById('prof-affiliates')?.value || '',
     memo:       document.getElementById('prof-memo')?.value       || '',
+    basedate:   document.getElementById('prof-basedate')?.value   || '',
     history:    profGetHistoryRows(),
   };
   localStorage.setItem('profileData', JSON.stringify(data));
@@ -4369,6 +4437,17 @@ function profileLoad() {
     set('prof-direction', d.direction); set('prof-affiliates', d.affiliates);
     set('prof-memo', d.memo);
     if (d.history) profRenderHistory(d.history);
+    // 슬라이드 바인딩 반영
+    if (d.name) {
+      const sn = document.getElementById('slide1-compname');
+      if (sn) sn.textContent = d.name;
+    }
+    if (d.basedate) {
+      const sb = document.getElementById('slide1-basedate');
+      if (sb) sb.textContent = d.basedate;
+      set('prof-basedate', d.basedate);
+    }
+    document.querySelectorAll('.slide-data-input[data-bind]').forEach(inp => slideBind(inp));
   } catch(e) {}
 }
 
