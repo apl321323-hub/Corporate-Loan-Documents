@@ -523,6 +523,128 @@
   #sidebar nav a.nav-mapping { color: #93c5fd; font-weight: 600; }
   #sidebar nav a.nav-mapping:hover { background: rgba(147,197,253,0.1); }
   #sidebar nav a.nav-mapping.active { background: #93c5fd; color: #1e3a5f; }
+
+  /* ── 회사소개서 ──────────────────────────────────────────── */
+  #page-profile { padding: 0 28px 40px; }
+  .profile-block {
+    background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06); margin-bottom: 20px; overflow: hidden;
+  }
+  .profile-block-title {
+    display: flex; align-items: center; gap: 10px;
+    background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+    padding: 12px 20px; font-size: 14px; font-weight: 700; color: #1e3a5f;
+  }
+  .profile-block-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; background: #1e3a5f;
+    color: #fff; font-size: 11px; font-weight: 800; flex-shrink: 0;
+  }
+  .profile-edit-hint {
+    font-size: 11px; color: #94a3b8; font-weight: 400; margin-left: 4px;
+  }
+  .profile-add-btn {
+    background: #e0f2fe; color: #0369a1; border: none; border-radius: 6px;
+    padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .profile-add-btn:hover { background: #bae6fd; }
+
+  /* 기업개요 그리드 */
+  .profile-overview-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 16px;
+    padding: 16px 20px;
+  }
+  .profile-field-row {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .profile-label {
+    font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: 0.3px;
+  }
+  .profile-input {
+    border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 10px;
+    font-size: 13px; color: #1e293b; background: #fff; outline: none;
+    transition: border-color .15s;
+  }
+  .profile-input:focus { border-color: #1e3a5f; background: #f0f9ff; }
+
+  /* KPI 그리드 */
+  .profile-kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    padding: 16px 20px;
+  }
+  .profile-kpi-card {
+    background: #f0f9ff; border-radius: 10px; padding: 14px 16px;
+    border-left: 4px solid #1e3a5f; text-align: center;
+  }
+  .profile-kpi-card.yellow { background: #fefce8; border-left-color: #eab308; }
+  .profile-kpi-card.green  { background: #f0fdf4; border-left-color: #16a34a; }
+  .profile-kpi-card.red    { background: #fff1f2; border-left-color: #dc2626; }
+  .profile-kpi-label { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 6px; }
+  .profile-kpi-value { font-size: 20px; font-weight: 800; color: #1e3a5f; }
+  .profile-kpi-card.yellow .profile-kpi-value { color: #92400e; }
+  .profile-kpi-card.green  .profile-kpi-value { color: #14532d; }
+  .profile-kpi-card.red    .profile-kpi-value { color: #991b1b; }
+  .profile-kpi-date { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+  /* 연혁 테이블 */
+  .profile-history-wrap { padding: 0 20px 16px; }
+  .profile-history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .profile-history-table th {
+    background: #f1f5f9; padding: 8px 10px; text-align: left;
+    font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 12px;
+  }
+  .profile-history-table td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; }
+  .profile-history-table tr:last-child td { border-bottom: none; }
+  .profile-history-input {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 5px; padding: 5px 8px;
+    font-size: 13px; color: #1e293b; background: #fff; outline: none;
+  }
+  .profile-history-input:focus { border-color: #1e3a5f; background: #f0f9ff; }
+  .profile-del-btn {
+    background: none; border: none; color: #cbd5e1; cursor: pointer;
+    font-size: 14px; padding: 2px 4px; border-radius: 4px;
+  }
+  .profile-del-btn:hover { color: #dc2626; background: #fff1f2; }
+
+  /* textarea */
+  .profile-textarea {
+    display: block; width: calc(100% - 40px); margin: 0 20px 16px;
+    border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px;
+    font-size: 13px; color: #1e293b; resize: vertical; outline: none;
+    transition: border-color .15s; font-family: inherit; line-height: 1.6;
+    box-sizing: border-box;
+  }
+  .profile-textarea:focus { border-color: #1e3a5f; background: #f0f9ff; }
+
+  /* 자산건전성 요약 */
+  .profile-asset-summary { padding: 10px 20px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .profile-asset-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px; border-radius: 8px; background: #f8fafc;
+  }
+  .profile-asset-row.total { background: #eff6ff; font-weight: 700; }
+  .profile-asset-label { font-size: 12px; font-weight: 600; color: #475569; width: 70px; flex-shrink: 0; }
+  .profile-asset-val   { font-size: 14px; font-weight: 700; color: #1e3a5f; min-width: 100px; }
+  .profile-asset-ratio { font-size: 12px; color: #64748b; margin-left: auto; }
+
+  /* 주주현황 테이블 */
+  .profile-table-wrap { padding: 0 20px 16px; }
+  .profile-sh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .profile-sh-table th {
+    background: #f1f5f9; padding: 8px 10px; text-align: left;
+    font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; font-size: 12px;
+  }
+  .profile-sh-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+  .profile-sh-table tr:last-child td { border-bottom: none; }
+  .profile-sh-table tr:hover td { background: #f8fafc; }
+
+  /* TODO 배너 */
+  .profile-todo-banner {
+    background: #fef9c3; border: 1px dashed #fde047; border-radius: 10px;
+    padding: 14px 20px; font-size: 13px; color: #713f12; display: flex;
+    align-items: center; margin-bottom: 20px;
+  }
   /* 업로드 페이지 그리드 */
   .upload-page-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
   .upload-sector-card {
@@ -670,6 +792,9 @@
     </a>
     <a onclick="showPage('page-borrowing')" id="nav-borrowing">
       <i class="fas fa-credit-card"></i> 차입현황
+    </a>
+    <a onclick="showPage('page-profile')" id="nav-profile">
+      <i class="fas fa-id-card"></i> 회사소개서
     </a>
     <div class="nav-divider"></div>
     <a onclick="showPage('page-upload')" id="nav-upload" class="nav-upload">
@@ -1533,6 +1658,243 @@
         </table>
       </div>
     </div>
+  </section>
+
+  <!-- ===== 회사소개서 ===== -->
+  <section class="page" id="page-profile">
+    <div class="section-header">
+      <h3><i class="fas fa-id-card" style="margin-right:8px;color:#1e3a5f;"></i>회사소개서</h3>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="save-btn" onclick="profileSyncFromApp()" style="background:#0f766e;">
+          <i class="fas fa-sync-alt"></i> 기업정보 불러오기
+        </button>
+        <button class="save-btn" onclick="profileSave()" style="background:#16a34a;">
+          <i class="fas fa-save"></i> 저장
+        </button>
+        <!-- TODO: PDF/PPTX 다운로드 버튼 확장 포인트 -->
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 1. 기업 개요
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-overview">
+      <div class="profile-block-title">
+        <span class="profile-block-num">01</span> 기업 개요
+        <span class="profile-edit-hint">← 기업정보 탭 데이터가 자동 연계됩니다</span>
+      </div>
+      <div class="profile-overview-grid">
+        <div class="profile-field-row">
+          <label class="profile-label">회사명</label>
+          <input class="profile-input" id="prof-name" placeholder="회사명">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">대표이사</label>
+          <input class="profile-input" id="prof-rep" placeholder="대표이사">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">설립일</label>
+          <input class="profile-input" id="prof-founded" placeholder="예) 2013년 1월">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">사업자번호</label>
+          <input class="profile-input" id="prof-bizno" placeholder="000-00-00000">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">업종</label>
+          <input class="profile-input" id="prof-industry" placeholder="업종">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">기업형태</label>
+          <input class="profile-input" id="prof-type" placeholder="주식회사 등">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">전화번호</label>
+          <input class="profile-input" id="prof-phone" placeholder="02-0000-0000">
+        </div>
+        <div class="profile-field-row">
+          <label class="profile-label">임직원수</label>
+          <input class="profile-input" id="prof-employees" placeholder="명">
+        </div>
+        <div class="profile-field-row" style="grid-column:1/-1;">
+          <label class="profile-label">사업장주소</label>
+          <input class="profile-input" id="prof-address" placeholder="주소">
+        </div>
+        <div class="profile-field-row" style="grid-column:1/-1;">
+          <label class="profile-label">홈페이지</label>
+          <input class="profile-input" id="prof-website" placeholder="https://">
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 2. 주요 현황 (KPI 자동 연계)
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-kpi">
+      <div class="profile-block-title">
+        <span class="profile-block-num">02</span> 주요 현황
+        <span class="profile-edit-hint">← 영업현황/자산건전성 탭 데이터가 자동 연계됩니다</span>
+      </div>
+      <div class="profile-kpi-grid" id="prof-kpi-grid">
+        <!-- JS로 동적 렌더링 -->
+        <div class="profile-kpi-card">
+          <div class="profile-kpi-label">대출 융자잔고</div>
+          <div class="profile-kpi-value" id="prof-kpi-balance">-</div>
+          <div class="profile-kpi-date" id="prof-kpi-balance-date"></div>
+        </div>
+        <div class="profile-kpi-card yellow">
+          <div class="profile-kpi-label">연체율</div>
+          <div class="profile-kpi-value" id="prof-kpi-overdue">-</div>
+          <div class="profile-kpi-date" id="prof-kpi-overdue-date"></div>
+        </div>
+        <div class="profile-kpi-card green">
+          <div class="profile-kpi-label">자본금</div>
+          <div class="profile-kpi-value" id="prof-kpi-capital">-</div>
+          <div class="profile-kpi-date" id="prof-kpi-capital-date"></div>
+        </div>
+        <div class="profile-kpi-card red">
+          <div class="profile-kpi-label">당기순이익</div>
+          <div class="profile-kpi-value" id="prof-kpi-netincome">-</div>
+          <div class="profile-kpi-date" id="prof-kpi-netincome-date"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 3. 회사 연혁
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-history">
+      <div class="profile-block-title">
+        <span class="profile-block-num">03</span> 회사 연혁
+        <span class="profile-edit-hint">← 기업정보 탭 연혁 데이터가 자동 연계됩니다</span>
+        <button class="profile-add-btn" onclick="profileAddHistory()" style="margin-left:auto;">
+          <i class="fas fa-plus"></i> 행 추가
+        </button>
+      </div>
+      <div class="profile-history-wrap">
+        <table class="profile-history-table">
+          <thead>
+            <tr>
+              <th style="width:120px;">일자(년/월)</th>
+              <th>내용</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="prof-history-tbody">
+            <!-- JS로 동적 렌더링 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 4. 영업 방향 및 장점
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-direction">
+      <div class="profile-block-title">
+        <span class="profile-block-num">04</span> 영업 방향 및 장점
+        <span class="profile-edit-hint">← 기업정보 탭 내용이 자동 연계됩니다</span>
+      </div>
+      <textarea class="profile-textarea" id="prof-direction" rows="8"
+        placeholder="영업 방향 및 장점을 입력하세요."></textarea>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 5. 관계사 및 계열사
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-affiliates">
+      <div class="profile-block-title">
+        <span class="profile-block-num">05</span> 관계사 및 계열사
+        <span class="profile-edit-hint">← 기업정보 탭 내용이 자동 연계됩니다</span>
+      </div>
+      <textarea class="profile-textarea" id="prof-affiliates" rows="4"
+        placeholder="관계사 및 계열사를 입력하세요."></textarea>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 6. 자산 건전성 요약 (자동 연계)
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-asset">
+      <div class="profile-block-title">
+        <span class="profile-block-num">06</span> 자산 건전성 요약
+        <span class="profile-edit-hint">← 자산건전성 탭 최신 데이터 자동 연계</span>
+      </div>
+      <div id="prof-asset-summary" class="profile-asset-summary">
+        <div class="profile-asset-row">
+          <span class="profile-asset-label">정상</span>
+          <span class="profile-asset-val" id="prof-asset-normal">-</span>
+          <span class="profile-asset-ratio" id="prof-asset-normal-r"></span>
+        </div>
+        <div class="profile-asset-row">
+          <span class="profile-asset-label">요주의</span>
+          <span class="profile-asset-val" id="prof-asset-watch">-</span>
+          <span class="profile-asset-ratio" id="prof-asset-watch-r"></span>
+        </div>
+        <div class="profile-asset-row">
+          <span class="profile-asset-label">고정</span>
+          <span class="profile-asset-val" id="prof-asset-fixed">-</span>
+          <span class="profile-asset-ratio" id="prof-asset-fixed-r"></span>
+        </div>
+        <div class="profile-asset-row">
+          <span class="profile-asset-label">회수의문</span>
+          <span class="profile-asset-val" id="prof-asset-doubt">-</span>
+          <span class="profile-asset-ratio" id="prof-asset-doubt-r"></span>
+        </div>
+        <div class="profile-asset-row">
+          <span class="profile-asset-label">추정손실</span>
+          <span class="profile-asset-val" id="prof-asset-loss">-</span>
+          <span class="profile-asset-ratio" id="prof-asset-loss-r"></span>
+        </div>
+        <div class="profile-asset-row total">
+          <span class="profile-asset-label">합계</span>
+          <span class="profile-asset-val" id="prof-asset-total">-</span>
+          <span class="profile-asset-ratio"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 7. 주주 현황
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-shareholders">
+      <div class="profile-block-title">
+        <span class="profile-block-num">07</span> 주주 현황
+        <span class="profile-edit-hint">← 기업정보 탭 주주현황 자동 연계</span>
+      </div>
+      <div class="profile-table-wrap">
+        <table class="profile-sh-table">
+          <thead>
+            <tr>
+              <th>주주명</th><th>주식수</th><th>지분율</th><th>주식금액</th><th>이해관계</th>
+            </tr>
+          </thead>
+          <tbody id="prof-sh-tbody">
+            <!-- JS로 렌더링 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         섹션 8. 메모 / 특이사항  (자유 편집)
+    ──────────────────────────────────────────── -->
+    <div class="profile-block" id="prof-block-memo">
+      <div class="profile-block-title">
+        <span class="profile-block-num">08</span> 메모 / 특이사항
+      </div>
+      <textarea class="profile-textarea" id="prof-memo" rows="6"
+        placeholder="심사 메모, 특이사항 등 자유롭게 입력하세요."></textarea>
+    </div>
+
+    <!-- ────────────────────────────────────────
+         TODO 확장 포인트 안내 배너
+    ──────────────────────────────────────────── -->
+    <div class="profile-todo-banner">
+      <i class="fas fa-code" style="margin-right:8px;"></i>
+      <strong>추가 개발 포인트</strong> :
+      PDF 출력 · PPTX 생성 · 이미지 첨부 · AI 요약 자동 생성 등 기능을 이 아래에 추가하세요.
+    </div>
+
   </section>
   <!-- ===== 업로드 페이지 ===== -->
   <section class="page" id="page-upload">
@@ -2485,14 +2847,14 @@ function showPage(pageId) {
     'page-cashflow': 'nav-cashflow', 'page-asset': 'nav-asset',
     'page-business': 'nav-business', 'page-loan': 'nav-loan',
     'page-borrowing': 'nav-borrowing', 'page-upload': 'nav-upload', 'page-mapping': 'nav-mapping',
-    'page-product-config': 'nav-product-config'
+    'page-product-config': 'nav-product-config', 'page-profile': 'nav-profile'
   };
   const titleMap = {
     'page-company': '기업정보', 'page-bspl': '재무상태표 / 손익계산서',
     'page-cashflow': '현금흐름', 'page-asset': '자산건전성',
     'page-business': '영업현황', 'page-loan': '대출자산속성',
     'page-borrowing': '차입현황', 'page-upload': '엑셀 업로드', 'page-mapping': 'PDF 매핑 설정',
-    'page-product-config': '구분설정'
+    'page-product-config': '구분설정', 'page-profile': '회사소개서'
   };
   const nav = document.getElementById(navMap[pageId]);
   if (nav) nav.classList.add('active');
@@ -2507,6 +2869,12 @@ function showPage(pageId) {
     pgInit();
     crInit();
     pcgInit();
+  }
+  // 회사소개서 진입 시: localStorage 불러오기 + KPI/자산건전성 최신화
+  if (pageId === 'page-profile') {
+    profileLoad();
+    profSyncKPI();
+    profSyncAsset();
   }
 }
 
@@ -3734,6 +4102,274 @@ async function saveCompanyInfo() {
   } catch {
     showToast('💾 로컬에 저장되었습니다.', 'success');
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  회사소개서 (page-profile)
+// ═══════════════════════════════════════════════════════════════
+
+/** ── 유틸 ── */
+function profFmt(won) {
+  if (!won && won !== 0) return '-';
+  const v = Math.abs(won);
+  if (v >= 1e12) return (won / 1e12).toFixed(1).replace(/\.0$/, '') + '조';
+  if (v >= 1e8)  return (won / 1e8).toFixed(1).replace(/\.0$/, '') + '억';
+  if (v >= 1e4)  return (won / 1e4).toFixed(0) + '만';
+  return won.toLocaleString();
+}
+
+/**
+ * 기업정보 탭 데이터를 회사소개서에 동기화
+ * - 기업개요 : 기업정보 탭 입력 필드에서 직접 읽음
+ * - 연혁     : ciHistoryRows 전역 배열
+ * - 주주현황 : data-sh 입력 필드
+ * - 자산건전성 : appData.aq 최신 컬럼
+ * - KPI     : appData.bsis / appData.aq / appData.bs
+ */
+function profileSyncFromApp() {
+  // ── 1. 기업 개요 ──────────────────────────────────────────
+  function gci(id) { return document.getElementById(id)?.value || ''; }
+  document.getElementById('prof-name').value        = gci('ci-name');
+  document.getElementById('prof-rep').value         = gci('ci-rep');
+  document.getElementById('prof-bizno').value       = gci('ci-bizno');
+  document.getElementById('prof-industry').value    = gci('ci-industry');
+  document.getElementById('prof-type').value        = gci('ci-type');
+  document.getElementById('prof-phone').value       = gci('ci-phone');
+  document.getElementById('prof-employees').value   = gci('ci-employees');
+  document.getElementById('prof-address').value     = gci('ci-address');
+
+  // ── 2. 영업방향 / 관계사 ─────────────────────────────────
+  document.getElementById('prof-direction').value   = gci('ci-business-direction');
+  document.getElementById('prof-affiliates').value  = gci('ci-affiliates');
+
+  // ── 3. 연혁 (ciHistoryRows) ───────────────────────────────
+  profRenderHistory(ciHistoryRows || []);
+
+  // ── 4. 주주현황 (data-sh) ─────────────────────────────────
+  const shRows = [];
+  for (let i = 0; i < 6; i++) {
+    const r = {
+      name:     document.querySelector(`[data-sh="${i}"][data-field="name"]`)?.value   || '',
+      shares:   document.querySelector(`[data-sh="${i}"][data-field="shares"]`)?.value || '',
+      ratio:    document.querySelector(`[data-sh="${i}"][data-field="ratio"]`)?.value  || '',
+      amount:   document.querySelector(`[data-sh="${i}"][data-field="amount"]`)?.value || '',
+      relation: document.querySelector(`[data-sh="${i}"][data-field="relation"]`)?.value || ''
+    };
+    if (r.name) shRows.push(r);
+  }
+  profRenderShareholders(shRows);
+
+  // ── 5. KPI (appData 기반) ─────────────────────────────────
+  profSyncKPI();
+
+  // ── 6. 자산건전성 ─────────────────────────────────────────
+  profSyncAsset();
+
+  showToast('✅ 기업정보 탭 데이터를 불러왔습니다.', 'success');
+}
+
+/** KPI 자동 연계 */
+function profSyncKPI() {
+  // 대출 융자잔고 → appData.bs (영업현황) 섹션에서 최신값
+  try {
+    const bs = appData?.bs;
+    if (bs) {
+      // 전체융잔 합계 또는 가장 큰 합계값
+      const balanceKey = Object.keys(bs).find(k => k.includes('융잔') || k.includes('융자잔'));
+      if (balanceKey) {
+        const vals = Object.entries(bs[balanceKey]).sort((a,b) => a[0].localeCompare(b[0]));
+        if (vals.length) {
+          const [ym, val] = vals[vals.length - 1];
+          document.getElementById('prof-kpi-balance').textContent = profFmt(val);
+          document.getElementById('prof-kpi-balance-date').textContent = ym + ' 기준';
+        }
+      }
+    }
+  } catch(e) {}
+
+  // 연체율 → appData.aq
+  try {
+    const aq = appData?.aq;
+    if (aq) {
+      // 연체율(%) 키 탐색
+      const rateKey = Object.keys(aq).find(k => k.includes('연체율') || k.includes('연체 율'));
+      if (rateKey) {
+        const vals = Object.entries(aq[rateKey]).sort((a,b) => a[0].localeCompare(b[0]));
+        if (vals.length) {
+          const [ym, val] = vals[vals.length - 1];
+          document.getElementById('prof-kpi-overdue').textContent = (typeof val === 'number' ? val.toFixed(2) + '%' : val);
+          document.getElementById('prof-kpi-overdue-date').textContent = ym + ' 기준';
+        }
+      }
+    }
+  } catch(e) {}
+
+  // 자본금 → appData.bsis BS
+  try {
+    const bsis = appData?.bsis;
+    if (bsis?.bs) {
+      const capKey = Object.keys(bsis.bs).find(k => k.includes('자본금'));
+      if (capKey) {
+        const hdrs = bsis.bs_headers || [];
+        const vals = bsis.bs[capKey] || [];
+        if (hdrs.length && vals.length) {
+          const last = vals[vals.length - 1];
+          const lastHdr = hdrs[hdrs.length - 1];
+          document.getElementById('prof-kpi-capital').textContent = profFmt(last);
+          document.getElementById('prof-kpi-capital-date').textContent = lastHdr + ' 기준';
+        }
+      }
+    }
+  } catch(e) {}
+
+  // 당기순이익 → appData.bsis IS
+  try {
+    const bsis = appData?.bsis;
+    if (bsis?.is) {
+      const niKey = Object.keys(bsis.is).find(k => k.includes('당기순이익'));
+      if (niKey) {
+        const hdrs = bsis.is_headers || [];
+        const vals = bsis.is[niKey] || [];
+        if (hdrs.length && vals.length) {
+          const last = vals[vals.length - 1];
+          const lastHdr = hdrs[hdrs.length - 1];
+          document.getElementById('prof-kpi-netincome').textContent = profFmt(last);
+          document.getElementById('prof-kpi-netincome-date').textContent = lastHdr + ' 기준';
+        }
+      }
+    }
+  } catch(e) {}
+}
+
+/** 자산건전성 요약 자동 연계 */
+function profSyncAsset() {
+  try {
+    const aq = appData?.aq;
+    if (!aq) return;
+    // 최신 년월 기준
+    const ymSet = new Set();
+    Object.values(aq).forEach(row => { if (typeof row === 'object') Object.keys(row).forEach(k => ymSet.add(k)); });
+    const latestYm = Array.from(ymSet).sort().pop();
+    if (!latestYm) return;
+
+    const labels = ['정상','요주의','고정','회수의문','추정손실'];
+    const ids    = ['normal','watch','fixed','doubt','loss'];
+    let total = 0;
+    labels.forEach((label, idx) => {
+      const key = Object.keys(aq).find(k => k.includes(label));
+      const val = key ? (aq[key][latestYm] ?? 0) : 0;
+      total += val;
+      document.getElementById(`prof-asset-${ids[idx]}`).textContent = profFmt(val);
+    });
+    // 비율
+    labels.forEach((label, idx) => {
+      const key = Object.keys(aq).find(k => k.includes(label));
+      const val = key ? (aq[key][latestYm] ?? 0) : 0;
+      const ratio = total > 0 ? (val / total * 100).toFixed(1) + '%' : '';
+      document.getElementById(`prof-asset-${ids[idx]}-r`).textContent = ratio;
+    });
+    document.getElementById('prof-asset-total').textContent = profFmt(total);
+  } catch(e) {}
+}
+
+/** 연혁 렌더링 */
+function profRenderHistory(rows) {
+  const tbody = document.getElementById('prof-history-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const list = (rows.length > 0) ? rows : [{ date: '', content: '' }];
+  list.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="profile-history-input" data-prof-hist="${i}" data-col="date"
+            value="${(r.date||'').replace(/"/g,'&quot;')}" placeholder="2024년"></td>
+      <td><input class="profile-history-input" data-prof-hist="${i}" data-col="content"
+            value="${(r.content||'').replace(/"/g,'&quot;')}" placeholder="내용"></td>
+      <td><button class="profile-del-btn" onclick="profDelHistory(${i})"><i class="fas fa-times"></i></button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/** 연혁 행 추가 */
+function profileAddHistory() {
+  const rows = profGetHistoryRows();
+  rows.push({ date: '', content: '' });
+  profRenderHistory(rows);
+}
+
+/** 연혁 행 삭제 */
+function profDelHistory(idx) {
+  const rows = profGetHistoryRows();
+  rows.splice(idx, 1);
+  profRenderHistory(rows);
+}
+
+/** DOM에서 연혁 행 읽기 */
+function profGetHistoryRows() {
+  const tbody = document.getElementById('prof-history-tbody');
+  if (!tbody) return [];
+  const rows = [];
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const dateInp    = tr.querySelector('[data-col="date"]');
+    const contentInp = tr.querySelector('[data-col="content"]');
+    rows.push({ date: dateInp?.value || '', content: contentInp?.value || '' });
+  });
+  return rows;
+}
+
+/** 주주현황 렌더링 */
+function profRenderShareholders(shRows) {
+  const tbody = document.getElementById('prof-sh-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  if (!shRows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px;">주주현황 데이터 없음</td></tr>';
+    return;
+  }
+  shRows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name||''}</td><td>${r.shares||''}</td><td>${r.ratio||''}</td><td>${r.amount||''}</td><td>${r.relation||''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/** 저장 (localStorage) */
+function profileSave() {
+  const data = {
+    name:       document.getElementById('prof-name')?.value       || '',
+    rep:        document.getElementById('prof-rep')?.value        || '',
+    founded:    document.getElementById('prof-founded')?.value    || '',
+    bizno:      document.getElementById('prof-bizno')?.value      || '',
+    industry:   document.getElementById('prof-industry')?.value   || '',
+    type:       document.getElementById('prof-type')?.value       || '',
+    phone:      document.getElementById('prof-phone')?.value      || '',
+    employees:  document.getElementById('prof-employees')?.value  || '',
+    address:    document.getElementById('prof-address')?.value    || '',
+    website:    document.getElementById('prof-website')?.value    || '',
+    direction:  document.getElementById('prof-direction')?.value  || '',
+    affiliates: document.getElementById('prof-affiliates')?.value || '',
+    memo:       document.getElementById('prof-memo')?.value       || '',
+    history:    profGetHistoryRows(),
+  };
+  localStorage.setItem('profileData', JSON.stringify(data));
+  showToast('💾 회사소개서가 저장되었습니다.', 'success');
+}
+
+/** 불러오기 (localStorage → 화면) */
+function profileLoad() {
+  try {
+    const raw = localStorage.getItem('profileData');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    set('prof-name', d.name); set('prof-rep', d.rep); set('prof-founded', d.founded);
+    set('prof-bizno', d.bizno); set('prof-industry', d.industry); set('prof-type', d.type);
+    set('prof-phone', d.phone); set('prof-employees', d.employees);
+    set('prof-address', d.address); set('prof-website', d.website);
+    set('prof-direction', d.direction); set('prof-affiliates', d.affiliates);
+    set('prof-memo', d.memo);
+    if (d.history) profRenderHistory(d.history);
+  } catch(e) {}
 }
 
 function exportCompanyInfo() {
