@@ -1118,11 +1118,6 @@
       <h3>자산건전성</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span id="aq-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">데이터 미업로드</span>
-        <!-- 업로드 버튼 -->
-        <label for="aq-file-input" style="background:#1e3a5f;color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
-          <i class="fas fa-upload"></i> 자산건전성 업로드
-        </label>
-        <input type="file" id="aq-file-input" accept=".xlsx,.xls" style="display:none" onchange="handleAQUpload(event)">
       </div>
     </div>
 
@@ -1227,10 +1222,6 @@
         </div>
         <!-- 데이터 배지 -->
         <span id="bs-data-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#e2e8f0;color:#64748b;">데이터 없음</span>
-        <!-- 업로드 버튼 -->
-        <button onclick="showPage('page-upload')" style="font-size:12px;padding:4px 12px;border:1px solid #1e3a5f;border-radius:5px;background:#fff;color:#1e3a5f;cursor:pointer;">
-          <i class="fas fa-upload"></i> 업로드
-        </button>
       </div>
     </div>
 
@@ -1370,9 +1361,6 @@
           <option value="24">최근 24개월</option>
           <option value="all">전체</option>
         </select>
-        <button onclick="showPage('page-upload')" style="font-size:12px;padding:4px 12px;border:1px solid #1e3a5f;border-radius:5px;background:#fff;color:#1e3a5f;cursor:pointer;">
-          <i class="fas fa-file-upload"></i> 업로드
-        </button>
       </div>
     </div>
 
