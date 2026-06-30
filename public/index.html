@@ -2571,6 +2571,115 @@
           </div>
           <!-- /SLIDE 7 -->
 
+          <!-- SLIDE 8 -->
+          <div class="slide" id="slide-8" style="width:1280px;height:720px;overflow:hidden;background-color:#F8FAFC;font-family:'Noto Sans KR',sans-serif;position:relative;">
+
+            <!-- Header BG -->
+            <div style="position:absolute;left:0;top:0;width:1280px;height:96px;background-color:#1B3A7E;z-index:1;"></div>
+            <!-- Gold Bar -->
+            <div style="position:absolute;left:48px;top:28px;width:6px;height:40px;background-color:#D4AF37;z-index:2;"></div>
+            <!-- Header Title -->
+            <div style="position:absolute;left:70px;top:24px;width:500px;height:40px;z-index:10;">
+              <p style="font-size:28px;font-weight:700;color:white;letter-spacing:0.5px;line-height:40px;">연체율 개선 및 리스크 관리 체계</p>
+            </div>
+            <div style="position:absolute;left:70px;top:62px;width:500px;height:20px;z-index:10;">
+              <p style="font-size:12px;color:#D1D5DB;letter-spacing:2px;text-transform:uppercase;">Delinquency Rate Improvement &amp; Risk Management</p>
+            </div>
+            <!-- Logo -->
+            <div style="position:absolute;left:1104px;top:28px;width:40px;height:40px;border-radius:50%;background-color:white;z-index:10;display:flex;align-items:center;justify-content:center;">
+              <p style="font-size:14px;font-weight:900;color:#1B3A7E;text-align:center;">A</p>
+            </div>
+            <div style="position:absolute;left:1150px;top:28px;width:100px;height:48px;z-index:10;">
+              <p style="font-size:16px;font-weight:700;color:white;line-height:1.4;">APL</p>
+              <p style="font-size:10px;color:#D1D5DB;line-height:1.2;letter-spacing:1px;">FINANCIAL</p>
+            </div>
+
+            <!-- Left Chart Card -->
+            <div style="position:absolute;left:48px;top:128px;width:578px;height:420px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);z-index:1;"></div>
+            <!-- Left Chart Title -->
+            <div style="position:absolute;left:68px;top:148px;width:400px;height:46px;z-index:10;">
+              <div style="border-left:4px solid #D4AF37;padding-left:8px;">
+                <p style="font-size:16px;font-weight:800;color:#1B3A7E;margin-bottom:4px;">연체율 추이 (2021-2026)</p>
+                <p style="font-size:12px;color:#6B7280;">업계 최저 수준의 연체율 유지 (2026.04 기준)</p>
+              </div>
+            </div>
+            <!-- 최우수 건전성 badge -->
+            <div style="position:absolute;left:490px;top:148px;width:116px;height:26px;z-index:10;">
+              <div style="background-color:#ECFDF5;color:#059669;border-radius:20px;padding:4px 8px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;">
+                <i class="fas fa-check-circle"></i><p>최우수 건전성</p>
+              </div>
+            </div>
+            <!-- Left Chart Canvas -->
+            <div style="position:absolute;left:70px;top:210px;width:538px;height:260px;z-index:10;">
+              <canvas id="slide8-delinquencyRateChart" width="538" height="260" style="display:block;box-sizing:border-box;"></canvas>
+            </div>
+            <!-- Left Info Box -->
+            <div style="position:absolute;left:68px;top:486px;width:538px;height:42px;z-index:10;">
+              <div style="background-color:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;height:100%;box-sizing:border-box;">
+                <i class="fas fa-info-circle" style="color:#1B3A7E;font-size:14px;"></i>
+                <p style="font-size:12px;color:#374151;"><span style="font-weight:700;color:#1B3A7E;">리스크 현황:</span> 전년도 NPL 채권매각 효과와 철저한 심사로 2%대 안정세를 이어가고 있습니다.</p>
+              </div>
+            </div>
+            <!-- 2026.04 수치 박스 -->
+            <div style="position:absolute;left:470px;top:216px;width:140px;height:80px;background-color:rgba(255,255,255,0.95);border:1px solid #F3F4F6;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.1);z-index:11;"></div>
+            <div style="position:absolute;left:470px;top:224px;width:140px;height:64px;z-index:12;text-align:center;">
+              <p style="font-size:10px;color:#9CA3AF;text-align:center;margin-bottom:2px;">2026.04 기준</p>
+              <p style="font-size:20px;font-weight:900;color:#1B3A7E;text-align:center;" id="slide8-rate-current">2.73<span style="font-size:12px;">%</span></p>
+            </div>
+
+            <!-- Right Chart Card -->
+            <div style="position:absolute;left:654px;top:128px;width:578px;height:420px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);z-index:1;"></div>
+            <!-- Right Chart Title -->
+            <div style="position:absolute;left:674px;top:148px;width:440px;height:46px;z-index:10;">
+              <div style="border-left:4px solid #D4AF37;padding-left:8px;">
+                <p style="font-size:16px;font-weight:800;color:#1B3A7E;margin-bottom:4px;">연체금액 추이 (2021-2026)</p>
+                <p style="font-size:12px;color:#6B7280;">총 연체금액 변화 (단위: 억원)</p>
+              </div>
+            </div>
+            <!-- Right Legend -->
+            <div style="position:absolute;left:1120px;top:154px;width:100px;height:24px;z-index:10;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="width:12px;height:12px;background-color:#1B3A7E;border-radius:2px;"></div>
+                <p style="font-size:12px;color:#4B5563;">총 연체금액</p>
+              </div>
+            </div>
+            <!-- Right Chart Canvas -->
+            <div style="position:absolute;left:674px;top:210px;width:538px;height:318px;z-index:10;">
+              <canvas id="slide8-delinquencyAmountChart" width="538" height="318" style="display:block;box-sizing:border-box;"></canvas>
+            </div>
+
+            <!-- Bottom Left Summary -->
+            <div style="position:absolute;left:48px;top:572px;width:578px;height:112px;background-color:white;border-radius:12px;border:1px solid #D4AF37;box-shadow:0 2px 4px rgba(0,0,0,0.05);z-index:1;"></div>
+            <div style="position:absolute;left:68px;top:604px;width:48px;height:48px;border-radius:50%;background-color:rgba(212,175,55,0.1);z-index:2;display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-shield-virus" style="font-size:20px;color:#D4AF37;"></i>
+            </div>
+            <div style="position:absolute;left:132px;top:586px;width:474px;height:84px;z-index:10;">
+              <p style="font-size:14px;font-weight:700;color:#6B7280;letter-spacing:1px;text-transform:uppercase;">Delinquency Rate</p>
+              <p style="font-size:20px;font-weight:900;color:#1B3A7E;margin:4px 0;">25년 1.6% 마감, 연체율 안정적 관리 지속</p>
+              <p style="font-size:12px;color:#4B5563;line-height:1.4;">2026년 4월 기준 2.73% 수준으로 자산건전성 목표 내에서 원활하게 관리되고 있습니다.</p>
+            </div>
+
+            <!-- Bottom Right Summary -->
+            <div style="position:absolute;left:654px;top:572px;width:578px;height:112px;background-color:white;border-radius:12px;border:1px solid #E2E8F0;box-shadow:0 2px 4px rgba(0,0,0,0.05);z-index:1;"></div>
+            <div style="position:absolute;left:674px;top:604px;width:48px;height:48px;border-radius:50%;background-color:#F1F5F9;z-index:2;display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-chart-line" style="font-size:20px;color:#1B3A7E;"></i>
+            </div>
+            <div style="position:absolute;left:738px;top:586px;width:474px;height:84px;z-index:10;">
+              <p style="font-size:14px;font-weight:700;color:#6B7280;letter-spacing:1px;text-transform:uppercase;">Risk Control</p>
+              <p style="font-size:20px;font-weight:900;color:#1B3A7E;margin:4px 0;">선제적 리스크 대응</p>
+              <p style="font-size:12px;color:#4B5563;line-height:1.4;">부실 징후 조기 포착 및 상시 모니터링을 통한 선제적인 포트폴리오 리스크 관리를 지속합니다.</p>
+            </div>
+
+            <!-- Footer -->
+            <div style="position:absolute;left:48px;top:692px;width:300px;height:16px;z-index:10;">
+              <p style="font-size:10px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">APL FINANCIAL RISK MANAGEMENT</p>
+            </div>
+            <div style="position:absolute;left:1216px;top:692px;width:16px;height:16px;z-index:10;">
+              <p style="font-size:10px;color:#9CA3AF;text-align:right;">08</p>
+            </div>
+          </div>
+          <!-- /SLIDE 8 -->
+
           <!-- placeholder: 추가 슬라이드 -->
 
         </div><!-- /slide-scale-wrapper -->
@@ -4895,6 +5004,7 @@ function slideGoTo(idx) {
   // 슬라이드별 차트 초기화
   if (idx === 3) slide4InitChart();
   if (idx === 6) slide7InitCharts();
+  if (idx === 7) slide8InitCharts();
 }
 
 /** 이전/다음 이동 */
@@ -5125,6 +5235,100 @@ function slide7InitCharts() {
             grid: { display: false },
             ticks: { display: true, font: { family: 'Noto Sans KR', size: 12, weight: 'bold' } }
           }
+        }
+      }
+    });
+  }
+}
+
+/** ── Slide 8: 연체율 & 연체금액 차트 ── */
+let slide8RateChartInstance = null;
+let slide8AmountChartInstance = null;
+function slide8InitCharts() {
+  if (slide8RateChartInstance && slide8AmountChartInstance) return;
+  if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+  // 좌측: 연체율 라인 차트
+  const rateCanvas = document.getElementById('slide8-delinquencyRateChart');
+  if (rateCanvas && !slide8RateChartInstance) {
+    slide8RateChartInstance = new Chart(rateCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: ['21', '22', '23', '24', '25', '26.04'],
+        datasets: [{
+          label: '연체율(%)',
+          data: [2.51, 4.20, 3.90, 3.39, 1.60, 2.73],
+          borderColor: '#1B3A7E',
+          backgroundColor: 'rgba(27,58,126,0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#1B3A7E',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 30, right: 10, left: 10 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: 'top', anchor: 'end',
+            color: '#1B3A7E',
+            font: { weight: 'bold', size: 12, family: "'Noto Sans KR', sans-serif" },
+            formatter: val => val.toFixed(2) + '%'
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true, max: 5,
+            grid: { color: 'rgba(0,0,0,0.1)' },
+            ticks: { callback: val => val + '%' }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // 우측: 연체금액 바 차트
+  const amountCanvas = document.getElementById('slide8-delinquencyAmountChart');
+  if (amountCanvas && !slide8AmountChartInstance) {
+    slide8AmountChartInstance = new Chart(amountCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['21', '22', '23', '24', '25', '26.04'],
+        datasets: [{
+          label: '총 연체금액',
+          data: [7.3, 23.0, 23.8, 27.8, 16.1, 29.21],
+          backgroundColor: '#1B3A7E',
+          barPercentage: 0.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 30 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            color: '#4B5563', anchor: 'end', align: 'top',
+            font: { weight: 'bold', size: 12, family: "'Noto Sans KR', sans-serif" },
+            formatter: (val) => {
+              if (val === 0) return '';
+              return (Math.round(val * 10) / 10 === val) ? val.toFixed(1) : val.toFixed(2);
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true, max: 35,
+            grid: { color: 'rgba(0,0,0,0.1)' }
+          },
+          x: { grid: { display: false } }
         }
       }
     });
