@@ -1398,8 +1398,8 @@
         <button class="tab-btn" id="la-stab-10" onclick="laSwitchSection('10')">상품구분</button>
         <button class="tab-btn" id="la-stab-11" onclick="laSwitchSection('11')">성별/연령/직업</button>
         <button class="tab-btn" id="la-stab-12" onclick="laSwitchSection('12')">지역별</button>
-        <button class="tab-btn" id="la-stab-13" onclick="laSwitchSection('13')">CB등급</button>
-        <button class="tab-btn" id="la-stab-14" onclick="laSwitchSection('14')">상품별CB등급</button>
+        <button class="tab-btn" id="la-stab-13" onclick="laSwitchSection('13')">CB분위</button>
+        <button class="tab-btn" id="la-stab-14" onclick="laSwitchSection('14')">상품별CB분위</button>
       </div>
 
       <!-- 각 섹션 뷰 -->
@@ -7452,8 +7452,8 @@ async function laRenderSection(sid) {
   else if (sid === '10') await laRenderCategorySection(periods);
   else if (sid === '11') await laRenderGenderAgeJob(periods);
   else if (sid === '12') laRenderRegionSection(periods);
-  else if (sid === '13') laRenderCbGradeSection(periods);
-  else if (sid === '14') laRenderCbGradeSection(periods);
+  else if (sid === '13') { if (!cbgConfig.length) await cbgInit(); laRenderCbGradeSection(periods); }
+  else if (sid === '14') { if (!cbgConfig.length) await cbgInit(); laRenderCbGradeSection(periods); }
 }
 
 // ── 성별/연령별/직업별 렌더 ──────────────────────────────────────
@@ -7724,7 +7724,6 @@ function laRenderRegionSection(periods) {
 
 // ── CB등급 렌더 (sid=13: CB등급 / sid=14: 상품별CB등급 → 동일 데이터) ──
 function laRenderCbGradeSection(periods) {
-  // sid에 따라 올바른 테이블 id 선택
   const sid = laCurSection;
   const tblId = sid === '14' ? 'la-tbl-14' : 'la-tbl-13';
   const tbl = document.getElementById(tblId);
@@ -7749,11 +7748,15 @@ function laRenderCbGradeSection(periods) {
     return;
   }
 
+  // cbgConfig에서 분위별 점수 구간 맵 생성
+  const cfgMap = {};
+  (cbgConfig || []).forEach(item => { if (item.grade) cfgMap[item.grade] = item; });
+
   // 헤더
   const tr0 = document.createElement('tr');
   const th0 = document.createElement('th');
-  th0.textContent = 'CB등급'; th0.className = 'bs-sub-col';
-  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:120px;';
+  th0.textContent = 'CB분위'; th0.className = 'bs-sub-col';
+  th0.style.cssText = 'position:sticky;left:0;z-index:3;background:#f1f5f9;font-weight:700;min-width:180px;';
   tr0.appendChild(th0);
   periods.forEach(ym => {
     const th = document.createElement('th');
@@ -7763,10 +7766,9 @@ function laRenderCbGradeSection(periods) {
   });
   thead.appendChild(tr0);
 
-  // 1등급~10등급 행 (순서 고정)
-  const GRADE_ORDER = ['1등급','2등급','3등급','4등급','5등급','6등급','7등급','8등급','9등급','10등급'];
+  // 1분위~10분위 행 (순서 고정)
+  const GRADE_ORDER = ['1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위'];
   const gradeKeys = GRADE_ORDER.filter(g => secData[g]);
-  // 설정에 없는 키 추가 (알 수 없는 등급명 등)
   Object.keys(secData).filter(k => k !== '전체융잔 합계' && !GRADE_ORDER.includes(k)).forEach(k => gradeKeys.push(k));
 
   gradeKeys.forEach((rowKey, idx) => {
@@ -7774,9 +7776,19 @@ function laRenderCbGradeSection(periods) {
     const color = idx < 3 ? '#15803d' : idx < 6 ? '#0369a1' : idx < 8 ? '#d97706' : '#dc2626';
     const bgEven = idx % 2 === 0 ? '#fff' : '#fafafa';
     const td0 = document.createElement('td');
-    td0.textContent = rowKey; td0.className = 'bs-sub-col';
-    td0.style.cssText = `position:sticky;left:0;z-index:2;background:${bgEven};min-width:120px;font-weight:600;color:${color};`;
+
+    // 행 레이블: "1분위 (900 ~ 1000)" 형식
+    const cfg = cfgMap[rowKey];
+    if (cfg && cfg.lo !== undefined && cfg.hi !== undefined) {
+      td0.innerHTML = `<span style="font-weight:700;">${rowKey}</span>`
+        + ` <span style="font-size:11px;color:#94a3b8;font-weight:400;">(${cfg.lo} ~ ${cfg.hi})</span>`;
+    } else {
+      td0.textContent = rowKey;
+    }
+    td0.className = 'bs-sub-col';
+    td0.style.cssText = `position:sticky;left:0;z-index:2;background:${bgEven};min-width:180px;color:${color};`;
     tr.appendChild(td0);
+
     const rowData = secData[rowKey] || {};
     periods.forEach(ym => {
       const td = document.createElement('td');
@@ -7793,7 +7805,7 @@ function laRenderCbGradeSection(periods) {
   trTotal.style.cssText = 'background:#f0f9ff;font-weight:700;';
   const tdTotal0 = document.createElement('td');
   tdTotal0.textContent = '전체융잔 합계'; tdTotal0.className = 'bs-sub-col';
-  tdTotal0.style.cssText = 'position:sticky;left:0;z-index:2;background:#e0f2fe;font-weight:700;min-width:120px;';
+  tdTotal0.style.cssText = 'position:sticky;left:0;z-index:2;background:#e0f2fe;font-weight:700;min-width:180px;';
   trTotal.appendChild(tdTotal0);
   periods.forEach(ym => {
     const td = document.createElement('td');
