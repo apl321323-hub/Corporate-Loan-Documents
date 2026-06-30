@@ -2765,6 +2765,129 @@
           </div>
           <!-- /SLIDE 9 -->
 
+          <!-- SLIDE 10 -->
+          <div class="slide" id="slide-10" style="width:1280px;height:720px;overflow:hidden;background-color:#F8FAFC;font-family:'Noto Sans KR',sans-serif;position:relative;">
+
+            <!-- 전용 스타일 -->
+            <style>
+              #slide-10 .s10-chart-title {
+                font-size:18px;font-weight:800;color:#1B3A7E;
+                display:flex;align-items:center;gap:8px;
+              }
+              #slide-10 .s10-chart-title::before {
+                content:'';display:block;width:4px;height:18px;
+                background-color:#D4AF37;border-radius:2px;
+              }
+              #slide-10 .s10-legend-item {
+                display:flex;align-items:center;font-size:12px;color:#64748b;margin-right:12px;
+              }
+              #slide-10 .s10-legend-color {
+                width:12px;height:12px;border-radius:2px;margin-right:6px;
+              }
+            </style>
+
+            <!-- Header BG -->
+            <div style="position:absolute;left:0;top:0;width:1280px;height:96px;background-color:#1B3A7E;z-index:1;"></div>
+            <div style="position:absolute;left:48px;top:28px;width:6px;height:40px;background-color:#D4AF37;z-index:10;"></div>
+            <!-- Header Title -->
+            <div style="position:absolute;left:70px;top:20px;width:600px;height:75px;z-index:10;">
+              <h1 style="margin:0;font-size:30px;font-weight:700;color:white;letter-spacing:0.025em;">포트폴리오 구조 및 신규 영업 현황</h1>
+              <p style="margin:4px 0 0 0;font-size:12px;color:#d1d5db;letter-spacing:0.1em;text-transform:uppercase;">Portfolio Structure &amp; New Business Performance</p>
+            </div>
+            <!-- Logo -->
+            <div style="position:absolute;left:1120px;top:32px;width:32px;height:32px;background-color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:10;">
+              <span style="color:#1B3A7E;font-weight:900;font-size:14px;">A</span>
+            </div>
+            <div style="position:absolute;left:1160px;top:24px;width:80px;height:50px;text-align:right;z-index:10;">
+              <p style="margin:0;font-size:18px;font-weight:700;color:white;line-height:1.2;">APL</p>
+              <p style="margin:0;font-size:10px;color:#d1d5db;line-height:1.2;letter-spacing:0.05em;">FINANCIAL</p>
+            </div>
+
+            <!-- Left Chart Card BG -->
+            <div style="position:absolute;left:48px;top:128px;width:576px;height:540px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);z-index:1;"></div>
+            <!-- Left Chart Header -->
+            <div style="position:absolute;left:72px;top:152px;width:528px;height:62px;z-index:10;">
+              <div style="border-bottom:1px solid #e2e8f0;padding-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;">
+                <div>
+                  <h2 class="s10-chart-title">보별 구성 비율 추이 (2021-2026)</h2>
+                  <p style="margin:4px 0 0 12px;font-size:12px;color:#6b7280;">포트폴리오 안정성 분석 (2026.04 기준, 단위: %)</p>
+                </div>
+                <div style="display:flex;">
+                  <div class="s10-legend-item"><div class="s10-legend-color" style="background-color:#1B3A7E;"></div>신용</div>
+                  <div class="s10-legend-item"><div class="s10-legend-color" style="background-color:#D4AF37;margin-right:0;"></div>담보</div>
+                </div>
+              </div>
+            </div>
+            <!-- Left Chart Canvas -->
+            <div style="position:absolute;left:72px;top:220px;width:528px;height:300px;z-index:10;">
+              <canvas id="slide10-portfolioChart" width="528" height="300" style="display:block;box-sizing:border-box;"></canvas>
+            </div>
+            <!-- Left Insight Box -->
+            <div style="position:absolute;left:72px;top:542px;width:528px;height:110px;background-color:#F1F5F9;border-radius:12px;border-left:4px solid #1B3A7E;z-index:1;"></div>
+            <div style="position:absolute;left:88px;top:558px;width:496px;height:90px;z-index:10;">
+              <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div style="width:32px;height:32px;border-radius:50%;background-color:white;display:flex;align-items:center;justify-content:center;color:#1B3A7E;box-shadow:0 1px 2px rgba(0,0,0,0.05);flex-shrink:0;margin-top:4px;">
+                  <i class="fas fa-chart-pie"></i>
+                </div>
+                <div>
+                  <h4 style="margin:0 0 4px 0;font-weight:700;color:#1B3A7E;font-size:14px;">신용과 담보의 균형잡힌 포트폴리오</h4>
+                  <p style="margin:0;font-size:12px;color:#4b5563;line-height:1.5;">
+                    <span style="font-weight:700;">신용대출(51.99%)</span>과 <span style="font-weight:700;color:#D4AF37;">담보대출(48.01%)</span>이 이상적인 균형을 이루고 있습니다. 2026년에도 신용 비중이 안정적으로 유지되며 수익성을 견인하는 동시에 담보 비중을 최적화하여 관리하고 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Chart Card BG -->
+            <div style="position:absolute;left:656px;top:128px;width:576px;height:540px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);z-index:1;"></div>
+            <!-- Right Chart Header -->
+            <div style="position:absolute;left:680px;top:152px;width:528px;height:62px;z-index:10;">
+              <div style="border-bottom:1px solid #e2e8f0;padding-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;">
+                <div>
+                  <h2 class="s10-chart-title">연도별 신규취급 추이 (2021-2026)</h2>
+                  <p style="margin:4px 0 0 12px;font-size:12px;color:#6b7280;">신규 영업 실적 분석 (2026.04 기준 누적)</p>
+                </div>
+                <div style="display:flex;gap:16px;">
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                    <span style="font-size:10px;color:#9ca3af;">2026 1~4월 누적</span>
+                    <span style="font-size:14px;font-weight:900;color:#1B3A7E;" id="slide10-new-amount">267.8억원</span>
+                  </div>
+                  <div style="width:1px;height:32px;background-color:#e5e7eb;"></div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                    <span style="font-size:10px;color:#9ca3af;">2026 1~4월 건수</span>
+                    <span style="font-size:14px;font-weight:900;color:#D4AF37;" id="slide10-new-count">2,058건</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Right Chart Canvas -->
+            <div style="position:absolute;left:680px;top:220px;width:528px;height:300px;z-index:10;">
+              <canvas id="slide10-newBizChart" width="528" height="300" style="display:block;box-sizing:border-box;"></canvas>
+            </div>
+            <!-- Right Insight Box -->
+            <div style="position:absolute;left:680px;top:542px;width:528px;height:110px;background-color:#FFFBEB;border-radius:12px;border-left:4px solid #D4AF37;z-index:1;"></div>
+            <div style="position:absolute;left:696px;top:558px;width:496px;height:90px;z-index:10;">
+              <div style="display:flex;align-items:flex-start;gap:12px;">
+                <div style="width:32px;height:32px;border-radius:50%;background-color:white;display:flex;align-items:center;justify-content:center;color:#D4AF37;box-shadow:0 1px 2px rgba(0,0,0,0.05);flex-shrink:0;margin-top:4px;">
+                  <i class="fas fa-arrow-trend-up"></i>
+                </div>
+                <div>
+                  <h4 style="margin:0 0 4px 0;font-weight:700;color:#1B3A7E;font-size:14px;">2026년 1분기 신규 영업 호조</h4>
+                  <p style="margin:0;font-size:12px;color:#4b5563;line-height:1.5;">
+                    2026년 4월까지의 누적 신규 취급액은 <span style="font-weight:700;color:#1B3A7E;">267.8억원</span>이며, 누적 신규 취급 건수 또한 <span style="font-weight:700;color:#D4AF37;">2,058건</span>으로 연초 견조한 영업 실적을 보여주고 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="position:absolute;left:48px;top:680px;width:1184px;height:24px;display:flex;justify-content:space-between;align-items:center;z-index:10;">
+              <p style="margin:0;font-size:10px;color:#9ca3af;">APL FINANCIAL PORTFOLIO ANALYSIS</p>
+              <p style="margin:0;font-size:10px;color:#9ca3af;">10</p>
+            </div>
+          </div>
+          <!-- /SLIDE 10 -->
+
           <!-- placeholder: 추가 슬라이드 -->
 
         </div><!-- /slide-scale-wrapper -->
@@ -5091,6 +5214,7 @@ function slideGoTo(idx) {
   if (idx === 6) slide7InitCharts();
   if (idx === 7) slide8InitCharts();
   if (idx === 8) slide9InitCharts();
+  if (idx === 9) slide10InitCharts();
 }
 
 /** 이전/다음 이동 */
@@ -5524,6 +5648,143 @@ function slide9InitCharts() {
             grid: { color: '#f1f5f9' },
             ticks: { font: { size: 10, family: 'Noto Sans KR' }, color: '#94a3b8' },
             suggestedMax: 35
+          }
+        }
+      }
+    });
+  }
+}
+
+/* ── Slide 10: 포트폴리오 구조 및 신규 영업 현황 ── */
+let slide10PortfolioChartInstance = null;
+let slide10NewBizChartInstance = null;
+function slide10InitCharts() {
+  if (slide10PortfolioChartInstance && slide10NewBizChartInstance) return;
+  if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+  // 좌측: 신용/담보 비율 수평 스택 바
+  const portfolioCanvas = document.getElementById('slide10-portfolioChart');
+  if (portfolioCanvas && !slide10PortfolioChartInstance) {
+    slide10PortfolioChartInstance = new Chart(portfolioCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['2021','2022','2023','2024','2025','2026'],
+        datasets: [
+          {
+            label: '신용',
+            data: [48.06,56.71,57.35,48.08,54.17,51.99],
+            backgroundColor: '#1B3A7E',
+            barThickness: 36,
+            datalabels: {
+              color: 'white',
+              font: { weight: 'bold', size: 11 },
+              formatter: val => val.toFixed(1) + '%'
+            }
+          },
+          {
+            label: '담보',
+            data: [51.94,43.29,42.65,51.92,45.83,48.01],
+            backgroundColor: '#D4AF37',
+            barThickness: 36,
+            datalabels: {
+              color: 'white',
+              font: { weight: 'bold', size: 11 },
+              formatter: val => val.toFixed(1) + '%'
+            }
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false,
+            callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.x + '%' }
+          }
+        },
+        scales: {
+          x: { stacked: true, max: 100, grid: { display: false }, ticks: { display: false } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Noto Sans KR', size: 12, weight: 'bold' }, color: '#475569' } }
+        },
+        layout: { padding: { right: 20 } }
+      }
+    });
+  }
+
+  // 우측: 신규취급 복합 차트 (bar + line, dual axis)
+  const newBizCanvas = document.getElementById('slide10-newBizChart');
+  if (newBizCanvas && !slide10NewBizChartInstance) {
+    slide10NewBizChartInstance = new Chart(newBizCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['2021','2022','2023','2024','2025','2026'],
+        datasets: [
+          {
+            label: '신규취급건수',
+            data: [1317,3744,3215,5864,7351,2058],
+            type: 'line',
+            borderColor: '#D4AF37',
+            borderWidth: 2,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#D4AF37',
+            pointRadius: 4,
+            yAxisID: 'y1',
+            datalabels: {
+              align: 'top', anchor: 'end',
+              color: '#D4AF37',
+              font: { size: 9, weight: 'bold' },
+              formatter: val => val.toLocaleString()
+            }
+          },
+          {
+            label: '신규취급금액',
+            data: [316.7,546.1,439.7,750.8,957.4,267.8],
+            backgroundColor: ctx => ctx.dataIndex === 5 ? '#1B3A7E' : 'rgba(27,58,126,0.6)',
+            borderRadius: 4,
+            barPercentage: 0.6,
+            yAxisID: 'y',
+            datalabels: {
+              anchor: 'center', align: 'center',
+              color: 'white',
+              font: { size: 9 },
+              rotation: -90,
+              formatter: val => val > 50 ? val : ''
+            }
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true } },
+          tooltip: {
+            mode: 'index', intersect: false,
+            backgroundColor: 'rgba(27,58,126,0.95)',
+            callbacks: {
+              label: ctx => {
+                const lbl = ctx.dataset.label ? ctx.dataset.label + ': ' : '';
+                return ctx.dataset.yAxisID === 'y' ? lbl + ctx.parsed.y + ' 억원' : lbl + ctx.parsed.y + ' 건';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { family: 'Noto Sans KR', size: 10 }, color: '#64748b' } },
+          y: {
+            type: 'linear', display: true, position: 'left',
+            title: { display: true, text: '금액(억원)', font: { size: 9 }, color: '#94a3b8' },
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 9 }, color: '#94a3b8' }
+          },
+          y1: {
+            type: 'linear', display: true, position: 'right',
+            title: { display: true, text: '건수(건)', font: { size: 9 }, color: '#D4AF37' },
+            grid: { display: false },
+            ticks: { display: false }
           }
         }
       }
