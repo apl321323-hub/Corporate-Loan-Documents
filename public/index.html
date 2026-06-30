@@ -525,29 +525,35 @@
   #sidebar nav a.nav-mapping.active { background: #93c5fd; color: #1e3a5f; }
 
   /* ── 회사소개서 슬라이드 뷰어 ─────────────────────────── */
-  #page-profile { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
+  #page-profile { padding: 0; display: flex; flex-direction: column; overflow-y: auto; }
   #page-profile .section-header { padding: 0 28px; flex-shrink: 0; }
 
   /* 슬라이드 뷰어 래퍼 */
   .slide-viewer-wrap {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    gap: 16px; padding: 12px 16px 0; min-height: 0; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    gap: 16px; padding: 12px 16px 0;
   }
 
-  /* 스케일 프레임 */
+  /* 스케일 프레임: 슬라이드 비율(16:9)을 유지하며 가로를 꽉 채움 */
   .slide-frame-outer {
-    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
-    background: #e2e8f0; border-radius: 12px; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    flex: 1; min-width: 0;
+    background: #1a1a2e; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.30);
+    /* 16:9 비율 유지 */
+    aspect-ratio: 16 / 9;
+    position: relative;
   }
+  /* wrapper가 outer를 꽉 채우며 scale로 1280×720 → 실제 크기 매핑 */
   .slide-scale-wrapper {
-    /* JS로 transform:scale() 설정 */
+    position: absolute;
+    top: 0; left: 0;
+    width: 1280px; height: 720px;
     transform-origin: top left;
-    flex-shrink: 0;
+    /* JS slideAutoScale()이 scale 값 주입 */
   }
 
   /* 개별 슬라이드 */
-  .slide { display: none; width: 1280px; height: 720px; flex-shrink: 0; }
+  .slide { display: none; width: 1280px; height: 720px; overflow: hidden; }
   .slide.active { display: block; }
 
   /* 화살표 버튼 */
@@ -4131,24 +4137,15 @@ function slideInitIndicator() {
   ).join('');
 }
 
-/** 슬라이드 크기를 뷰어에 맞게 스케일 조정 */
+/** 슬라이드 크기를 뷰어(outer)에 맞게 스케일 조정 */
 function slideAutoScale() {
   const outer = document.getElementById('slide-frame-outer');
   const wrapper = document.getElementById('slide-scale-wrapper');
   if (!outer || !wrapper) return;
-  const ow = outer.clientWidth  - 8;
-  const oh = outer.clientHeight - 8;
-  const scaleX = ow / 1280;
-  const scaleY = oh / 720;
-  const scale  = Math.min(scaleX, scaleY);
+  // outer는 CSS aspect-ratio:16/9 로 자동 높이 결정됨
+  // outer.clientWidth 기준으로 scale 계산
+  const scale = outer.clientWidth / 1280;
   wrapper.style.transform = `scale(${scale})`;
-  wrapper.style.width  = '1280px';
-  wrapper.style.height = '720px';
-  // outer 안에서 가운데 정렬
-  outer.style.display = 'flex';
-  outer.style.alignItems = 'center';
-  outer.style.justifyContent = 'center';
-  outer.style.height = `${Math.round(720 * scale + 8)}px`;
 }
 
 /** data-bind 속성으로 슬라이드 내 텍스트 즉시 반영 */
