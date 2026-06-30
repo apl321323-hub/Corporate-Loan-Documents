@@ -7766,20 +7766,27 @@ function laRenderCbGradeSection(periods) {
   });
   thead.appendChild(tr0);
 
-  // 1분위~10분위 행 (순서 고정)
-  const GRADE_ORDER = ['1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위'];
-  const gradeKeys = GRADE_ORDER.filter(g => secData[g]);
-  Object.keys(secData).filter(k => k !== '전체융잔 합계' && !GRADE_ORDER.includes(k)).forEach(k => gradeKeys.push(k));
+  // 10분위→1분위 내림차순, 무분위는 맨 뒤 (전체융잔 합계 제외한 분위 행들)
+  const GRADE_ORDER_DESC = ['10분위','9분위','8분위','7분위','6분위','5분위','4분위','3분위','2분위','1분위'];
+  // API에 있는 분위 키 (내림차순 순서 유지) + 무분위 마지막
+  const gradeKeys = GRADE_ORDER_DESC.filter(g => g in secData);
+  // GRADE_ORDER에 없는 기타 키 (10분위가 0원이어도 서버가 보내면 포함됨)
+  Object.keys(secData).filter(k => k !== '전체융잔 합계' && k !== '무분위' && !GRADE_ORDER_DESC.includes(k))
+    .forEach(k => gradeKeys.push(k));
+  if ('무분위' in secData) gradeKeys.push('무분위');
 
   gradeKeys.forEach((rowKey, idx) => {
     const tr = document.createElement('tr');
-    const color = idx < 3 ? '#15803d' : idx < 6 ? '#0369a1' : idx < 8 ? '#d97706' : '#dc2626';
+    const isNoGrade = rowKey === '무분위';
+    // 색상: 내림차순이므로 idx=0이 10분위(최고신용) → 앞에서 초록, 뒤로 갈수록 빨강, 무분위는 회색
+    const color = isNoGrade ? '#64748b'
+      : idx < 3 ? '#15803d' : idx < 5 ? '#0369a1' : idx < 7 ? '#d97706' : '#dc2626';
     const bgEven = idx % 2 === 0 ? '#fff' : '#fafafa';
     const td0 = document.createElement('td');
 
-    // 행 레이블: "1분위 (900 ~ 1000)" 형식
+    // 행 레이블: "10분위 (965 ~ 1000)" 형식, 무분위는 그냥 텍스트
     const cfg = cfgMap[rowKey];
-    if (cfg && cfg.lo !== undefined && cfg.hi !== undefined) {
+    if (!isNoGrade && cfg && cfg.lo !== undefined && cfg.hi !== undefined) {
       td0.innerHTML = `<span style="font-weight:700;">${rowKey}</span>`
         + ` <span style="font-size:11px;color:#94a3b8;font-weight:400;">(${cfg.lo} ~ ${cfg.hi})</span>`;
     } else {
@@ -7809,12 +7816,18 @@ function laRenderCbGradeSection(periods) {
   trTotal.appendChild(tdTotal0);
   periods.forEach(ym => {
     const td = document.createElement('td');
-    let total = null;
-    gradeKeys.forEach(rowKey => {
-      const v = (secData[rowKey] || {})[ym];
-      if (v != null) total = (total ?? 0) + v;
-    });
-    td.textContent = total !== null ? Math.round(total / 1_000_000).toLocaleString() : '–';
+    // 전체융잔 합계 행이 API에 있으면 그 값 사용, 없으면 분위+무분위 합산
+    const apiTotal = (secData['전체융잔 합계'] || {})[ym];
+    if (apiTotal != null) {
+      td.textContent = Math.round(apiTotal / 1_000_000).toLocaleString();
+    } else {
+      let total = null;
+      gradeKeys.forEach(rowKey => {
+        const v = (secData[rowKey] || {})[ym];
+        if (v != null) total = (total ?? 0) + v;
+      });
+      td.textContent = total !== null ? Math.round(total / 1_000_000).toLocaleString() : '–';
+    }
     td.style.cssText = 'text-align:right;padding:5px 8px;font-size:12px;font-weight:700;';
     trTotal.appendChild(td);
   });

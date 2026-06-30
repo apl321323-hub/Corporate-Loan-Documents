@@ -1960,8 +1960,9 @@ async def get_asset_data():
                             cb_cfg = json.load(_f)
                         uploaded_data["cb_grade_config"] = cb_cfg
                 if cb_cfg:
-                    # 등급별 집계 버킷 초기화
-                    grade_bucket: dict[str, float] = {}
+                    # 분위별 집계 버킷 — cfg에 있는 모든 분위를 0으로 미리 초기화 (데이터 없어도 표시)
+                    grade_bucket: dict[str, float] = {item["grade"]: 0.0 for item in cb_cfg if item.get("grade")}
+                    no_grade_total = 0.0  # 무분위: 어떤 구간에도 해당 없는 점수
                     total_cb = 0.0
                     for score_str, bal_m in cb_raw_pdata.items():
                         try:
@@ -1970,19 +1971,30 @@ async def get_asset_data():
                             continue
                         bal_won = float(bal_m) * 1_000_000
                         total_cb += bal_won
-                        # 해당 등급 찾기
+                        # 해당 분위 찾기
+                        matched = False
                         for cfg_item in cb_cfg:
                             lo = cfg_item.get("lo", 0)
                             hi = cfg_item.get("hi", 9999)
                             grade = cfg_item.get("grade", "")
                             if lo <= score <= hi:
                                 grade_bucket[grade] = grade_bucket.get(grade, 0.0) + bal_won
+                                matched = True
                                 break
-                    # 섹션 삽입
-                    for grade_key, bal_won in grade_bucket.items():
+                        if not matched:
+                            no_grade_total += bal_won
+
+                    # 섹션 삽입 — 10분위→1분위 내림차순, 무분위, 전체융잔 합계 순
+                    GRADE_ORDER_DESC = list(reversed([item["grade"] for item in cb_cfg if item.get("grade")]))
+                    for grade_key in GRADE_ORDER_DESC:
+                        bal_won = grade_bucket.get(grade_key, 0.0)
                         if grade_key not in cb_sec_out:
                             cb_sec_out[grade_key] = {}
                         cb_sec_out[grade_key][ym] = cb_sec_out[grade_key].get(ym, 0.0) + bal_won
+                    # 무분위
+                    if "무분위" not in cb_sec_out:
+                        cb_sec_out["무분위"] = {}
+                    cb_sec_out["무분위"][ym] = cb_sec_out["무분위"].get(ym, 0.0) + no_grade_total
                     # 전체융잔 합계
                     if total_cb > 0:
                         if "전체융잔 합계" not in cb_sec_out:
