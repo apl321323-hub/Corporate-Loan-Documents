@@ -8,6 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -2060,6 +2061,102 @@
             </div>
           </div>
           <!-- /SLIDE 3 -->
+
+          <!-- SLIDE 4 -->
+          <div class="slide" id="slide-4" style="width:1280px;height:720px;overflow:hidden;background-color:#F8FAFC;font-family:'Noto Sans KR',sans-serif;">
+            <!-- Header Background -->
+            <div style="position:absolute;left:0;top:0;width:1280px;height:96px;background-color:#1B3A7E;"></div>
+            <!-- Header Title -->
+            <div style="position:absolute;left:48px;top:24px;width:600px;height:65px;">
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="width:6px;height:40px;background-color:#D4AF37;"></div>
+                <div>
+                  <h1 style="font-size:30px;font-weight:700;color:white;letter-spacing:1px;">영업 실적 성장</h1>
+                  <p style="margin-top:4px;font-size:12px;color:#d1d5db;letter-spacing:2px;text-transform:uppercase;">Annual Sales Performance (2018-2026)</p>
+                </div>
+              </div>
+            </div>
+            <!-- Header Logo -->
+            <div style="position:absolute;left:1080px;top:32px;width:152px;height:44px;">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+                <div style="width:32px;height:32px;background-color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1B3A7E;font-weight:900;font-size:14px;">A</div>
+                <div style="text-align:right;">
+                  <p style="font-size:18px;font-weight:700;color:white;line-height:1;">APL</p>
+                  <p style="font-size:10px;color:#d1d5db;line-height:1;letter-spacing:1px;">FINANCIAL</p>
+                </div>
+              </div>
+            </div>
+            <!-- Left Column: Title -->
+            <div style="position:absolute;left:48px;top:144px;width:380px;height:120px;">
+              <h2 style="margin-bottom:12px;font-size:24px;font-weight:700;color:#1B3A7E;">폭발적인 성장세</h2>
+              <p style="color:#4b5563;line-height:1.6;font-size:14px;">2018년 본격적인 영업 개시 이후, 전략적인 포트폴리오 운용과 리스크 관리를 통해 매년 경이로운 성장을 기록하며 업계 선두 주자로 도약했습니다.</p>
+            </div>
+            <!-- Card 1 (white) -->
+            <div style="position:absolute;left:48px;top:280px;width:380px;height:175px;background-color:white;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);border-left:5px solid #1B3A7E;"></div>
+            <div style="position:absolute;left:72px;top:304px;width:332px;height:130px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <p style="font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total Growth</p>
+                <i class="fas fa-rocket" style="color:#1B3A7E;font-size:20px;"></i>
+              </div>
+              <p style="font-size:48px;font-weight:900;color:#1B3A7E;letter-spacing:-1px;line-height:1;" id="slide4-growth-total">31.6<span style="font-size:24px;font-weight:700;margin-left:4px;">배</span></p>
+              <p style="margin-top:16px;font-size:12px;color:#6b7280;font-weight:500;display:flex;align-items:center;gap:8px;">
+                <span style="background-color:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;">2018 vs 2025</span>기간 내 자산 규모 확대
+              </p>
+            </div>
+            <!-- Card 2 (navy) -->
+            <div style="position:absolute;left:48px;top:475px;width:380px;height:175px;background-color:#1B3A7E;border-radius:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);border-left:5px solid #D4AF37;"></div>
+            <div style="position:absolute;left:72px;top:499px;width:332px;height:130px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <p style="font-size:14px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:1px;">7-Year CAGR</p>
+                <i class="fas fa-chart-line" style="color:#D4AF37;font-size:20px;"></i>
+              </div>
+              <p style="font-size:48px;font-weight:900;color:white;letter-spacing:-1px;line-height:1;" id="slide4-cagr">63.6<span style="font-size:24px;font-weight:700;margin-left:4px;">%</span></p>
+              <p style="margin-top:16px;font-size:12px;color:#d1d5db;font-weight:500;display:flex;align-items:center;gap:8px;">
+                <span style="background-color:rgba(255,255,255,0.2);color:white;padding:2px 8px;border-radius:4px;">연평균 성장률</span>지속가능한 고속 성장
+              </p>
+            </div>
+            <!-- Annotation -->
+            <div style="position:absolute;left:48px;top:665px;width:380px;height:30px;">
+              <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#6b7280;">
+                <i class="fas fa-info-circle" style="color:#D4AF37;"></i>
+                <p>2026년 4월 최신 기준 데이터 (단위: 억원)</p>
+              </div>
+            </div>
+            <!-- Right Column: Chart Background -->
+            <div style="position:absolute;left:468px;top:144px;width:764px;height:506px;background-color:white;border-radius:16px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.05);"></div>
+            <!-- Right Column: Chart Header -->
+            <div style="position:absolute;left:500px;top:176px;width:700px;height:60px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+                <div>
+                  <h3 style="font-size:20px;font-weight:700;color:#1B3A7E;">연도별 대출잔액 추이</h3>
+                  <p style="margin-top:4px;font-size:14px;color:#6b7280;">Loan Balance Trend (Unit: KRW 100 Million)</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:16px;font-size:12px;font-weight:500;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="width:12px;height:12px;background-color:#1B3A7E;border-radius:2px;"></div>
+                    <span style="color:#4b5563;">성장 추이</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="width:12px;height:12px;background-color:#D4AF37;border-radius:2px;"></div>
+                    <span style="color:#4b5563;">2026 현재</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Chart Canvas -->
+            <div style="position:absolute;left:500px;top:250px;width:700px;height:370px;">
+              <canvas id="slide4-growthChart" width="700" height="370" style="display:block;box-sizing:border-box;"></canvas>
+            </div>
+            <!-- Footer -->
+            <div style="position:absolute;left:48px;top:685px;width:500px;height:20px;">
+              <p style="font-size:10px;color:#9ca3af;letter-spacing:1px;">APL FINANCIAL PERFORMANCE</p>
+            </div>
+            <!-- Page Number -->
+            <div style="position:absolute;left:1192px;top:685px;width:40px;height:20px;">
+              <p style="font-size:10px;color:#9ca3af;text-align:right;">04</p>
+            </div>
+          </div>
+          <!-- /SLIDE 4 -->
 
           <!-- placeholder: 추가 슬라이드 -->
 
@@ -4381,6 +4478,9 @@ function slideGoTo(idx) {
   const nextBtn = document.getElementById('slide-next');
   if (prevBtn) prevBtn.disabled = (idx === 0);
   if (nextBtn) nextBtn.disabled = (idx === slides.length - 1);
+
+  // 슬라이드별 차트 초기화
+  if (idx === 3) slide4InitChart();
 }
 
 /** 이전/다음 이동 */
@@ -4423,6 +4523,81 @@ function slideViewerInit() {
   // 창 크기 변경 시 재조정
   window.removeEventListener('resize', slideAutoScale);
   window.addEventListener('resize', slideAutoScale);
+}
+
+/* ── Slide 4: 영업실적 성장 차트 ── */
+let slide4ChartInstance = null;
+function slide4InitChart() {
+  const canvas = document.getElementById('slide4-growthChart');
+  if (!canvas) return;
+  // 이미 초기화된 경우 재생성 방지
+  if (slide4ChartInstance) return;
+
+  // ChartDataLabels 플러그인 등록 (전역)
+  if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+  const ctx = canvas.getContext('2d');
+  slide4ChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'],
+      datasets: [{
+        label: '대출잔액 (억원)',
+        data: [32, 92, 150, 288, 548, 610, 821, 1010.1, 1070.1],
+        backgroundColor: function(context) {
+          return context.dataIndex === 8 ? '#D4AF37' : '#1B3A7E';
+        },
+        borderRadius: 4,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 30 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(27,58,126,0.9)',
+          titleFont: { family: 'Noto Sans KR', size: 14 },
+          bodyFont:  { family: 'Noto Sans KR', size: 13 },
+          padding: 10,
+          callbacks: {
+            label: ctx => ctx.parsed.y.toLocaleString() + ' 억원'
+          }
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          offset: -4,
+          color: ctx => ctx.dataIndex === 8 ? '#D4AF37' : '#1B3A7E',
+          font: { family: 'Noto Sans KR', weight: 'bold', size: 14 },
+          formatter: val => val.toLocaleString()
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#f1f5f9', drawBorder: false },
+          ticks: {
+            font: { family: 'Noto Sans KR', size: 11 },
+            color: '#94a3b8',
+            callback: val => val.toLocaleString()
+          },
+          border: { display: false }
+        },
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { family: 'Noto Sans KR', weight: '500', size: 12 },
+            color: '#475569'
+          },
+          border: { display: false }
+        }
+      }
+    }
+  });
 }
 
 /** ── 유틸 ── */
