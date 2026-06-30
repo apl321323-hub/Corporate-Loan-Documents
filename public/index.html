@@ -3743,12 +3743,10 @@ function exportCompanyInfo() {
   }
 
   const wb = XLSX.utils.book_new();
+  function gv(id) { return document.getElementById(id)?.value || ''; }
+  function v(val) { return (val === null || val === undefined) ? '' : val; }
 
-  // ── 헬퍼: 셀 스타일용 래퍼 ──────────────────────────────────────
-  function v(val) { return val || ''; }
-  function gv(id) { return v(document.getElementById(id)?.value); }
-
-  // ── 주주현황 읽기 (차주사) ──────────────────────────────────────
+  // ── 주주현황 (차주사) ─────────────────────────────────────────
   const shareholders = [];
   for (let i = 0; i < 6; i++) {
     shareholders.push({
@@ -3760,7 +3758,7 @@ function exportCompanyInfo() {
     });
   }
 
-  // ── 주주현황 읽기 (보증인) ──────────────────────────────────────
+  // ── 주주현황 (보증인) ─────────────────────────────────────────
   const guShareholders = [];
   for (let i = 0; i < 7; i++) {
     guShareholders.push({
@@ -3772,97 +3770,232 @@ function exportCompanyInfo() {
     });
   }
 
-  // ── 대표이사 이력 / 연혁 / 보증인 연혁 ────────────────────────
-  const getHistRows = (rows) => (rows || []).map(r => [v(r.date), v(r.content)]);
+  // ── 이력/연혁 행 목록 (빈 행도 원본과 동일하게 최소 n행 유지) ──
+  function histRows(rows, minCount) {
+    const data = (rows || []).map(r => [v(r.date), v(r.content)]);
+    while (data.length < minCount) data.push(['', '']);
+    return data;
+  }
+
+  const ceoHist = histRows(ciCeoRows, 8);
+  const ciHist  = histRows(ciHistoryRows, 15);
+  const guHist  = histRows(guHistoryRows, 8);
 
   // ══════════════════════════════════════════════════════════════
-  //  시트1: 차주사
+  //  단일 시트 "기업정보" — 원본과 동일한 행/열 배치
+  //  row  1: 1. 기업정보
+  //  row  3: ■ 차주사
+  //  row  4: 차주명 | 값 | 대표이사 | 값 | 실경영자 | 값
+  //  row  5: 사업자번호 | 값 | 업종 | 값 | 기업형태 | 값
+  //  row  6: 전화번호 | 값 | 대표이사전화번호 | 값 | 상장 | 값
+  //  row  7: 임직원수 | 값 | 사업장주소 | 값(D7:F7 병합)
+  //  row  8: 주주현황(A8:A14) | 주주명 | 주식수 | 지분율 | 주식금액 | 이해관계
+  //  row  9~14: 주주 6명
+  //  row 15: 등기임원 | 임원들
+  //  row 16: 대표이사(실경영자)이력(A16:A24) | 일자(년/월) | 내용(C16:F16 병합)
+  //  row 17~24: 이력 8행
+  //  row 25: 연혁(A25:A40) | 일자(년/월) | 내용(C25:F25 병합)
+  //  row 26~40: 연혁 15행
+  //  row 42: ■ 보증(법)인
+  //  row 43: 보증(법)인명 | 값 | 대표이사 | | 실경영자 | 값
+  //  row 44: 사업자번호 | 값 | 업종 | | 기업형태
+  //  row 45: 전화번호 | 값 | 대표이사전화번호 | | 상장
+  //  row 46: 임직원수 | | 사업장주소 | 값(D46:F46)
+  //  row 47: 주주현황(A47:A53) | 주주명 | 주식수 | 지분율 | 주식금액 | 이해관계
+  //  row 48~53: 보증인 주주 6명
+  //  row 54: 등기임원 | 임원들
+  //  row 55: 연혁(경력)(A55:A63) | 일자(년/월) | 내용(C55:F55)
+  //  row 56~63: 보증인 이력 8행
+  //  row 65: ■ 기타
+  //  row 66: 구분 | 내용(B66:F66)
+  //  row 67: 차주사 영업방향 및 장점 | 값(B67:F67)
+  //  row 68: 관계사 및 계열사 | 값(B68:F68)
   // ══════════════════════════════════════════════════════════════
-  const ciRows = [
-    ['■ 차주사'],
-    [],
-    ['[기본정보]'],
-    ['차주명', gv('ci-name'), '', '대표이사', gv('ci-rep'), '', '실경영자', gv('ci-actual')],
-    ['사업자번호', gv('ci-bizno'), '', '업종', gv('ci-industry'), '', '기업형태', gv('ci-type')],
-    ['전화번호', gv('ci-phone'), '', '대표이사전화번호', gv('ci-rep-phone'), '', '상장', gv('ci-listed')],
-    ['임직원수', gv('ci-employees'), '', '사업장주소', gv('ci-address')],
-    [],
-    ['[등기임원]'],
-    [ciExecutives.join(', ')],
-    [],
-    ['[주주현황]'],
-    ['주주명', '주식수', '지분율', '주식금액', '이해관계'],
-    ...shareholders.filter(s => s.name).map(s => [s.name, s.shares, s.ratio, s.amount, s.relation]),
-    [],
-    ['[대표이사(실경영자) 이력]'],
-    ['날짜', '내용'],
-    ...getHistRows(ciCeoRows).filter(r => r[0] || r[1]),
-    [],
-    ['[연혁]'],
-    ['날짜', '내용'],
-    ...getHistRows(ciHistoryRows).filter(r => r[0] || r[1]),
+
+  // 빈 68행 × 6열 배열 초기화
+  const TOTAL_ROWS = 68;
+  const TOTAL_COLS = 6;
+  const data = [];
+  for (let r = 0; r < TOTAL_ROWS; r++) {
+    data.push(Array(TOTAL_COLS).fill(''));
+  }
+
+  // A열=0, B=1, C=2, D=3, E=4, F=5
+  const A=0, B=1, C=2, D=3, E=4, F=5;
+
+  // row 1 (idx 0)
+  data[0][A] = '1. 기업정보';
+
+  // row 3 (idx 2)
+  data[2][A] = '■ 차주사';
+
+  // row 4 (idx 3): 기본정보
+  data[3][A] = '차주명';        data[3][B] = gv('ci-name');
+  data[3][C] = '대표이사';      data[3][D] = gv('ci-rep');
+  data[3][E] = '실경영자';
+
+  // row 5 (idx 4)
+  data[4][A] = '사업자번호';    data[4][B] = gv('ci-bizno');
+  data[4][C] = '업종';          data[4][D] = gv('ci-industry');
+  data[4][E] = '기업형태';      data[4][F] = gv('ci-type');
+
+  // row 6 (idx 5)
+  data[5][A] = '전화번호';      data[5][B] = gv('ci-phone');
+  data[5][C] = '대표이사 전화번호'; data[5][D] = gv('ci-rep-phone');
+  data[5][E] = '상장';          data[5][F] = gv('ci-listed');
+
+  // row 7 (idx 6): 사업장주소 D7:F7 병합
+  data[6][A] = '임직원수';      data[6][B] = gv('ci-employees');
+  data[6][C] = '사업장주소';    data[6][D] = gv('ci-address');
+
+  // row 8 (idx 7): 주주현황 헤더 (A8:A14 병합)
+  data[7][A] = '주주현황';
+  data[7][B] = '주주명';        data[7][C] = '주식수';
+  data[7][D] = '지분율';        data[7][E] = '주식금액';  data[7][F] = '이해관계';
+
+  // row 9~14 (idx 8~13): 주주 6명
+  for (let i = 0; i < 6; i++) {
+    const s = shareholders[i] || {};
+    data[8+i][B] = s.name || '';    data[8+i][C] = s.shares || '';
+    data[8+i][D] = s.ratio || '';   data[8+i][E] = s.amount || '';
+    data[8+i][F] = s.relation || '';
+  }
+
+  // row 15 (idx 14): 등기임원 (원본: 각 셀 분리 — B15, C15, D15, ...)
+  data[14][A] = '등기임원';
+  (ciExecutives || []).forEach((exec, i) => { if (i < 5) data[14][B + i] = exec; });
+
+  // row 16 (idx 15): 대표이사 이력 헤더 (A16:A24 병합)
+  data[15][A] = '대표이사(실경영자)\n\n이    력';
+  data[15][B] = '일자(년/월)';  data[15][C] = '내용';
+
+  // row 17~24 (idx 16~23): 이력 8행
+  ceoHist.forEach((h, i) => {
+    data[16+i][B] = h[0];  data[16+i][C] = h[1];
+  });
+
+  // row 25 (idx 24): 연혁 헤더 (A25:A40 병합)
+  data[24][A] = '연      혁';
+  data[24][B] = '일자(년/월)';  data[24][C] = '내용';
+
+  // row 26~40 (idx 25~39): 연혁 15행
+  ciHist.forEach((h, i) => {
+    data[25+i][B] = h[0];  data[25+i][C] = h[1];
+  });
+
+  // row 42 (idx 41): ■ 보증(법)인
+  data[41][A] = '■ 보증(법)인';
+
+  // row 43 (idx 42)
+  data[42][A] = '보증(법)인명';  data[42][B] = gv('gu-name');
+  data[42][C] = '대표이사';      // D없음 (원본과 동일)
+  data[42][E] = '실경영자';
+
+  // row 44 (idx 43)
+  data[43][A] = '사업자번호';    data[43][B] = gv('gu-bizno');
+  data[43][C] = '업종';
+  data[43][E] = '기업형태';
+
+  // row 45 (idx 44)
+  data[44][A] = '전화번호';      data[44][B] = gv('gu-phone');
+  data[44][C] = '대표이사 전화번호';
+  data[44][E] = '상장';
+
+  // row 46 (idx 45): 사업장주소 D46:F46 병합
+  data[45][A] = '임직원수';      data[45][B] = gv('gu-employees');
+  data[45][C] = '사업장주소';    data[45][D] = gv('gu-address');
+
+  // row 47 (idx 46): 보증인 주주현황 헤더 (A47:A53 병합)
+  data[46][A] = '주주현황';
+  data[46][B] = '주주명';        data[46][C] = '주식수';
+  data[46][D] = '지분율';        data[46][E] = '주식금액';  data[46][F] = '이해관계';
+
+  // row 48~53 (idx 47~52): 보증인 주주 6명
+  for (let i = 0; i < 6; i++) {
+    const s = guShareholders[i] || {};
+    data[47+i][B] = s.name || '';   data[47+i][C] = s.shares || '';
+    data[47+i][D] = s.ratio || '';  data[47+i][E] = s.amount || '';
+    data[47+i][F] = s.relation || '';
+  }
+
+  // row 54 (idx 53): 보증인 등기임원 (원본: 각 셀 분리)
+  data[53][A] = '등기임원';
+  (guExecutives || []).forEach((exec, i) => { if (i < 5) data[53][B + i] = exec; });
+
+  // row 55 (idx 54): 보증인 연혁 헤더 (A55:A63 병합)
+  data[54][A] = '연      혁\n\n(경     력)';
+  data[54][B] = '일자(년/월)';  data[54][C] = '내용';
+
+  // row 56~63 (idx 55~62): 보증인 이력 8행
+  guHist.forEach((h, i) => {
+    data[55+i][B] = h[0];  data[55+i][C] = h[1];
+  });
+
+  // row 65 (idx 64): ■ 기타
+  data[64][A] = '■ 기타';
+
+  // row 66 (idx 65): 기타 헤더 (B66:F66 병합)
+  data[65][A] = '구분';  data[65][B] = '내용';
+
+  // row 67 (idx 66): 영업방향 (A67, B67:F67 병합)
+  data[66][A] = '차주사 영업방향\n및\n장      점';
+  data[66][B] = gv('ci-business-direction');
+
+  // row 68 (idx 67): 관계사 (A68, B68:F68 병합)
+  data[67][A] = '관계사 및 계열사';
+  data[67][B] = gv('ci-affiliates');
+
+  // ── 시트 생성 ──────────────────────────────────────────────────
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // ── 병합셀 (원본과 동일) ────────────────────────────────────────
+  ws['!merges'] = [
+    // 차주사
+    {s:{r:6,c:3},  e:{r:6,c:5}},   // D7:F7 사업장주소값
+    {s:{r:7,c:0},  e:{r:13,c:0}},  // A8:A14 주주현황
+    {s:{r:15,c:0}, e:{r:23,c:0}},  // A16:A24 대표이사이력
+    {s:{r:15,c:2}, e:{r:15,c:5}},  // C16:F16 내용헤더
+    // 연혁 (A25:A40, 각 내용열 C:F)
+    {s:{r:24,c:0}, e:{r:39,c:0}},  // A25:A40
+    {s:{r:24,c:2}, e:{r:24,c:5}},  // C25:F25
+    ...[16,17,18,19,20,21,22,23].map(r => ({s:{r,c:2}, e:{r,c:5}})), // C17:F17 ~ C24:F24
+    ...[25,26,27,28,29,30,31,32,33,34,35,36,37,38,39].map(r => ({s:{r,c:2}, e:{r,c:5}})), // C26:F26 ~ C40:F40
+    // 보증인
+    {s:{r:45,c:3}, e:{r:45,c:5}},  // D46:F46 사업장주소값
+    {s:{r:46,c:0}, e:{r:52,c:0}},  // A47:A53 주주현황
+    {s:{r:54,c:0}, e:{r:62,c:0}},  // A55:A63 연혁
+    {s:{r:54,c:2}, e:{r:54,c:5}},  // C55:F55
+    ...[55,56,57,58,59,60,61,62].map(r => ({s:{r,c:2}, e:{r,c:5}})), // C56:F56 ~ C63:F63
+    // 기타
+    {s:{r:65,c:1}, e:{r:65,c:5}},  // B66:F66
+    {s:{r:66,c:1}, e:{r:66,c:5}},  // B67:F67
+    {s:{r:67,c:1}, e:{r:67,c:5}},  // B68:F68
   ];
 
-  const ciWs = XLSX.utils.aoa_to_sheet(ciRows);
-  ciWs['!cols'] = [
-    {wch:14},{wch:22},{wch:2},{wch:16},{wch:22},{wch:2},{wch:12},{wch:22}
-  ];
-  XLSX.utils.book_append_sheet(wb, ciWs, '차주사');
-
-  // ══════════════════════════════════════════════════════════════
-  //  시트2: 보증인
-  // ══════════════════════════════════════════════════════════════
-  const guRows = [
-    ['■ 보증(법)인'],
-    [],
-    ['[기본정보]'],
-    ['보증인명', gv('gu-name'), '', '관계', gv('gu-relation'), '', '실경영자', gv('gu-actual')],
-    ['사업자번호', gv('gu-bizno'), '', '업종', gv('gu-industry'), '', '기업형태', gv('gu-type')],
-    ['전화번호', gv('gu-phone'), '', '대표이사전화번호', gv('gu-rep-phone'), '', '상장', gv('gu-listed')],
-    ['임직원수', gv('gu-employees'), '', '사업장주소', gv('gu-address')],
-    [],
-    ['[등기임원]'],
-    [guExecutives.join(', ')],
-    [],
-    ['[주주현황]'],
-    ['주주명', '주식수', '지분율', '주식금액', '이해관계'],
-    ...guShareholders.filter(s => s.name).map(s => [s.name, s.shares, s.ratio, s.amount, s.relation]),
-    [],
-    ['[연혁]'],
-    ['날짜', '내용'],
-    ...getHistRows(guHistoryRows).filter(r => r[0] || r[1]),
+  // ── 열 너비 (원본 기준: A열만 지정, 나머지 기본값)
+  ws['!cols'] = [
+    {wch: 20.625}, // A
   ];
 
-  const guWs = XLSX.utils.aoa_to_sheet(guRows);
-  guWs['!cols'] = [
-    {wch:14},{wch:22},{wch:2},{wch:16},{wch:22},{wch:2},{wch:12},{wch:22}
-  ];
-  XLSX.utils.book_append_sheet(wb, guWs, '보증인');
+  // ── 행 높이 (원본과 동일)
+  ws['!rows'] = [];
+  ws['!rows'][0]  = {hpt: 18.75};   // row1
+  ws['!rows'][1]  = {hpt: 18.75};   // row2
+  ws['!rows'][14] = {hpt: 15.0};    // row15 등기임원
+  ws['!rows'][15] = {hpt: 16.5};    // row16 대표이사이력 헤더
+  ws['!rows'][53] = {hpt: 15.0};    // row54 보증인 등기임원
+  ws['!rows'][66] = {hpt: 244.5};   // row67 영업방향 (원본값 그대로)
+  ws['!rows'][67] = {hpt: 218.25};  // row68 관계사 (원본값 그대로)
 
-  // ══════════════════════════════════════════════════════════════
-  //  시트3: 기타
-  // ══════════════════════════════════════════════════════════════
-  const etcRows = [
-    ['■ 기타'],
-    [],
-    ['[차주사 영업방향 및 장점]'],
-    [gv('ci-business-direction')],
-    [],
-    ['[관계사 및 계열사]'],
-    [gv('ci-affiliates')],
-  ];
+  XLSX.utils.book_append_sheet(wb, ws, '기업정보');
 
-  const etcWs = XLSX.utils.aoa_to_sheet(etcRows);
-  etcWs['!cols'] = [{wch:80}];
-  XLSX.utils.book_append_sheet(wb, etcWs, '기타');
-
-  // ── 파일명: 기업명_기업정보_YYYYMMDD.xlsx ──────────────────────
+  // ── 파일명 ───────────────────────────────────────────────────
   const companyName = gv('ci-name') || '기업정보';
   const today = new Date();
   const dateStr = today.getFullYear().toString()
     + String(today.getMonth()+1).padStart(2,'0')
     + String(today.getDate()).padStart(2,'0');
-  const fileName = `${companyName}_기업정보_${dateStr}.xlsx`;
+  const fileName = `기업여신자료_기업현황_${companyName}_${dateStr}.xlsx`;
 
   XLSX.writeFile(wb, fileName);
   showToast(`✅ ${fileName} 다운로드 완료`, 'success');
