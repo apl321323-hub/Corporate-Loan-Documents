@@ -3737,7 +3737,135 @@ async function saveCompanyInfo() {
 }
 
 function exportCompanyInfo() {
-  showToast('ℹ️ 기업정보 엑셀 다운로드는 준비 중입니다.', '');
+  if (typeof XLSX === 'undefined') {
+    showToast('❌ SheetJS 라이브러리 로드 중입니다. 잠시 후 다시 시도하세요.', 'error');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // ── 헬퍼: 셀 스타일용 래퍼 ──────────────────────────────────────
+  function v(val) { return val || ''; }
+  function gv(id) { return v(document.getElementById(id)?.value); }
+
+  // ── 주주현황 읽기 (차주사) ──────────────────────────────────────
+  const shareholders = [];
+  for (let i = 0; i < 6; i++) {
+    shareholders.push({
+      name:     document.querySelector(`[data-sh="${i}"][data-field="name"]`)?.value || '',
+      shares:   document.querySelector(`[data-sh="${i}"][data-field="shares"]`)?.value || '',
+      ratio:    document.querySelector(`[data-sh="${i}"][data-field="ratio"]`)?.value || '',
+      amount:   document.querySelector(`[data-sh="${i}"][data-field="amount"]`)?.value || '',
+      relation: document.querySelector(`[data-sh="${i}"][data-field="relation"]`)?.value || ''
+    });
+  }
+
+  // ── 주주현황 읽기 (보증인) ──────────────────────────────────────
+  const guShareholders = [];
+  for (let i = 0; i < 7; i++) {
+    guShareholders.push({
+      name:     document.querySelector(`[data-gsh="${i}"][data-field="name"]`)?.value || '',
+      shares:   document.querySelector(`[data-gsh="${i}"][data-field="shares"]`)?.value || '',
+      ratio:    document.querySelector(`[data-gsh="${i}"][data-field="ratio"]`)?.value || '',
+      amount:   document.querySelector(`[data-gsh="${i}"][data-field="amount"]`)?.value || '',
+      relation: document.querySelector(`[data-gsh="${i}"][data-field="relation"]`)?.value || ''
+    });
+  }
+
+  // ── 대표이사 이력 / 연혁 / 보증인 연혁 ────────────────────────
+  const getHistRows = (rows) => (rows || []).map(r => [v(r.date), v(r.content)]);
+
+  // ══════════════════════════════════════════════════════════════
+  //  시트1: 차주사
+  // ══════════════════════════════════════════════════════════════
+  const ciRows = [
+    ['■ 차주사'],
+    [],
+    ['[기본정보]'],
+    ['차주명', gv('ci-name'), '', '대표이사', gv('ci-rep'), '', '실경영자', gv('ci-actual')],
+    ['사업자번호', gv('ci-bizno'), '', '업종', gv('ci-industry'), '', '기업형태', gv('ci-type')],
+    ['전화번호', gv('ci-phone'), '', '대표이사전화번호', gv('ci-rep-phone'), '', '상장', gv('ci-listed')],
+    ['임직원수', gv('ci-employees'), '', '사업장주소', gv('ci-address')],
+    [],
+    ['[등기임원]'],
+    [ciExecutives.join(', ')],
+    [],
+    ['[주주현황]'],
+    ['주주명', '주식수', '지분율', '주식금액', '이해관계'],
+    ...shareholders.filter(s => s.name).map(s => [s.name, s.shares, s.ratio, s.amount, s.relation]),
+    [],
+    ['[대표이사(실경영자) 이력]'],
+    ['날짜', '내용'],
+    ...getHistRows(ciCeoRows).filter(r => r[0] || r[1]),
+    [],
+    ['[연혁]'],
+    ['날짜', '내용'],
+    ...getHistRows(ciHistoryRows).filter(r => r[0] || r[1]),
+  ];
+
+  const ciWs = XLSX.utils.aoa_to_sheet(ciRows);
+  ciWs['!cols'] = [
+    {wch:14},{wch:22},{wch:2},{wch:16},{wch:22},{wch:2},{wch:12},{wch:22}
+  ];
+  XLSX.utils.book_append_sheet(wb, ciWs, '차주사');
+
+  // ══════════════════════════════════════════════════════════════
+  //  시트2: 보증인
+  // ══════════════════════════════════════════════════════════════
+  const guRows = [
+    ['■ 보증(법)인'],
+    [],
+    ['[기본정보]'],
+    ['보증인명', gv('gu-name'), '', '관계', gv('gu-relation'), '', '실경영자', gv('gu-actual')],
+    ['사업자번호', gv('gu-bizno'), '', '업종', gv('gu-industry'), '', '기업형태', gv('gu-type')],
+    ['전화번호', gv('gu-phone'), '', '대표이사전화번호', gv('gu-rep-phone'), '', '상장', gv('gu-listed')],
+    ['임직원수', gv('gu-employees'), '', '사업장주소', gv('gu-address')],
+    [],
+    ['[등기임원]'],
+    [guExecutives.join(', ')],
+    [],
+    ['[주주현황]'],
+    ['주주명', '주식수', '지분율', '주식금액', '이해관계'],
+    ...guShareholders.filter(s => s.name).map(s => [s.name, s.shares, s.ratio, s.amount, s.relation]),
+    [],
+    ['[연혁]'],
+    ['날짜', '내용'],
+    ...getHistRows(guHistoryRows).filter(r => r[0] || r[1]),
+  ];
+
+  const guWs = XLSX.utils.aoa_to_sheet(guRows);
+  guWs['!cols'] = [
+    {wch:14},{wch:22},{wch:2},{wch:16},{wch:22},{wch:2},{wch:12},{wch:22}
+  ];
+  XLSX.utils.book_append_sheet(wb, guWs, '보증인');
+
+  // ══════════════════════════════════════════════════════════════
+  //  시트3: 기타
+  // ══════════════════════════════════════════════════════════════
+  const etcRows = [
+    ['■ 기타'],
+    [],
+    ['[차주사 영업방향 및 장점]'],
+    [gv('ci-business-direction')],
+    [],
+    ['[관계사 및 계열사]'],
+    [gv('ci-affiliates')],
+  ];
+
+  const etcWs = XLSX.utils.aoa_to_sheet(etcRows);
+  etcWs['!cols'] = [{wch:80}];
+  XLSX.utils.book_append_sheet(wb, etcWs, '기타');
+
+  // ── 파일명: 기업명_기업정보_YYYYMMDD.xlsx ──────────────────────
+  const companyName = gv('ci-name') || '기업정보';
+  const today = new Date();
+  const dateStr = today.getFullYear().toString()
+    + String(today.getMonth()+1).padStart(2,'0')
+    + String(today.getDate()).padStart(2,'0');
+  const fileName = `${companyName}_기업정보_${dateStr}.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+  showToast(`✅ ${fileName} 다운로드 완료`, 'success');
 }
 
 // ===== BS/IS 렌더링 =====
