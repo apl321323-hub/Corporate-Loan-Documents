@@ -1907,7 +1907,7 @@
         <span class="sector-badge" style="background:#0f766e;">섹터 12</span>
         <div>
           <div class="upload-sector-title">대출자산속성</div>
-          <div class="upload-sector-desc">기업여신자료 - 대출자산속성.xlsx → 18개 섹션 + 상품별CB등급</div>
+          <div class="upload-sector-desc">기업여신자료 - 대출자산속성.xlsx → 18개 섹션 + 상품별CB분위</div>
         </div>
         <span class="upload-status-dot" id="dot-asset"></span>
       </div>
@@ -2137,7 +2137,7 @@
     <button id="cfg-tab-btn-cbgrade" onclick="cfgSwitchTab('cbgrade')"
       style="padding:9px 22px;font-size:13px;font-weight:600;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
              background:none;color:#64748b;cursor:pointer;">
-      <i class="fas fa-star-half-alt"></i> CB등급
+      <i class="fas fa-star-half-alt"></i> CB분위
     </button>
   </div>
 
@@ -2373,16 +2373,16 @@
     </div>
   </div>
 
-  <!-- ── CB등급 탭 ── -->
+  <!-- ── CB분위 탭 ── -->
   <div id="cfg-tab-cbgrade" style="display:none;">
     <div style="margin-bottom:14px;">
-      <span style="font-size:12px;color:#64748b;">1~10등급 그룹에 NICE스코어 점수 구간을 등록합니다. 등록한 구간 기준으로 대출자산속성 CB등급 탭에 반영됩니다.</span>
+      <span style="font-size:12px;color:#64748b;">1~10분위 그룹에 NICE스코어 점수 구간을 등록합니다. 등록한 구간 기준으로 대출자산속성 CB분위 탭에 반영됩니다.</span>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
       <!-- 왼쪽: 등급별 구간 입력 -->
       <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:12px 16px;background:#0f766e;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
-          <span><i class="fas fa-star-half-alt"></i> CB등급 점수 구간 설정</span>
+          <span><i class="fas fa-star-half-alt"></i> CB분위 점수 구간 설정</span>
           <button onclick="cbgSave()"
             style="background:#fff;color:#0f766e;border:none;padding:4px 14px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;">
             <i class="fas fa-save"></i> 저장
@@ -2391,7 +2391,7 @@
         <div style="padding:16px;">
           <div style="display:grid;grid-template-columns:80px 1fr 20px 1fr;gap:8px;align-items:center;margin-bottom:8px;
                       font-size:11px;font-weight:700;color:#64748b;">
-            <div>등급</div><div>최저점수</div><div></div><div>최고점수</div>
+            <div>분위</div><div>최저점수</div><div></div><div>최고점수</div>
           </div>
           <div id="cbg-grade-inputs">
             <!-- JS로 렌더링 -->
@@ -2401,7 +2401,7 @@
       <!-- 오른쪽: 현재 등록된 구간 요약 -->
       <div class="card" style="padding:0;overflow:hidden;">
         <div style="padding:12px 16px;background:#1e293b;color:#fff;font-weight:700;font-size:13px;">
-          <i class="fas fa-list-ul"></i> 등록된 CB등급 구간
+          <i class="fas fa-list-ul"></i> 등록된 CB분위 구간
         </div>
         <div id="cbg-summary" style="padding:16px;">
           <span style="color:#94a3b8;font-size:13px;">저장 후 여기에 구간이 표시됩니다.</span>
@@ -4929,11 +4929,11 @@ let jgGroups    = [];   // [{name, items:[직업분류raw값, ...]}, ...]
 let jgSelIdx    = -1;
 let jgAllJobs   = [];   // 결산자료 AC열 고유값 목록
 
-// ── CB등급 전역 변수 ─────────────────────────────────────────────
-let cbgConfig = [];    // [{grade, lo, hi}, ...] 1~10등급
-const CBG_GRADE_NAMES = ['1등급','2등급','3등급','4등급','5등급','6등급','7등급','8등급','9등급','10등급'];
+// ── CB분위 전역 변수 ─────────────────────────────────────────────
+let cbgConfig = [];    // [{grade, lo, hi}, ...] 1~10분위
+const CBG_GRADE_NAMES = ['1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위'];
 
-// ===== CB등급 설정 (cbg) =====
+// ===== CB분위 설정 (cbg) =====
 async function cbgInit() {
   try {
     const res = await axios.get(`${API_BASE}/api/cb-grade-config`);
@@ -5032,8 +5032,8 @@ async function cbgSave() {
     await axios.post(`${API_BASE}/api/cb-grade-config`, cfg);
     cbgConfig = cfg;
     cbgRenderSummary();
-    showToast('✅ CB등급 구간 저장됨', 'success');
-    // assetData 갱신 (CB등급 섹션 반영)
+    showToast('✅ CB분위 구간 저장됨', 'success');
+    // assetData 갱신 (CB분위 섹션 반영)
     if (typeof loadAssetData === 'function') {
       try { await loadAssetData(); } catch(e) {}
     }
@@ -6773,8 +6773,8 @@ const LA_SEC_MAP = {
   '10': ['상품구분', '상품구분상세', '상품구분화해채권'],
   '11': ['성별', '연령별', '직업별'],
   '12': '지역별',
-  '13': 'CB등급',
-  '14': null,   // 상품별CB등급: 별도 처리
+  '13': 'CB분위',
+  '14': null,   // 상품별CB분위: 별도 처리
 };
 
 // ── 숫자 포맷 ──────────────────────────────────────────────────
@@ -7351,10 +7351,10 @@ const LA_ROW_DEFS = {
   '연령별':             ['20대', '30대', '40대', '50대이상', '전체융잔 합계'],
   '직업별':             ['직장인', '자영업', '주부', '학생', '기타', '전체융잔 합계'],
   '지역별':             ['서울', '부산', '대구', '경기/인천', '강원', '충청/대전', '전라/광주', '경상/울산', '제주', '기타', '전체융잔 합계'],
-  'CB등급':             ['1 등급', '2 등급', '3 등급', '4 등급', '5 등급', '6 등급', '7 등급', '8 등급', '9 등급', '10 등급', '기타', '전체융잔 합계'],
+  'CB분위':             ['1분위', '2분위', '3분위', '4분위', '5분위', '6분위', '7분위', '8분위', '9분위', '10분위', '기타', '전체융잔 합계'],
 };
 
-const LA_CB_GRADES = ['1 등급(965~1000)', '2 등급(945~964)', '3 등급(930~944)', '4 등급(905~929)', '5 등급(880~904)', '6 등급(825~879)', '7 등급(785~824)', '8 등급(750~784)', '9 등급(725~749)', '10 등급(1~724)', '무등급', '융잔합계'];
+const LA_CB_GRADES = ['1분위(965~1000)', '2분위(945~964)', '3분위(930~944)', '4분위(905~929)', '5분위(880~904)', '6분위(825~879)', '7분위(785~824)', '8분위(750~784)', '9분위(725~749)', '10분위(1~724)', '무등급', '융잔합계'];
 
 // ── 탭 전환 ────────────────────────────────────────────────────
 async function laSwitchSection(sid) {
@@ -7722,7 +7722,7 @@ function laRenderRegionSection(periods) {
   tbody.appendChild(trTotal);
 }
 
-// ── CB등급 렌더 (sid=13: CB등급 / sid=14: 상품별CB등급 → 동일 데이터) ──
+// ── CB분위 렌더 (sid=13: CB분위 / sid=14: 상품별CB분위 → 동일 데이터) ──
 function laRenderCbGradeSection(periods) {
   const sid = laCurSection;
   const tblId = sid === '14' ? 'la-tbl-14' : 'la-tbl-13';
@@ -7821,7 +7821,7 @@ function laRenderCbGradeSection(periods) {
   tbody.appendChild(trTotal);
 }
 
-// ── 상품별CB등급 렌더 (기존 유지 - 별도 cb_products 데이터 사용 시) ─────────────────────────────────────────
+// ── 상품별CB분위 렌더 (기존 유지 - 별도 cb_products 데이터 사용 시) ─────────────────────────────────────────
 function laRenderCbProduct() {
   if (!assetData) return;
   const sel = document.getElementById('la-cb-product-sel');
@@ -8102,7 +8102,7 @@ async function loadAssetData() {
     // UI 전환
     document.getElementById('la-empty').style.display = 'none';
     document.getElementById('la-content').style.display = '';
-    // 상품별CB등급 select 초기화
+    // 상품별CB분위 select 초기화
     const sel = document.getElementById('la-cb-product-sel');
     if (sel) {
       sel.innerHTML = '';
