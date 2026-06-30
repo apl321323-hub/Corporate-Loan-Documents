@@ -2459,6 +2459,118 @@
           </div>
           <!-- /SLIDE 6 -->
 
+          <!-- SLIDE 7 -->
+          <div class="slide" id="slide-7" style="width:1280px;height:720px;overflow:hidden;background-color:#F8FAFC;font-family:'Noto Sans KR',sans-serif;position:relative;">
+
+            <!-- 슬라이드 내부 전용 스타일 -->
+            <style>
+              #slide-7 .s7-chart-title {
+                font-size:18px; font-weight:800; color:#1B3A7E;
+                display:flex; align-items:center; gap:8px;
+              }
+              #slide-7 .s7-chart-title::before {
+                content:''; display:block; width:4px; height:18px;
+                background-color:#D4AF37; border-radius:2px;
+              }
+              #slide-7 .s7-legend-item {
+                display:flex; align-items:center; gap:4px;
+                font-size:11px; color:#475569; font-weight:500;
+              }
+              #slide-7 .s7-legend-color { width:10px; height:10px; border-radius:2px; }
+              #slide-7 .s7-tag {
+                font-size:11px; font-weight:700; padding:3px 8px;
+                border-radius:4px; display:inline-block; margin-bottom:6px;
+              }
+            </style>
+
+            <!-- Header BG -->
+            <div style="position:absolute;left:0;top:0;width:1280px;height:96px;background-color:#1B3A7E;z-index:1;"></div>
+            <!-- Gold Bar -->
+            <div style="position:absolute;left:48px;top:28px;width:6px;height:40px;background-color:#D4AF37;z-index:10;"></div>
+            <!-- Header Title -->
+            <div style="position:absolute;left:70px;top:22px;width:850px;height:60px;z-index:10;">
+              <h1 style="font-size:28px;font-weight:700;color:white;letter-spacing:0.5px;">상품별 포트폴리오 구성 및 추이</h1>
+              <p style="font-size:12px;color:#D1D5DB;letter-spacing:1px;margin-top:4px;text-transform:uppercase;">Product Portfolio Structure &amp; Trends (2021-2026)</p>
+            </div>
+            <!-- Logo -->
+            <div style="position:absolute;left:1080px;top:26px;width:152px;height:44px;z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+              <div style="width:32px;height:32px;background-color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#1B3A7E;font-weight:900;font-size:16px;">A</div>
+              <div style="text-align:right;">
+                <p style="font-size:18px;font-weight:700;color:white;line-height:1;">APL</p>
+                <p style="font-size:10px;color:#D1D5DB;line-height:1;letter-spacing:1px;margin-top:2px;">FINANCIAL</p>
+              </div>
+            </div>
+
+            <!-- Left: 포트폴리오 추이 차트 -->
+            <div style="position:absolute;left:48px;top:116px;width:576px;height:414px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);padding:24px;box-sizing:border-box;z-index:1;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #F1F5F9;padding-bottom:12px;margin-bottom:16px;">
+                <div>
+                  <h2 class="s7-chart-title">연도별 포트폴리오 구성 (2021-2026)</h2>
+                  <p style="font-size:12px;color:#64748B;margin-top:4px;padding-left:12px;">신용 vs 담보 균형 성장 추이 (단위: 억원)</p>
+                </div>
+                <div style="display:flex;gap:16px;">
+                  <div class="s7-legend-item"><div class="s7-legend-color" style="background-color:#1B3A7E;"></div>신용</div>
+                  <div class="s7-legend-item"><div class="s7-legend-color" style="background-color:#D4AF37;"></div>담보</div>
+                </div>
+              </div>
+              <div style="position:relative;width:100%;height:310px;">
+                <canvas id="slide7-portfolioTrendChart" width="528" height="310" style="display:block;box-sizing:border-box;"></canvas>
+              </div>
+            </div>
+
+            <!-- Left: Insight Box -->
+            <div style="position:absolute;left:48px;top:546px;width:576px;height:130px;background-color:#FFFFFF;border-radius:12px;border-left:4px solid #1B3A7E;padding:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);box-sizing:border-box;display:flex;gap:16px;align-items:flex-start;z-index:10;">
+              <div style="width:44px;height:44px;border-radius:50%;background-color:#F8FAFC;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;color:#1B3A7E;flex-shrink:0;font-size:18px;">
+                <i class="fas fa-balance-scale"></i>
+              </div>
+              <div style="flex:1;">
+                <span class="s7-tag" style="background-color:rgba(212,175,55,0.15);color:#927514;">Balanced Growth</span>
+                <h4 style="font-weight:700;color:#1B3A7E;font-size:15px;margin-bottom:6px;">균형잡힌 포트폴리오 성장 유지</h4>
+                <p style="font-size:13px;color:#4B5563;line-height:1.6;">
+                  <span style="font-weight:700;color:#1B3A7E;">신용대출</span>을 기반으로 안정적인 수익을 창출하며, <span style="font-weight:700;color:#D4AF37;">담보대출</span> 비중을 47.8% 수준으로 조절하여 2026년에도 리스크를 효과적으로 분산하고 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <!-- Right: 상품별 잔액 차트 -->
+            <div style="position:absolute;left:656px;top:116px;width:576px;height:414px;background-color:white;border-radius:16px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);padding:24px;box-sizing:border-box;z-index:1;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #F1F5F9;padding-bottom:12px;margin-bottom:16px;">
+                <div>
+                  <h2 class="s7-chart-title">2026년 4월 상품별 잔액 및 비중</h2>
+                  <p style="font-size:12px;color:#64748B;margin-top:4px;padding-left:12px;">핵심 상품 현황 (단위: 억원, %)</p>
+                </div>
+                <div style="text-align:right;">
+                  <p style="font-size:10px;color:#94A3B8;">Total Balance (2026.04)</p>
+                  <p style="font-size:18px;font-weight:900;color:#1B3A7E;" id="slide7-total-balance">1,070.1억원</p>
+                </div>
+              </div>
+              <div style="position:relative;width:100%;height:310px;">
+                <canvas id="slide7-productBreakdownChart" width="528" height="310" style="display:block;box-sizing:border-box;"></canvas>
+              </div>
+            </div>
+
+            <!-- Right: Insight Box -->
+            <div style="position:absolute;left:656px;top:546px;width:576px;height:130px;background-color:#FFFFFF;border-radius:12px;border-left:4px solid #D4AF37;padding:20px;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);box-sizing:border-box;display:flex;gap:16px;align-items:flex-start;z-index:10;">
+              <div style="width:44px;height:44px;border-radius:50%;background-color:#FFFBEB;box-shadow:0 1px 3px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;color:#D4AF37;flex-shrink:0;font-size:18px;">
+                <i class="fas fa-layer-group"></i>
+              </div>
+              <div style="flex:1;">
+                <span class="s7-tag" style="background-color:rgba(27,58,126,0.1);color:#1B3A7E;">Diversification</span>
+                <h4 style="font-weight:700;color:#1B3A7E;font-size:15px;margin-bottom:6px;">상품 라인업 다각화 및 전문성</h4>
+                <p style="font-size:13px;color:#4B5563;line-height:1.6;">
+                  다양한 담보 상품을 통해 포트폴리오 안정성을 확보하고, 특화 시장에서의 전문성을 발휘하여 최적화된 자산 운용을 지속하고 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="position:absolute;left:48px;top:686px;width:1184px;height:20px;display:flex;justify-content:space-between;align-items:center;z-index:10;">
+              <p style="font-size:10px;color:#94A3B8;font-weight:500;">APL FINANCIAL PRODUCT PORTFOLIO ANALYSIS</p>
+              <p style="font-size:10px;color:#94A3B8;font-weight:500;">07</p>
+            </div>
+          </div>
+          <!-- /SLIDE 7 -->
+
           <!-- placeholder: 추가 슬라이드 -->
 
         </div><!-- /slide-scale-wrapper -->
@@ -4782,6 +4894,7 @@ function slideGoTo(idx) {
 
   // 슬라이드별 차트 초기화
   if (idx === 3) slide4InitChart();
+  if (idx === 6) slide7InitCharts();
 }
 
 /** 이전/다음 이동 */
@@ -4899,6 +5012,123 @@ function slide4InitChart() {
       }
     }
   });
+}
+
+/* ── Slide 7: 포트폴리오 구성 및 추이 차트 ── */
+let slide7TrendChartInstance = null;
+let slide7BreakdownChartInstance = null;
+function slide7InitCharts() {
+  // 이미 초기화된 경우 스킵
+  if (slide7TrendChartInstance && slide7BreakdownChartInstance) return;
+
+  if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+  // 좌측: 연도별 포트폴리오 추이 (stacked bar)
+  const trendCanvas = document.getElementById('slide7-portfolioTrendChart');
+  if (trendCanvas && !slide7TrendChartInstance) {
+    slide7TrendChartInstance = new Chart(trendCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['2021', '2022', '2023', '2024', '2025', '2026'],
+        datasets: [
+          {
+            label: '신용',
+            data: [139, 311, 350, 395, 547, 556.7],
+            backgroundColor: '#1B3A7E',
+            barPercentage: 0.55,
+            datalabels: { display: true, color: 'white' }
+          },
+          {
+            label: '담보',
+            data: [150, 238, 261, 426, 463, 513.4],
+            backgroundColor: '#D4AF37',
+            barPercentage: 0.55,
+            datalabels: { display: true, color: 'white' }
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false,
+            backgroundColor: 'rgba(27,58,126,0.95)',
+            titleFont: { family: 'Noto Sans KR' },
+            bodyFont: { family: 'Noto Sans KR' }
+          },
+          datalabels: {
+            font: { family: 'Noto Sans KR', size: 10, weight: 'bold' },
+            formatter: val => Math.round(val)
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: 'Noto Sans KR', size: 12 }, color: '#64748B' },
+            stacked: true
+          },
+          y: {
+            grid: { color: '#F1F5F9' },
+            ticks: { font: { family: 'Noto Sans KR', size: 11 }, color: '#94A3B8' },
+            stacked: true,
+            title: { display: true, text: '융자잔고 (억원)', font: { family: 'Noto Sans KR', size: 10 }, color: '#94A3B8' },
+            suggestedMax: 1200
+          }
+        }
+      }
+    });
+  }
+
+  // 우측: 상품별 잔액 수평 바 차트
+  const breakdownCanvas = document.getElementById('slide7-productBreakdownChart');
+  if (breakdownCanvas && !slide7BreakdownChartInstance) {
+    slide7BreakdownChartInstance = new Chart(breakdownCanvas.getContext('2d'), {
+      type: 'bar',
+      indexAxis: 'y',
+      data: {
+        labels: ['담보론', '첨담보', '차량', '회생', '지분', '신용'],
+        datasets: [{
+          label: '2026 잔액',
+          data: [430.3, 255.4, 148.9, 114.3, 83.4, 37.7],
+          backgroundColor: ['#D4AF37', '#E5C558', '#F97316', '#475569', '#94A3B8', '#1B3A7E'],
+          borderRadius: 4,
+          barPercentage: 0.7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { right: 140, left: 10 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end', align: 'end', offset: 8,
+            color: '#475569',
+            font: { family: 'Noto Sans KR', weight: 'bold', size: 11 },
+            formatter: (value, ctx) => {
+              const label = ctx.chart.data.labels[ctx.dataIndex];
+              const total = 1070.1;
+              const pct = ((value / total) * 100).toFixed(1);
+              return label + ' ' + value.toFixed(1) + '억 (' + pct + '%)';
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { display: false },
+            suggestedMax: 500
+          },
+          y: {
+            grid: { display: false },
+            ticks: { display: true, font: { family: 'Noto Sans KR', size: 12, weight: 'bold' } }
+          }
+        }
+      }
+    });
+  }
 }
 
 /** ── 유틸 ── */
