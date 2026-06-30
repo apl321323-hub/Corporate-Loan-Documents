@@ -1007,16 +1007,16 @@ async def get_cb_grade_config():
         else:
             # 기본값: 1~10등급 NICE 점수 구간
             cfg = [
-                {"grade": "1등급", "lo": 900, "hi": 1000},
-                {"grade": "2등급", "lo": 870, "hi": 899},
-                {"grade": "3등급", "lo": 840, "hi": 869},
-                {"grade": "4등급", "lo": 805, "hi": 839},
-                {"grade": "5등급", "lo": 750, "hi": 804},
-                {"grade": "6등급", "lo": 665, "hi": 749},
-                {"grade": "7등급", "lo": 600, "hi": 664},
-                {"grade": "8등급", "lo": 515, "hi": 599},
-                {"grade": "9등급", "lo": 445, "hi": 514},
-                {"grade": "10등급", "lo": 0,   "hi": 444},
+                {"grade": "1분위", "lo": 900, "hi": 1000},
+                {"grade": "2분위", "lo": 870, "hi": 899},
+                {"grade": "3분위", "lo": 840, "hi": 869},
+                {"grade": "4분위", "lo": 805, "hi": 839},
+                {"grade": "5분위", "lo": 750, "hi": 804},
+                {"grade": "6분위", "lo": 665, "hi": 749},
+                {"grade": "7분위", "lo": 600, "hi": 664},
+                {"grade": "8분위", "lo": 515, "hi": 599},
+                {"grade": "9분위", "lo": 445, "hi": 514},
+                {"grade": "10분위", "lo": 0,   "hi": 444},
             ]
             uploaded_data["cb_grade_config"] = cfg
     return JSONResponse(cfg)
@@ -1999,7 +1999,7 @@ async def get_asset_data():
         if region_sec_out:
             sections["지역별"] = region_sec_out
         if cb_sec_out:
-            sections["CB등급"] = cb_sec_out
+            sections["CB분위"] = cb_sec_out
         result["sections"] = sections
 
     return JSONResponse(result)

@@ -1497,7 +1497,7 @@
       </div>
       <div id="la-view-13" class="la-view" style="display:none;">
         <div class="card" style="padding:0;overflow:hidden;">
-          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star"></i> CB등급 (23.04.01부터 신용평점기준)</div>
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star"></i> CB분위 (23.04.01부터 신용평점기준)</div>
           <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-13"><thead></thead><tbody></tbody></table></div>
         </div>
       </div>
@@ -1507,7 +1507,7 @@
           <select id="la-cb-product-sel" onchange="laRenderCbProduct()" style="font-size:12px;padding:4px 10px;border:1px solid #cbd5e1;border-radius:5px;max-width:200px;"></select>
         </div>
         <div class="card" style="padding:0;overflow:hidden;">
-          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star-half-alt"></i> 상품별 CB등급 (단위: 백만원, NICE 은행CB등급기준)</div>
+          <div class="card-title" style="padding:10px 14px;"><i class="fas fa-star-half-alt"></i> 상품별 CB분위 (단위: 백만원, NICE 은행CB분위기준)</div>
           <div class="table-scroll"><table class="data-table bs-time-table" id="la-tbl-14"><thead></thead><tbody></tbody></table></div>
         </div>
       </div>
@@ -4997,21 +4997,21 @@ function cbgRenderSummaryWithData(cfg) {
     wrap.innerHTML = '<span style="color:#94a3b8;font-size:13px;">저장 후 여기에 구간이 표시됩니다.</span>';
     return;
   }
-  let html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+  let html = '<div style="display:flex;flex-direction:column;gap:5px;">';
   cfg.forEach((item, idx) => {
     if (!item.grade) return;
-    const lo = item.lo !== '' && item.lo !== undefined ? item.lo : '-';
-    const hi = item.hi !== '' && item.hi !== undefined ? item.hi : '-';
+    const lo = (item.lo !== '' && item.lo !== undefined) ? item.lo : '-';
+    const hi = (item.hi !== '' && item.hi !== undefined) ? item.hi : '-';
     const color = idx < 3 ? '#15803d' : idx < 6 ? '#0369a1' : idx < 8 ? '#d97706' : '#dc2626';
     const bg    = idx < 3 ? '#f0fdf4' : idx < 6 ? '#eff6ff' : idx < 8 ? '#fffbeb' : '#fff1f2';
     html += `
-      <div style="display:flex;align-items:center;gap:12px;padding:6px 12px;border-radius:6px;background:${bg};">
-        <span style="font-size:12px;font-weight:700;color:${color};min-width:45px;">${item.grade}</span>
-        <span style="font-size:13px;color:#374151;">
-          <b style="color:${color};">${lo}</b>
+      <div style="display:flex;align-items:center;padding:5px 12px;border-radius:6px;background:${bg};">
+        <span style="font-size:12px;font-weight:700;color:${color};min-width:50px;">${item.grade}</span>
+        <span style="font-size:13px;color:#374151;font-weight:500;">
+          (<b style="color:${color};">${lo}</b>
           <span style="color:#94a3b8;"> ~ </span>
           <b style="color:${color};">${hi}</b>
-          <span style="font-size:11px;color:#94a3b8;"> 점</span>
+          <span style="font-size:11px;color:#94a3b8;"> 점</span>)
         </span>
       </div>`;
   });
@@ -7730,7 +7730,7 @@ function laRenderCbGradeSection(periods) {
   const tbl = document.getElementById(tblId);
   if (!tbl) return;
 
-  const secData = (assetData && assetData.sections && assetData.sections['CB등급']) || {};
+  const secData = (assetData && assetData.sections && assetData.sections['CB분위']) || {};
 
   const thead = tbl.querySelector('thead');
   const tbody = tbl.querySelector('tbody');
@@ -7743,7 +7743,7 @@ function laRenderCbGradeSection(periods) {
     const td = document.createElement('td');
     td.colSpan = periods.length + 1;
     td.style.cssText = 'text-align:center;padding:24px;color:#94a3b8;font-size:13px;';
-    td.textContent = '결산자료를 업로드하면 CB등급 데이터가 표시됩니다.';
+    td.textContent = '결산자료를 업로드하면 CB분위 데이터가 표시됩니다.';
     tbody.appendChild(trEmpty);
     trEmpty.appendChild(td);
     return;
