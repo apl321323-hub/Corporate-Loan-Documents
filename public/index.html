@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --primary: #1e3a5f;
@@ -1118,6 +1119,9 @@
       <h3>자산건전성</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span id="aq-data-badge" style="font-size:11px;padding:3px 10px;border-radius:99px;background:#fef9c3;color:#a16207;font-weight:600;">데이터 미업로드</span>
+        <button onclick="downloadAQExcel()" id="aq-download-btn" style="display:none;font-size:12px;padding:5px 12px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-weight:600;cursor:pointer;">
+          <i class="fas fa-file-excel"></i> 엑셀 다운로드
+        </button>
       </div>
     </div>
 
@@ -1222,6 +1226,9 @@
         </div>
         <!-- 데이터 배지 -->
         <span id="bs-data-badge" style="font-size:11px;padding:3px 10px;border-radius:20px;background:#e2e8f0;color:#64748b;">데이터 없음</span>
+        <button onclick="downloadBSExcel()" id="bs-download-btn" style="display:none;font-size:12px;padding:5px 12px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-weight:600;cursor:pointer;">
+          <i class="fas fa-file-excel"></i> 엑셀 다운로드
+        </button>
       </div>
     </div>
 
@@ -1361,6 +1368,9 @@
           <option value="24">최근 24개월</option>
           <option value="all">전체</option>
         </select>
+        <button onclick="downloadLAExcel()" id="la-download-btn" style="display:none;font-size:12px;padding:5px 12px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-weight:600;cursor:pointer;">
+          <i class="fas fa-file-excel"></i> 엑셀 다운로드
+        </button>
       </div>
     </div>
 
@@ -4270,6 +4280,8 @@ async function loadAQData() {
         `${aqData.periods[0]} ~ ${aqData.periods[aqData.periods.length-1]} (${aqData.periods.length}개월)`;
       document.getElementById('aq-data-badge').style.background = '#d1fae5';
       document.getElementById('aq-data-badge').style.color = '#065f46';
+      const aqDlBtn = document.getElementById('aq-download-btn');
+      if (aqDlBtn) aqDlBtn.style.display = '';
       aqInitProductSelect();
       aqUpdateKPI();
       // 현재 섹션 표시
@@ -5936,6 +5948,8 @@ async function loadBusinessData() {
       badge.textContent = `${bsData.periods[0]} ~ ${bsData.periods[bsData.periods.length-1]} (${bsData.periods.length}개월)`;
       badge.style.background = '#d1fae5';
       badge.style.color = '#065f46';
+      const bsDlBtn = document.getElementById('bs-download-btn');
+      if (bsDlBtn) bsDlBtn.style.display = '';
 
       bsUpdateKPI();
       bsSwitchSection(bsCurrentSection);
@@ -8103,6 +8117,8 @@ async function loadAssetData() {
     // UI 전환
     document.getElementById('la-empty').style.display = 'none';
     document.getElementById('la-content').style.display = '';
+    const laDlBtn = document.getElementById('la-download-btn');
+    if (laDlBtn) laDlBtn.style.display = '';
     // 상품별CB분위 select 초기화
     const sel = document.getElementById('la-cb-product-sel');
     if (sel) {
@@ -8169,6 +8185,297 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAssetData();          // 대출자산속성 별도 로드
   loadLoanCountData();      // 대출취급건수 별도 로드
 });
+
+// ============================================================
+// ██████  엑셀 다운로드 유틸리티 (SheetJS)
+// ============================================================
+
+/** 공통: aoa(배열의 배열) → 워크시트 → 파일 다운로드 */
+function _xlsxDownload(sheetsData, fileName) {
+  const wb = XLSX.utils.book_new();
+  sheetsData.forEach(({name, aoa}) => {
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    if (aoa.length > 0) {
+      ws['!cols'] = aoa[0].map((_, ci) => {
+        const maxLen = aoa.reduce((m, row) => {
+          const v = row[ci] != null ? String(row[ci]) : '';
+          return Math.max(m, v.length);
+        }, 4);
+        return { wch: Math.min(maxLen + 2, 30) };
+      });
+    }
+    XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31));
+  });
+  XLSX.writeFile(wb, fileName);
+}
+
+// ─────────────────────────────────────────────────
+// 자산건전성 엑셀 다운로드
+// ─────────────────────────────────────────────────
+function downloadAQExcel() {
+  if (!aqData) { showToast('자산건전성 데이터가 없습니다.', 'error'); return; }
+  const indices = aqFilteredIndices();
+  const periods = indices.map(i => aqData.periods[i]);
+  const sheetsData = [];
+
+  const buildAQSheet = (rowDefs, secData, sheetName, fmtFn) => {
+    if (!secData) return;
+    const aoa = [['구분', ...periods]];
+    rowDefs.forEach(({key, fmt}) => {
+      const rowData = secData[key];
+      if (!rowData) return;
+      const row = [key];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : rowData;
+        row.push(fmtFn(v, fmt));
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: sheetName, aoa });
+  };
+
+  buildAQSheet(AQ_S1_ROWS, aqData.section1, '■금액(원)',
+    (v) => v != null ? Math.round(v) : '');
+
+  buildAQSheet(AQ_S2_ROWS, aqData.section2, '구분(%)',
+    (v, fmt) => {
+      if (v == null) return '';
+      return fmt === 'pct' ? parseFloat((v * 100).toFixed(2)) : Math.round(v);
+    });
+
+  Object.keys(aqData.section3 || {}).forEach(grpName => {
+    const grpData = aqData.section3[grpName];
+    if (!grpData) return;
+    const aoa = [['구분', ...periods]];
+    AQ_S3_ROWS.forEach(({key, fmt}) => {
+      const rowData = grpData[key];
+      if (!rowData) return;
+      const row = [key];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : rowData;
+        row.push(v == null ? '' : (fmt === 'pct' ? parseFloat((v*100).toFixed(2)) : Math.round(v)));
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: `담보_${grpName}`.substring(0,31), aoa });
+  });
+
+  Object.keys(aqData.section4 || {}).forEach(prodName => {
+    const prodData = aqData.section4[prodName];
+    if (!prodData) return;
+    const aoa = [['구분', ...periods]];
+    AQ_S4_ROWS.forEach(({key, fmt}) => {
+      const rowData = prodData[key];
+      if (!rowData) return;
+      const row = [key];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : rowData;
+        row.push(v == null ? '' : (fmt === 'pct' ? parseFloat((v*100).toFixed(2)) : Math.round(v)));
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: `상품_${prodName}`.substring(0,31), aoa });
+  });
+
+  if (!sheetsData.length) { showToast('다운로드할 데이터가 없습니다.', 'error'); return; }
+  _xlsxDownload(sheetsData, '자산건전성.xlsx');
+  showToast('✅ 자산건전성 엑셀 다운로드 완료', 'success');
+}
+
+// ─────────────────────────────────────────────────
+// 영업현황 엑셀 다운로드
+// ─────────────────────────────────────────────────
+function downloadBSExcel() {
+  if (!bsData && !contractData && !paymentData && !writeoffData && !saleData) {
+    showToast('영업현황 데이터가 없습니다.', 'error'); return;
+  }
+  const indices = bsFilteredIndices();
+  const srcBase = bsData || contractData || paymentData || writeoffData || saleData;
+  const periods = indices.map(i => srcBase.periods[i]);
+  const sheetsData = [];
+
+  // 섹션1: 전체 영업현황
+  {
+    const aoa = [['구분', '소분류', ...periods]];
+    BS_S1_ROWS.forEach(({key, group, sub, mergeSub}) => {
+      const sources = [bsData?.section1, contractData?.section1,
+                       paymentData?.section1, writeoffData?.section1, saleData?.section1];
+      let rowData = null;
+      for (const s of sources) { if (s?.[key] !== undefined) { rowData = s[key]; break; } }
+      const row = [mergeSub ? group : (group||''), mergeSub ? '' : (sub||'')];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : (rowData != null ? rowData : null);
+        row.push(v != null ? Math.round(v * 10) / 10 : '');
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: '전체 영업현황', aoa });
+  }
+
+  // 섹션2: 대출구분별
+  const s2 = bsData?.section2 || contractData?.section2;
+  if (s2) {
+    const aoa = [['구분', '소분류', ...periods]];
+    BS_S2_ROWS.forEach(({key, group, sub, mergeSub}) => {
+      const rowData = s2[key];
+      const row = [mergeSub ? group : (group||''), mergeSub ? '' : (sub||'')];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : (rowData != null ? rowData : null);
+        row.push(v != null ? Math.round(v * 10) / 10 : '');
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: '대출구분별', aoa });
+  }
+
+  // 섹션3: 담보구분별
+  const s3 = contractData?.section3 || bsData?.section3;
+  if (s3) {
+    const aoa = [['구분', '소분류', ...periods]];
+    BS_S3_ROWS.forEach(({key, group, sub, mergeSub}) => {
+      const rowData = s3[key];
+      const row = [mergeSub ? group : (group||''), mergeSub ? '' : (sub||'')];
+      indices.forEach(i => {
+        const v = Array.isArray(rowData) ? rowData[i] : (rowData != null ? rowData : null);
+        row.push(v != null ? Math.round(v * 10) / 10 : '');
+      });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: '담보구분별', aoa });
+  }
+
+  _xlsxDownload(sheetsData, '영업현황.xlsx');
+  showToast('✅ 영업현황 엑셀 다운로드 완료', 'success');
+}
+
+// ─────────────────────────────────────────────────
+// 대출자산속성 엑셀 다운로드
+// ─────────────────────────────────────────────────
+async function downloadLAExcel() {
+  if (!assetData) { showToast('대출자산속성 데이터가 없습니다.', 'error'); return; }
+  const periods = laGetPeriods();
+  if (!periods.length) { showToast('표시 기간 내 데이터가 없습니다.', 'error'); return; }
+  const sections = assetData.sections || {};
+  const sheetsData = [];
+
+  // 단순 섹션 공통 빌더 (행키→{기간→값})
+  const buildSimple = (secKey, sheetName, fmtFn) => {
+    const secData = sections[secKey];
+    if (!secData || !Object.keys(secData).length) return;
+    const rowKeys = Object.keys(secData).filter(k => k !== '전체융잔 합계');
+    const aoa = [[secKey, ...periods]];
+    rowKeys.forEach(rk => {
+      const row = [rk];
+      periods.forEach(ym => {
+        const v = (secData[rk]||{})[ym];
+        row.push(fmtFn ? fmtFn(v, secKey, rk) : (v != null ? Math.round(v/1_000_000) : ''));
+      });
+      aoa.push(row);
+    });
+    if (secData['전체융잔 합계']) {
+      const row = ['전체융잔 합계'];
+      periods.forEach(ym => {
+        const v = (secData['전체융잔 합계']||{})[ym];
+        row.push(fmtFn ? fmtFn(v, secKey, '전체융잔 합계') : (v != null ? Math.round(v/1_000_000) : ''));
+      });
+      aoa.push(row);
+    }
+    sheetsData.push({ name: sheetName.substring(0,31), aoa });
+  };
+
+  const rateFmt = (v) => {
+    if (v == null || v === 0) return '';
+    return Math.abs(v) <= 1 ? parseFloat((v*100).toFixed(2)) : parseFloat(v.toFixed(2));
+  };
+
+  buildSimple('대출취급건수', '01.대출취급건수', (v) => v != null ? Math.round(v) : '');
+  buildSimple('대출채권잔액', '02.대출채권잔액');
+  buildSimple('대출취급액',   '03.대출취급액');
+
+  // 04 대출만기
+  const matSec = sections['대출만기'];
+  if (matSec) {
+    const matKeys = ['12개월 미만','12~24개월 미만','24~36개월 미만','36개월 이상','전체융잔 합계'];
+    const aoa = [['대출만기', ...periods]];
+    matKeys.forEach(rk => {
+      const rowData = matSec[rk]; if (!rowData) return;
+      const row = [rk];
+      periods.forEach(ym => { const v=(rowData||{})[ym]; row.push(v!=null?Math.round(v/1_000_000):''); });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: '04.대출만기', aoa });
+  }
+
+  // 05 이자율
+  ['평균이자율','평균이자율2'].forEach((sk,i) => {
+    const sec = sections[sk]; if (!sec || !Object.keys(sec).length) return;
+    const aoa = [[sk, ...periods]];
+    Object.keys(sec).forEach(rk => {
+      const row = [rk];
+      periods.forEach(ym => { row.push(rateFmt((sec[rk]||{})[ym])); });
+      aoa.push(row);
+    });
+    sheetsData.push({ name: `05${i?'b':''}.이자율(%)`, aoa });
+  });
+
+  buildSimple('상환방식',  '06.상환방식');
+  buildSimple('금액별',    '07.금액별');
+  buildSimple('접수경로',  '08.접수경로');
+  buildSimple('상품별',    '09.상품별');
+  buildSimple('상품구분',  '10a.상품구분');
+  buildSimple('상품구분상세', '10b.상품구분상세');
+  buildSimple('상품구분화해채권', '10c.상품구분화해채권');
+  buildSimple('성별',  '11a.성별');
+  buildSimple('연령별','11b.연령별');
+  buildSimple('직업별','11c.직업별');
+  buildSimple('지역별','12.지역별');
+
+  // 13 CB분위 (내림차순 + 무분위)
+  const cbSec = sections['CB분위'];
+  if (cbSec && Object.keys(cbSec).length) {
+    const GDESC = ['10분위','9분위','8분위','7분위','6분위','5분위','4분위','3분위','2분위','1분위','무분위'];
+    const aoa = [['CB분위', ...periods]];
+    GDESC.filter(g => cbSec[g]).forEach(rk => {
+      const cfg = (cbgConfig||[]).find(c => c.grade === rk);
+      const label = cfg ? `${rk} (${cfg.lo}~${cfg.hi})` : rk;
+      const row = [label];
+      periods.forEach(ym => { const v=(cbSec[rk]||{})[ym]; row.push(v!=null?Math.round(v/1_000_000):''); });
+      aoa.push(row);
+    });
+    if (cbSec['전체융잔 합계']) {
+      const row = ['전체융잔 합계'];
+      periods.forEach(ym => { const v=(cbSec['전체융잔 합계']||{})[ym]; row.push(v!=null?Math.round(v/1_000_000):''); });
+      aoa.push(row);
+    }
+    sheetsData.push({ name: '13.CB분위', aoa });
+  }
+
+  // 14 상품별CB분위
+  const cbProds = assetData.cb_products || {};
+  Object.keys(cbProds).forEach(prodName => {
+    const prodCb = cbProds[prodName] || {};
+    const GDESC = ['10분위','9분위','8분위','7분위','6분위','5분위','4분위','3분위','2분위','1분위','무분위'];
+    const aoa = [[`${prodName} CB분위`, ...periods]];
+    GDESC.filter(g => prodCb[g]).forEach(rk => {
+      const cfg = (cbgConfig||[]).find(c => c.grade === rk);
+      const label = cfg ? `${rk} (${cfg.lo}~${cfg.hi})` : rk;
+      const row = [label];
+      periods.forEach(ym => { const v=(prodCb[rk]||{})[ym]; row.push(v!=null?Math.round(v/1_000_000):''); });
+      aoa.push(row);
+    });
+    if (prodCb['전체융잔 합계']) {
+      const row = ['전체융잔 합계'];
+      periods.forEach(ym => { const v=(prodCb['전체융잔 합계']||{})[ym]; row.push(v!=null?Math.round(v/1_000_000):''); });
+      aoa.push(row);
+    }
+    sheetsData.push({ name: `14.${prodName}_CB`.substring(0,31), aoa });
+  });
+
+  if (!sheetsData.length) { showToast('다운로드할 데이터가 없습니다.', 'error'); return; }
+  _xlsxDownload(sheetsData, '대출자산속성.xlsx');
+  showToast('✅ 대출자산속성 엑셀 다운로드 완료', 'success');
+}
+// ============================================================
 
 </script>
 </body>
