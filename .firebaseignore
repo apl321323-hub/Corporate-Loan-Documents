@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+node_modules/
+server/__pycache__/
+server/*.log
+server/data/*.json
+*.xlsx
+*.xls
+*.pdf
+일마감보고_*.xlsx

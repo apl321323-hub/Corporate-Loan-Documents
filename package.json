@@ -6,6 +6,7 @@
     "build": "vite build",
     "preview": "wrangler pages dev",
     "deploy": "npm run build && wrangler pages deploy",
+    "deploy:firebase": "npm run build && firebase deploy --only hosting",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {

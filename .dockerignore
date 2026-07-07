@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+node_modules
+dist
+.wrangler
+server/__pycache__
+server/*.log
+*.xlsx
+*.xls
+*.pdf
