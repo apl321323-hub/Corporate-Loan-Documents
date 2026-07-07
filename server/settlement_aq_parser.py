@@ -103,6 +103,10 @@ AMOUNT_BANDS: list[tuple[str, float, float]] = [
 ]
 AMOUNT_KEYS = [b[0] for b in AMOUNT_BANDS] + ["전체융잔 합계"]
 
+# Product category reconciliation basis: AJ(rank) + CV(subrank).
+HWAHAE_RANK_VALUE = "\uD654\uD574"
+HWAHAE_SUBRANK_EXCLUDES = {"\u2605\uBCC4\uC81C\uAD8C\uBD80", "\u2605\uBCC4\uC81C\uAD8C\uBD80 \uB3D9\uC758"}
+
 
 def _classify_amount(balance: float) -> list[str]:
     """잔액(원) → 해당하는 모든 금액 구간 키 리스트 반환"""
@@ -179,6 +183,17 @@ def _to_float(v) -> Optional[float]:
         return float(v)
     except (ValueError, TypeError):
         return None
+
+
+def _contract_no(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, float) and v.is_integer():
+        return str(int(v))
+    s = str(v).strip()
+    if s.endswith(".0") and s[:-2].isdigit():
+        return s[:-2]
+    return s
 
 
 def _classify(days: int) -> dict:
@@ -259,6 +274,9 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # 섹션4 집계 버킷 (상품명 → 버킷)
     s4: dict[str, dict] = {}
 
+    # 대손충당금 계산용 원자료. 설정된 연체구간이 바뀌어도 실제 연체일수로 재집계한다.
+    loan_loss_rows: list[dict] = []
+
     # 대출만기 집계 버킷 (원 단위)
     maturity_raw: dict[str, float] = {k: 0.0 for k in MATURITY_KEYS}
 
@@ -291,14 +309,18 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
 
     # ── 광고매체(접수경로) 고유값 수집 ──────────────────────────────
     channel_set: set[str] = set()
+    channel_amount_raw: dict[str, float] = {}
 
     # ── 화해채권: BW(74)/BX(75) 고유값 수집 및 집계 버킷 ────────────
     # s5_bw: {bw값: {product: balance_원}}
     # s5_bx: {bx값: {product: balance_원}}
+    rank_set: set[str] = set()
     bw_set: set[str] = set()
     bx_set: set[str] = set()
+    s5_rank: dict[str, dict[str, float]] = {}
     s5_bw: dict[str, dict[str, float]] = {}
     s5_bx: dict[str, dict[str, float]] = {}
+    section5_rows: list[dict] = []
 
     # ── 성별 집계 버킷 (T열, index 19) ───────────────────────────
     # gender_sec: {'남성': float, '여성': float}  (원 단위)
@@ -328,6 +350,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # ── 행 순회 ─────────────────────────────────────────────────────
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         # 열 인덱스 (0-based)
+        contract_no  = _contract_no(row[1]) if len(row) > 1 else ""  # B column: contract number
         product      = str(row[7]).strip() if row[7] is not None else None  # H열
         days         = _to_int(row[9])                                       # J열
         balance      = _to_float(row[11])                                    # L열
@@ -339,8 +362,11 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         region_raw   = str(row[36]).strip() if len(row) > 36 and row[36] is not None else None  # AK열: 자택주소
         channel_raw  = str(row[16]).strip() if len(row) > 16 and row[16] is not None else None  # Q열: 광고매체
         age_raw      = int(float(row[91])) if len(row) > 91 and row[91] is not None else None  # CN열: 만나이 (index 91, float→int)
-        bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW열: 회생상태
-        bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX열: 신복상태
+        rank_raw     = str(row[35]).strip() if len(row) > 35 and row[35] is not None else None  # AJ column: rank
+        bw_raw       = str(row[74]).strip() if len(row) > 74 and row[74] is not None else None  # BW column: rehabilitation status
+        bx_raw       = str(row[75]).strip() if len(row) > 75 and row[75] is not None else None  # BX column: credit recovery status
+        subrank_raw  = str(row[99]).strip() if len(row) > 99 and row[99] is not None else None  # CV column: exclusion filter only
+        collateral_kind = str(row[62]).strip() if len(row) > 62 and row[62] is not None else None  # BK column: collateral kind
         # AW열(NICE스코어): index 48, 문자열→int 변환
         nice_score: Optional[int] = None
         if len(row) > 48 and row[48] is not None:
@@ -348,9 +374,31 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 nice_score = int(float(str(row[48]).strip()))
             except (ValueError, TypeError):
                 nice_score = None
+        # CI column: K score, index 86
+        k_score: Optional[int] = None
+        if len(row) > 86 and row[86] is not None:
+            try:
+                k_score = int(float(str(row[86]).strip()))
+            except (ValueError, TypeError):
+                k_score = None
 
         if product is None or days is None or balance is None:
             continue
+
+        gname = product_to_group.get(product)
+
+        loan_loss_rows.append({
+            "contract_no": contract_no or "",
+            "product": product,
+            "group": gname or "",
+            "channel": channel_raw or "",
+            "days": days,
+            "balance": balance,
+            "balance_million": balance / 1_000_000,
+            "nice_score": nice_score,
+            "k_score": k_score,
+            "collateral_kind": collateral_kind or "",
+        })
 
         clf = _classify(days)
 
@@ -360,7 +408,6 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 s1[k] += balance
 
         # ── 섹션3: 담보구분별 ───────────────────────────────────────
-        gname = product_to_group.get(product)
         if gname and gname in s3:
             bucket = s3[gname]
             # s3 키는 S3_KEYS 기준: 91~180 묶음, 연체율(%) 는 계산
@@ -412,28 +459,51 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
                 amount_raw[band_key] += balance
 
         # ── 광고매체(접수경로): Q열 고유값 수집 ─────────────────────
-        if channel_raw:
+        if channel_raw and channel_raw not in ('None', '') and balance is not None:
             channel_set.add(channel_raw)
+            channel_amount_raw[channel_raw] = channel_amount_raw.get(channel_raw, 0.0) + balance
 
         # ── 화해채권: BW/BX 고유값 수집 + 상품별 잔액 집계 ──────────
         # BW열(회생상태): 고유값 수집 + {bw값: {product: balance}} 집계
-        if bw_raw and bw_raw not in ('None', ''):
-            bw_set.add(bw_raw)
-            if product and balance is not None:
+        excluded_subrank = subrank_raw in HWAHAE_SUBRANK_EXCLUDES
+
+        if not excluded_subrank and product and balance is not None:
+            row_statuses: list[str] = []
+
+            if rank_raw == HWAHAE_RANK_VALUE:
+                rank_set.add(HWAHAE_RANK_VALUE)
+                if HWAHAE_RANK_VALUE not in s5_rank:
+                    s5_rank[HWAHAE_RANK_VALUE] = {}
+                if product not in s5_rank[HWAHAE_RANK_VALUE]:
+                    s5_rank[HWAHAE_RANK_VALUE][product] = 0.0
+                s5_rank[HWAHAE_RANK_VALUE][product] += balance
+                row_statuses.append(f"[\uB7AD\uD06C]{HWAHAE_RANK_VALUE}")
+
+            if bw_raw and bw_raw not in ('None', ''):
+                bw_set.add(bw_raw)
                 if bw_raw not in s5_bw:
                     s5_bw[bw_raw] = {}
                 if product not in s5_bw[bw_raw]:
                     s5_bw[bw_raw][product] = 0.0
                 s5_bw[bw_raw][product] += balance
-        # BX열(신복상태): 고유값 수집 + {bx값: {product: balance}} 집계
-        if bx_raw and bx_raw not in ('None', ''):
-            bx_set.add(bx_raw)
-            if product and balance is not None:
+                row_statuses.append(f"[\uD68C\uC0DD]{bw_raw}")
+
+            if bx_raw and bx_raw not in ('None', ''):
+                bx_set.add(bx_raw)
                 if bx_raw not in s5_bx:
                     s5_bx[bx_raw] = {}
                 if product not in s5_bx[bx_raw]:
                     s5_bx[bx_raw][product] = 0.0
                 s5_bx[bx_raw][product] += balance
+                row_statuses.append(f"[\uC2E0\uBCF5]{bx_raw}")
+
+            if row_statuses:
+                section5_rows.append({
+                    "row": row_idx,
+                    "product": product,
+                    "amount": balance / 1_000_000,
+                    "statuses": row_statuses,
+                })
 
         # ── 성별: T열 집계 ───────────────────────────────────────────
         if gender_raw and gender_raw not in ('None', ''):
@@ -482,19 +552,19 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     # (섹션4는 융잔합계만 있으므로 연체율은 별도 계산)
 
     # ── 원 단위 → 백만원 반올림 (표시용, 백만원 단위) ──────────────
-    s1_m    = {k: round(v / 1_000_000) for k, v in s1.items()}
+    s1_m    = {k: v / 1_000_000 for k, v in s1.items()}
     s3_m    = {}
     for gname, bucket in s3.items():
         s3_m[gname] = {
-            k: (round(v / 1_000_000) if k != "연체율(%)" else v)
+            k: (v / 1_000_000 if k != "연체율(%)" else v)
             for k, v in bucket.items()
         }
     s4_m    = {
-        prod: {k: round(v / 1_000_000) for k, v in bucket.items()}
+        prod: {k: v / 1_000_000 for k, v in bucket.items()}
         for prod, bucket in s4.items()
     }
     # 대출만기: 원 단위 → 백만원
-    maturity_m = {k: round(v / 1_000_000) for k, v in maturity_raw.items()}
+    maturity_m = {k: v / 1_000_000 for k, v in maturity_raw.items()}
 
     # ── 평균이율 계산 (소수 둘째자리 반올림) ────────────────────────
     def _wavg(wsum: float, bsum: float) -> Optional[float]:
@@ -514,7 +584,7 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
     #   담보 _원리금균등상환, 담보 _자유상환, 담보 _체융잔 합계
     #   원리금균등상환, 자유상환, 전체융잔 합계
     def _m(v: float) -> int:
-        return round(v / 1_000_000)
+        return v / 1_000_000
 
     repayment: dict[str, int] = {}
     # 신용 그룹 (group_names에 '신용'이 있으면)
@@ -542,17 +612,25 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
 
     # ── 광고매체(접수경로) 정렬된 목록 ──────────────────────────────
     channels_list = sorted(channel_set)
+    channel_amount_m: dict[str, int] = {k: _m(v) for k, v in channel_amount_raw.items()}
+    if channel_amount_m:
+        channel_amount_m['전체융잔 합계'] = _m(sum(channel_amount_raw.values()))
 
     # ── 화해채권 BW/BX 백만원 변환 및 정렬 ──────────────────────────
+    hwahae_rank = sorted(rank_set)
     hwahae_bw = sorted(bw_set)
     hwahae_bx = sorted(bx_set)
-    # section5: 원 단위 → 백만원 반올림
+    # section5: original won amount -> million won
+    section5_rank = {
+        rank: {p: v / 1_000_000 for p, v in prods.items()}
+        for rank, prods in s5_rank.items()
+    }
     section5_bw = {
-        bw: {p: round(v / 1_000_000) for p, v in prods.items()}
+        bw: {p: v / 1_000_000 for p, v in prods.items()}
         for bw, prods in s5_bw.items()
     }
     section5_bx = {
-        bx: {p: round(v / 1_000_000) for p, v in prods.items()}
+        bx: {p: v / 1_000_000 for p, v in prods.items()}
         for bx, prods in s5_bx.items()
     }
 
@@ -582,15 +660,21 @@ def parse_settlement_asset_quality(filepath: str, product_groups: list) -> dict:
         "section1"    : s1_m,
         "section3"    : s3_m,
         "section4"    : s4_m,
+        "loan_loss_rows": loan_loss_rows,
         "maturity"    : maturity_m,
         "avg_rate"    : avg_rate,    # 평균이율 집계 결과
         "repayment"   : repayment,   # 상환방식 집계 결과 (백만원)
         "amount_band" : amount_band, # 금액별 집계 결과 (백만원)
         "channels"    : channels_list,  # 광고매체(접수경로) 고유값 목록
-        "hwahae_bw"   : hwahae_bw,   # BW열(회생상태) 고유값 목록
-        "hwahae_bx"   : hwahae_bx,   # BX열(신복상태) 고유값 목록
-        "section5_bw" : section5_bw, # BW값별 상품별 잔액 (백만원)
-        "section5_bx" : section5_bx, # BX값별 상품별 잔액 (백만원)
+        "channel_amount": channel_amount_m,
+        "hwahae_basis": "rank_bw_bx",
+        "hwahae_rank" : hwahae_rank,   # AJ rank unique values
+        "hwahae_bw"   : hwahae_bw,     # BW rehabilitation status values
+        "hwahae_bx"   : hwahae_bx,     # BX credit recovery status values
+        "section5_rank" : section5_rank, # AJ rank by product (million won)
+        "section5_bw" : section5_bw,   # BW status by product (million won)
+        "section5_bx" : section5_bx,   # BX status by product (million won)
+        "section5_rows": section5_rows, # row-level statuses for duplicate-safe union sums
         "gender"      : gender_m,    # 성별별 융잔 합계 (백만원)
         "age_band"    : age_band_m,  # 연령대별 융잔 합계 (백만원)
         "job_raw"     : job_m,       # 직업분류별 융잔 합계 (백만원, raw 키)

@@ -3,6 +3,7 @@
 파일: 계약리스트_YYYYMM.xlsx  (시트: '계약리스트')
 
 핵심 열:
+  B(2)  : 계약번호
   C(3)  : 상품명
   Q(17) : 계약구분  — '신규' | '추가대출' | '재대출' | '만기연장(전환)'
   AD(30): 계약일   — 'YYYY-MM-DD' 문자열
@@ -42,13 +43,15 @@
   }
 """
 
-from datetime import datetime
+from datetime import date, datetime
+import re
 import openpyxl
 from collections import defaultdict
 
 
 # 집계 대상 계약구분 (이 3개만 취급액에 포함)
 DEAL_TYPES = {'신규', '추가대출', '재대출'}
+MATURITY_EXTENSION_TYPE = '만기연장(전환)'
 # 표시명 매핑 (Q열값 → 영업현황 행키)
 Q_LABEL = {
     '신규':    '신규',
@@ -58,14 +61,65 @@ Q_LABEL = {
 
 
 def _ym(val) -> str | None:
-    """계약일 → 'YYYY-MM' 변환"""
+    """Convert a date-like value to YYYY-MM."""
     if val is None:
         return None
-    if isinstance(val, datetime):
+    if isinstance(val, (datetime, date)):
         return val.strftime('%Y-%m')
     s = str(val).strip()
-    if len(s) >= 7:
-        return s[:7]
+    m = re.search(r'(\d{4})\D+(\d{1,2})', s)
+    if m:
+        month = int(m.group(2))
+        if 1 <= month <= 12:
+            return f"{m.group(1)}-{month:02d}"
+    m = re.search(r'(?<!\d)(\d{2})\D+(\d{1,2})(?!\d)', s)
+    if m:
+        month = int(m.group(2))
+        if 1 <= month <= 12:
+            return f"20{m.group(1)}-{month:02d}"
+    return None
+
+
+def normalize_period_key(val) -> str | None:
+    """Normalize an upload/file period value to YYYY-MM."""
+    return _ym(val)
+
+
+def _date_str(val) -> str | None:
+    """Convert a date-like value to YYYY-MM-DD."""
+    if val is None:
+        return None
+    if isinstance(val, (datetime, date)):
+        return val.strftime('%Y-%m-%d')
+    s = str(val).strip()
+    m = re.search(r'(\d{4})\D+(\d{1,2})\D+(\d{1,2})', s)
+    if m:
+        month = int(m.group(2))
+        day = int(m.group(3))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            return f"{m.group(1)}-{month:02d}-{day:02d}"
+    m = re.search(r'(?<!\d)(\d{2})\D+(\d{1,2})\D+(\d{1,2})(?!\d)', s)
+    if m:
+        month = int(m.group(2))
+        day = int(m.group(3))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            return f"20{m.group(1)}-{month:02d}-{day:02d}"
+    return None
+
+
+def _norm_header(val) -> str:
+    return re.sub(r'\s+', '', str(val or '')).lower()
+
+
+def _find_channel_col(ws) -> int | None:
+    keywords = ('\uc811\uc218\uacbd\ub85c', '\uad11\uace0\ub9e4\uccb4', '\uad11\uace0', '\ub9e4\uccb4', '\uc5d0\uc774\uc804\ud2b8', '\uc720\uc785\uacbd\ub85c', '\ucc44\ub110', 'channel', 'agent')
+    reserved = {2, 3, 17, 20, 22, 26, 30}
+    for col in range(1, ws.max_column + 1):
+        label = _norm_header(ws.cell(row=1, column=col).value)
+        if not label or col in reserved:
+            continue
+        if any(k.lower() in label for k in keywords):
+            return col
     return None
 
 
@@ -115,15 +169,25 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
 
     # ── 행 순회: C(3)/Q(17)/AD(30)/T(20)/V(22) ───────────────────
     # s1_raw[ym][q_label] = 합계(원)
+    channel_col = _find_channel_col(ws)
+
     s1_raw: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     # s3_raw[group][ym][q_label] = 합계(원)
     s3_raw: dict[str, dict[str, dict[str, float]]] = \
+        defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+    product_raw: dict[str, dict[str, dict[str, float]]] = \
         defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
     # balance_raw[group][ym] = {"건수": int, "잔액": float(원)}  ← 모든 행 집계
     balance_raw: dict = defaultdict(lambda: defaultdict(lambda: {"건수": 0, "잔액": 0.0}))
     # balance_total[ym] = {"건수": int, "잔액": float(원)}
     balance_total: dict = defaultdict(lambda: {"건수": 0, "잔액": 0.0})
+    maturity_extension_raw: dict[str, float] = defaultdict(float)
+    maturity_extension_group_raw: dict[str, dict[str, float]] = \
+        defaultdict(lambda: defaultdict(float))
+    maturity_extension_product_raw: dict[str, dict[str, float]] = \
+        defaultdict(lambda: defaultdict(float))
+    raw_rows: list[dict] = []
 
     products_set: set[str] = set()
     # 잔액 집계용 기간 Set (계약구분 필터 없이 모든 행에서 수집)
@@ -136,6 +200,7 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
     amt_sum_deal:  dict[str, float] = defaultdict(float)  # Σ T
 
     for row in range(2, ws.max_row + 1):
+        contract_no = ws.cell(row=row, column=2).value  # B: 계약번호
         prod = ws.cell(row=row, column=3).value    # C: 상품명
         q    = ws.cell(row=row, column=17).value   # Q: 계약구분
         ad   = ws.cell(row=row, column=30).value   # AD: 계약일
@@ -162,23 +227,48 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         if not q:
             continue
         q = str(q).strip()
+        amt = _safe_amt(t)
+        contract_no_raw = str(contract_no).strip() if contract_no is not None else ''
+        prod_name = str(prod).strip() if prod else ''
+        gname = prod_to_group.get(prod_name) if prod_name else ''
+        contract_date = _date_str(ad)
+        channel = ''
+        if channel_col:
+            ch_val = ws.cell(row=row, column=channel_col).value
+            channel = str(ch_val).strip() if ch_val is not None else ''
+        if q in DEAL_TYPES or q == MATURITY_EXTENSION_TYPE:
+            raw_rows.append({
+                "period": ym,
+                "date": contract_date or '',
+                "contract_no": contract_no_raw,
+                "product": prod_name,
+                "group": gname or '',
+                "channel": channel,
+                "deal_type": q,
+                "amount": amt / 1_000_000,
+                "amount_won": amt,
+            })
+        if q == MATURITY_EXTENSION_TYPE:
+            maturity_extension_raw[ym] += amt
+            if gname:
+                maturity_extension_group_raw[gname][ym] += amt
+            if prod_name:
+                maturity_extension_product_raw[prod_name][ym] += amt
         if q not in DEAL_TYPES:
             continue
 
-        amt   = _safe_amt(t)
         label = Q_LABEL[q]
 
-        # 섹션1: 전체 합산
+        # ??1: ?? ??
         s1_raw[ym][label] += amt
 
-        # 섹션3: 상품그룹별
-        if prod:
-            products_set.add(str(prod))
-            gname = prod_to_group.get(str(prod).strip())
+        # ??3: ?????
+        if prod_name:
+            products_set.add(prod_name)
+            product_raw[prod_name][ym][label] += amt
             if gname:
                 s3_raw[gname][ym][label] += amt
 
-        # ── 취급대출 평균이율: DEAL_TYPES 행만, Z열(정상이율) × T열(대출액) ──
         rate_z = _safe_amt(z)   # 정상이율(%) — None/빈값 → 0.0
         if amt > 0 and rate_z > 0:
             rate_sum_deal[ym] += amt * rate_z
@@ -204,10 +294,10 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
             d = ym_label_dict.get(ym, {})
             total = 0.0
             for lbl in labels:
-                v = round(d.get(lbl, 0) / 1_000_000, 1)
+                v = d.get(lbl, 0) / 1_000_000
                 result[lbl][ym] = v
                 total += d.get(lbl, 0)
-            result['취급액(대출)'][ym] = round(total / 1_000_000, 1)
+            result['취급액(대출)'][ym] = total / 1_000_000
 
         return result
 
@@ -221,6 +311,11 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         gname = g.get('name', '')
         section3[gname] = to_series(s3_raw.get(gname, {}))
 
+    # ── 상품별 취급액 (마감보고 전월 그룹 fallback용) ───────────────
+    section_product = {}
+    for pname in sorted(product_raw.keys()):
+        section_product[pname] = to_series(product_raw.get(pname, {}))
+
     # ── 대출취급액 (section_deal) ──────────────────────────────────
     # T열(취급액) 기준, 계약구분 매핑:
     #   신규        = Q열 '신규'
@@ -230,13 +325,27 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
     section_deal: dict = {}
     for ym in periods:
         d = s1_raw.get(ym, {})
-        section_deal.setdefault('신규',          {})[ym] = round(d.get('신규', 0) / 1_000_000, 1)
-        section_deal.setdefault('추가재대출',     {})[ym] = round(
-            (d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000, 1
+        section_deal.setdefault('신규',          {})[ym] = d.get('신규', 0) / 1_000_000
+        section_deal.setdefault('추가재대출',     {})[ym] = (
+            (d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000
         )
-        section_deal.setdefault('대출취급액 합계', {})[ym] = round(
-            (d.get('신규', 0) + d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000, 1
+        section_deal.setdefault('대출취급액 합계', {})[ym] = (
+            (d.get('신규', 0) + d.get('추가대출', 0) + d.get('재대출', 0)) / 1_000_000
         )
+
+    maturity_extension_amount: dict[str, float] = {
+        ym: maturity_extension_raw.get(ym, 0) / 1_000_000
+        for ym in periods
+    }
+
+    def maturity_series(bucket: dict) -> dict:
+        return {
+            name: {ym: vals.get(ym, 0) / 1_000_000 for ym in periods}
+            for name, vals in bucket.items()
+        }
+
+    maturity_extension_section3 = maturity_series(maturity_extension_group_raw)
+    maturity_extension_product = maturity_series(maturity_extension_product_raw)
 
     # ── 대출채권잔액 (section_balance) ────────────────────────────
     # 잔액은 원(raw) 단위로 저장 — asset_parser 엑셀 데이터와 단위 통일
@@ -265,15 +374,22 @@ def parse_contract_list(filepath: str, product_groups: list) -> dict:
         wa  = amt_sum_deal.get(ym, 0.0)
         avg_rate_deal[ym] = round(ws_ / wa, 2) if wa > 0 else None
 
-    return {
+    result = {
         "periods":          periods,
         "section1":         section1,
         "section3":         section3,
         "section_deal":     section_deal,
+        "section_product":  section_product,
         "section_balance":  section_balance,
-        "avg_rate_deal":    avg_rate_deal,   # 취급대출 가중평균이율 {ym: float|None}
+        "maturity_extension_amount": maturity_extension_amount,
+        "maturity_extension_section3": maturity_extension_section3,
+        "maturity_extension_product": maturity_extension_product,
+        "avg_rate_deal":    avg_rate_deal,   # weighted deal average rate {ym: float|None}
+        "raw_rows":         raw_rows,
+        "channel_column":   channel_col,
         "products":         sorted(products_set),
     }
+    return result
 
 
 # ── CLI 테스트 ─────────────────────────────────────────────────────

@@ -79,16 +79,29 @@ SECTION2_ROWS = {
     28: ('기업대출', '취급액(대출)'),
 }
 
-SECTION3_ROWS = {
-    31: ('신용대출', '신규'),
-    32: ('신용대출', '추가'),
-    33: ('신용대출', '재대출'),
-    34: ('신용대출', '취급액(대출)'),
-    35: ('담보대출', '신규'),
-    36: ('담보대출', '추가'),
-    37: ('담보대출', '재대출'),
-    38: ('담보대출', '취급액(대출)'),
+SECTION3_ROWS_LEGACY = {
+    31: ('\uc2e0\uc6a9\ub300\ucd9c', '\uc2e0\uaddc'),
+    32: ('\uc2e0\uc6a9\ub300\ucd9c', '\ucd94\uac00'),
+    33: ('\uc2e0\uc6a9\ub300\ucd9c', '\uc7ac\ub300\ucd9c'),
+    34: ('\uc2e0\uc6a9\ub300\ucd9c', '\ucde8\uae09\uc561(\ub300\ucd9c)'),
+    35: ('\ub2f4\ubcf4\ub300\ucd9c', '\uc2e0\uaddc'),
+    36: ('\ub2f4\ubcf4\ub300\ucd9c', '\ucd94\uac00'),
+    37: ('\ub2f4\ubcf4\ub300\ucd9c', '\uc7ac\ub300\ucd9c'),
+    38: ('\ub2f4\ubcf4\ub300\ucd9c', '\ucde8\uae09\uc561(\ub300\ucd9c)'),
 }
+
+SECTION3_ROWS_CURRENT = {
+    21: ('\uc2e0\uc6a9\ub300\ucd9c', '\uc2e0\uaddc'),
+    22: ('\uc2e0\uc6a9\ub300\ucd9c', '\ucd94\uac00'),
+    23: ('\uc2e0\uc6a9\ub300\ucd9c', '\uc7ac\ub300\ucd9c'),
+    24: ('\uc2e0\uc6a9\ub300\ucd9c', '\ucde8\uae09\uc561(\ub300\ucd9c)'),
+    25: ('\ub2f4\ubcf4\ub300\ucd9c', '\uc2e0\uaddc'),
+    26: ('\ub2f4\ubcf4\ub300\ucd9c', '\ucd94\uac00'),
+    27: ('\ub2f4\ubcf4\ub300\ucd9c', '\uc7ac\ub300\ucd9c'),
+    28: ('\ub2f4\ubcf4\ub300\ucd9c', '\ucde8\uae09\uc561(\ub300\ucd9c)'),
+}
+
+SECTION3_ROWS = SECTION3_ROWS_CURRENT
 
 # row → key 매핑 (section별)
 def _row_key(group, sub):
@@ -99,7 +112,7 @@ def _row_key(group, sub):
 # 섹션별 key 순서
 S1_KEYS = [_row_key(*v) for v in SECTION1_ROWS.values()]
 S2_KEYS = [_row_key(*v) for v in SECTION2_ROWS.values()]
-S3_KEYS = [_row_key(*v) for v in SECTION3_ROWS.values()]
+S3_KEYS = [_row_key(*v) for v in SECTION3_ROWS_CURRENT.values()]
 
 
 def _safe_num(v) -> float:
@@ -107,9 +120,21 @@ def _safe_num(v) -> float:
     if v is None:
         return None
     if isinstance(v, (int, float)):
-        return round(v / 1_000_000, 1)
+        return v / 1_000_000
     return None
 
+
+
+def _has_numeric_values(values: dict) -> bool:
+    for series in values.values():
+        if any(v is not None for v in series):
+            return True
+    return False
+
+
+def _is_current_collateral_layout(ws) -> bool:
+    label = ws.cell(row=25, column=1).value
+    return isinstance(label, str) and '\ub2f4\ubcf4' in label
 
 def parse_business_excel(filepath: str) -> dict:
     """
@@ -135,7 +160,14 @@ def parse_business_excel(filepath: str) -> dict:
     }
     """
     wb = openpyxl.load_workbook(filepath, data_only=True)
-    ws = wb['영업현황 (APL기준)']
+    ws = wb['영업현황 (APL기준)'] if '영업현황 (APL기준)' in wb.sheetnames else None
+    if ws is None:
+        for sheet_name in wb.sheetnames:
+            if '영업현황' in sheet_name:
+                ws = wb[sheet_name]
+                break
+    if ws is None:
+        ws = wb.active
 
     # ── 기간 헤더 추출 (3행) ──────────────────────────────────
     period_cols = []   # [(col_index, 'YYYY-MM'), ...]
@@ -169,9 +201,15 @@ def parse_business_excel(filepath: str) -> dict:
 
     # ── 섹션3 ─────────────────────────────────────────────────
     s3 = {}
-    for row_num, (group, sub) in SECTION3_ROWS.items():
+    section3_rows = SECTION3_ROWS_CURRENT if _is_current_collateral_layout(ws) else SECTION3_ROWS_LEGACY
+    for row_num, (group, sub) in section3_rows.items():
         key = _row_key(group, sub)
         s3[key] = _extract_row(row_num)
+    if section3_rows is SECTION3_ROWS_LEGACY and not _has_numeric_values(s3):
+        s3 = {}
+        for row_num, (group, sub) in SECTION3_ROWS_CURRENT.items():
+            key = _row_key(group, sub)
+            s3[key] = _extract_row(row_num)
 
     wb.close()
 

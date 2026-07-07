@@ -43,7 +43,7 @@ def parse_sale(file_path: str) -> dict:
     wb.close()
 
     # 백만 단위 변환
-    result = {ym: round(v / 1_000_000, 1) for ym, v in monthly.items()}
+    result = {ym: v / 1_000_000 for ym, v in monthly.items()}
     periods = sorted(result.keys())
 
     return {

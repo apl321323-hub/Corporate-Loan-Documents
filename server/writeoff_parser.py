@@ -91,7 +91,7 @@ def parse_writeoff(filepath: str) -> dict:
     periods = sorted(raw.keys())
 
     # ── 백만원 변환 ───────────────────────────────────────────────
-    series = {ym: round(raw[ym] / 1_000_000, 1) for ym in periods}
+    series = {ym: raw[ym] / 1_000_000 for ym in periods}
 
     return {
         "periods": periods,
