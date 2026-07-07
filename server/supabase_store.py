@@ -37,10 +37,11 @@ class SupabaseStore:
     def _headers(self, extra: dict | None = None) -> dict:
         headers = {
             "apikey": self.key,
-            "Authorization": f"Bearer {self.key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        if self.key.startswith("eyJ"):
+            headers["Authorization"] = f"Bearer {self.key}"
         if extra:
             headers.update(extra)
         return headers
