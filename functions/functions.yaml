@@ -1,0 +1,19 @@
+specVersion: v1alpha1
+endpoints:
+  api:
+    platform: gcfv2
+    entryPoint: api
+    region:
+      - asia-northeast3
+    availableMemoryMb: 2048
+    timeoutSeconds: 540
+    httpsTrigger: {}
+    secretEnvironmentVariables:
+      - key: SUPABASE_URL
+        secret: SUPABASE_URL
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        secret: SUPABASE_SERVICE_ROLE_KEY
+      - key: SUPABASE_KEY
+        secret: SUPABASE_KEY
+      - key: SUPABASE_TABLE
+        secret: SUPABASE_TABLE

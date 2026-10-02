@@ -8,4 +8,8 @@ server/data/*.json
 *.xlsx
 *.xls
 *.pdf
+!server/templates/company_info_template.xlsx
+!functions/server/templates/company_info_template.xlsx
+!server/templates/asset_quality_template.xlsx
+!functions/server/templates/asset_quality_template.xlsx
 일마감보고_*.xlsx

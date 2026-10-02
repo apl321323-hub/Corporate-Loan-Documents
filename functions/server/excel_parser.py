@@ -279,11 +279,8 @@ def parse_bs_is(wb) -> Dict:
 
 def parse_cashflow(ws) -> Dict:
     """현금흐름 시트 파싱"""
-    result = {"dates": {}, "items": {}, "layout_rows": []}
+    result = {"dates": {}, "items": {}}
     date_cols = {}
-    drop_labels = {"차입금 이자상환(12월)"}
-    drop_range_start = "1. 신용_대출금 원리금상환"
-    drop_range_end = "1. 대출금"
 
     # 헤더행 찾기 (날짜가 있는 행) - 1개 이상이면 OK
     header_row_idx = 4
@@ -299,20 +296,9 @@ def parse_cashflow(ws) -> Dict:
 
     result["dates"] = date_cols
 
-    def row_type(label: str) -> str:
-        if re.match(r"^[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]\.", label):
-            return "main"
-        if re.match(r"^\d+\.", label):
-            return "subtotal"
-        return "detail"
-
     items = {}
-    layout_rows = []
-    rows_data = []
-    dropping = False
-    drop_until_spacer = False
+    current_label = None
     for row in ws.iter_rows(min_row=header_row_idx + 1, max_row=ws.max_row):
-        row_label = None
         for cell in row:
             try:
                 col = cell.column_letter
@@ -320,50 +306,14 @@ def parse_cashflow(ws) -> Dict:
                 continue
             val = cell.value
             if col == "A" and val:
-                row_label = str(val).strip()
-        if not row_label:
-            if dropping and drop_until_spacer:
-                dropping = False
-                drop_until_spacer = False
-                continue
-            if not dropping and layout_rows and layout_rows[-1].get("type") != "spacer":
-                layout_rows.append({"type": "spacer"})
-                rows_data.append({"type": "spacer"})
-            continue
-        if row_label in drop_labels:
-            continue
-        if row_label == drop_range_start:
-            dropping = True
-            continue
-        if dropping:
-            if row_label == drop_range_end:
-                drop_until_spacer = True
-            continue
-        layout_rows.append({"label": row_label, "type": row_type(row_label)})
-        row_values = {}
-        for cell in row:
-            try:
-                col = cell.column_letter
-            except AttributeError:
-                continue
-            val = cell.value
-            if col in date_cols:
-                row_values[date_cols[col]] = safe_value(val) if val is not None else None
-        if row_label not in items:
-            items[row_label] = row_values
-        rows_data.append({
-            "label": row_label,
-            "type": row_type(row_label),
-            "values": row_values,
-        })
+                lbl = str(val).strip()
+                current_label = lbl
+                if lbl not in items:
+                    items[lbl] = {}
+            elif val is not None and current_label and col in date_cols:
+                items[current_label][date_cols[col]] = safe_value(val)
 
     result["items"] = items
-    while layout_rows and layout_rows[-1].get("type") == "spacer":
-        layout_rows.pop()
-    while rows_data and rows_data[-1].get("type") == "spacer":
-        rows_data.pop()
-    result["layout_rows"] = layout_rows
-    result["rows"] = rows_data
     return result
 
 

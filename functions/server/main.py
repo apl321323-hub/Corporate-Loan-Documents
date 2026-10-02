@@ -1423,7 +1423,6 @@ def _save_local_data(key: str, value) -> None:
 
 
 def _atomic_save_local_many(values: dict) -> None:
-    """Replace a local batch with rollback if any replacement fails."""
     staged: dict[str, str] = {}
     previous: dict[str, bytes | None] = {}
     replaced: list[str] = []

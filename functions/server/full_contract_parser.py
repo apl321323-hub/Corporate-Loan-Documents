@@ -14,9 +14,9 @@ Columns used:
   CJ : document status
   CK : collateral kind, optional
   CW : collateral division, optional
+  CX : relationship, optional
   DU : LTV, optional
   CE : receivable collateral company, optional
-  CX : relationship, optional
   EK : NICE score, optional
   EO : K score, optional
   FI : collateral provider, optional

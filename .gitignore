@@ -33,3 +33,14 @@ lerna-debug.log*
 # misc
 .DS_Store
 server/data/*.json
+
+# Local runtime data and private upload files
+__pycache__/
+*.py[cod]
+.env.*
+!.env.example
+tmp/
+functions/.runtime_data/
+functions/server/data/
+*.xlsx
+*.xls

@@ -1,5 +1,6 @@
+firebase-functions>=0.4.2
+firebase-admin>=6.5.0
 fastapi
-uvicorn[standard]
 python-multipart
 openpyxl
 xlrd==2.0.1
